@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver" // hoặc "mysql", "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Landlord {
+  LandlordID String   @id @db.Char(10)
+  Name       String   @db.Char(50)
+  Phone      String   @db.Char(15)
+  Email      String   @db.Char(50)
+  CreatedAt  DateTime
+  UpdatedAt  DateTime
+
+  rooms      Room[]
+  listings   Listing[]
+}
+
+model Tenant {
+  TenantID   String   @id @db.Char(10)
+  Name       String   @db.Char(50)
+  Age        Int
+  Budget     Float
+  Habit      String?  @db.Char(255)
+  Preference String?  @db.Char(255)
+  Phone      String   @db.Char(15)
+  Email      String   @db.Char(50)
+  CreatedAt  DateTime
+  UpdatedAt  DateTime
+
+  contracts  Contract[]
+  schedules  ViewingSchedule[]
+  matchings  AiMatching[]
+  reviews    Review[]
+}
+
+model Room {
+  RoomID      String   @id @db.Char(10)
+  LandlordID  String   @db.Char(10)
+  RoomType    String   @db.Char(20)
+  Status      String   @db.Char(20)
+  Price       Float
+  Description String?  @db.Char(255)
+  CreatedAt   DateTime
+  UpdatedAt   DateTime
+
+  landlord   Landlord @relation(fields: [LandlordID], references: [LandlordID])
+  amenities  RoomAmenity[]
+  contracts  Contract[]
+  schedules  ViewingSchedule[]
+  listings   Listing[]
+  images     RoomImage[]
+  matchings  AiMatching[]
+  reviews    Review[]
+}
+
+model Amenity {
+  AmenityID   String   @id @db.Char(10)
+  Name        String   @db.Char(50)
+  Description String?  @db.Char(255)
+
+  rooms       RoomAmenity[]
+}
+
+model RoomAmenity {
+  RoomID    String @db.Char(10)
+  AmenityID String @db.Char(10)
+
+  room    Room    @relation(fields: [RoomID], references: [RoomID])
+  amenity Amenity @relation(fields: [AmenityID], references: [AmenityID])
+
+  @@id([RoomID, AmenityID])
+}
+
+model Contract {
+  ContractID String   @id @db.Char(10)
+  TenantID   String   @db.Char(10)
+  RoomID     String   @db.Char(10)
+  StartDate  DateTime
+  EndDate    DateTime
+  Status     String   @db.Char(20)
+  TotalPrice Float
+  Deposit    Float
+  CreatedAt  DateTime
+  UpdatedAt  DateTime
+
+  tenant    Tenant   @relation(fields: [TenantID], references: [TenantID])
+  room      Room     @relation(fields: [RoomID], references: [RoomID])
+  payments  Payment[]
+}
+
+model ViewingSchedule {
+  ScheduleID String   @id @db.Char(10)
+  TenantID   String   @db.Char(10)
+  RoomID     String   @db.Char(10)
+  DateTime   DateTime
+  Status     String   @db.Char(20)
+  CreatedAt  DateTime
+  UpdatedAt  DateTime
+
+  tenant Tenant @relation(fields: [TenantID], references: [TenantID])
+  room   Room   @relation(fields: [RoomID], references: [RoomID])
+}
+
+model Listing {
+  ListingID   String   @id @db.Char(10)
+  RoomID      String   @db.Char(10)
+  LandlordID  String   @db.Char(10)
+  Title       String   @db.Char(100)
+  Description String?  @db.Char(255)
+  CreatedAt   DateTime
+  UpdatedAt   DateTime
+
+  room     Room     @relation(fields: [RoomID], references: [RoomID])
+  landlord Landlord @relation(fields: [LandlordID], references: [LandlordID])
+}
+
+model AiMatching {
+  MatchingID String   @id @db.Char(10)
+  TenantID   String   @db.Char(10)
+  RoomID     String   @db.Char(10)
+  Score      Float
+  Reason     String?  @db.Char(255)
+  CreatedAt  DateTime
+
+  tenant Tenant @relation(fields: [TenantID], references: [TenantID])
+  room   Room   @relation(fields: [RoomID], references: [RoomID])
+}
+
+model Notification {
+  NotificationID String   @id @db.Char(10)
+  TargetID       String   @db.Char(10)
+  Content        String
+  Type           String   @db.Char(20)
+  CreatedAt      DateTime
+  Status         String   @db.Char(20)
+}
+
+model Account {
+  AccountID String @id @db.Char(10)
+  Username  String @db.Char(30)
+  Password  String @db.Char(64)
+  Role      String @db.Char(20)
+  Status    String @db.Char(15)
+}
+
+model Location {
+  LocationID String  @id @db.Char(10)
+  Address    String  @db.Char(100)
+  Ward       String  @db.Char(30)
+  District   String  @db.Char(30)
+  City       String  @db.Char(30)
+  Latitude   Float
+  Longitude  Float
+}
+
+model RoomImage {
+  ImageID  String @id @db.Char(10)
+  RoomID   String @db.Char(10)
+  ImageURL String @db.Char(150)
+  Order    Int
+
+  room Room @relation(fields: [RoomID], references: [RoomID])
+}
+
+model Payment {
+  PaymentID   String @id @db.Char(10)
+  ContractID  String @db.Char(10)
+  PaymentDate DateTime
+  Amount      Float
+  Method      String @db.Char(20)
+  Status      String @db.Char(20)
+
+  contract Contract @relation(fields: [ContractID], references: [ContractID])
+}
+
+model Review {
+  ReviewID   String @id @db.Char(10)
+  RoomID     String @db.Char(10)
+  TenantID   String @db.Char(10)
+  Rating     Int
+  Content    String
+  ReviewDate DateTime
+
+  room   Room   @relation(fields: [RoomID], references: [RoomID])
+  tenant Tenant @relation(fields: [TenantID], references: [TenantID])
+}

@@ -1,0 +1,45 @@
+flowchart TB
+    A[Quản lý hợp đồng & trạng thái phòng]
+
+    %% Cấp 1
+    A --> B[Tạo hợp đồng]
+    A --> C[Cập nhật trạng thái phòng]
+    A --> D[Quản lý lịch sử hợp đồng]
+
+    %% 6.1 Tạo hợp đồng
+    B --> B1[Nhập thông tin hợp đồng]
+    B --> B2[Kiểm tra điều kiện hợp đồng]
+    B --> B3[Lưu hợp đồng]
+
+    B1 --> B11[Ngày bắt đầu]
+    B1 --> B12[Ngày kết thúc]
+    B1 --> B13[Tiền cọc]
+    B1 --> B14[Tổng tiền]
+    B1 --> B15[Điều khoản hợp đồng]
+
+    B2 --> B21[Kiểm tra phòng đang thuê hay chưa]
+    B2 --> B22[Kiểm tra trùng thời gian hợp đồng]
+    B2 --> B23[Kiểm tra thông tin người thuê]
+
+    B3 --> B31[Tạo hợp đồng trạng thái hiệu lực]
+    B3 --> B32[Ghi nhận ngày tạo hợp đồng]
+
+    %% 6.2 Cập nhật trạng thái phòng
+    C --> C1[Kích hoạt hợp đồng]
+    C --> C2[Cập nhật trạng thái phòng]
+    C --> C3[Đồng bộ tin đăng]
+
+    C1 --> C11[Hợp đồng bắt đầu hiệu lực]
+    C2 --> C21[Phòng chuyển sang Đã cho thuê]
+    C3 --> C31[Tin đăng chuyển sang Đã cho thuê]
+
+    %% 6.3 Quản lý lịch sử hợp đồng
+    D --> D1[Lưu lịch sử hợp đồng]
+    D --> D2[Tra cứu hợp đồng cũ]
+    D --> D3[Theo dõi trạng thái hợp đồng]
+
+    D1 --> D11[Hợp đồng đang hiệu lực]
+    D1 --> D12[Hợp đồng đã kết thúc]
+
+    D3 --> D31[Sắp hết hạn]
+    D3 --> D32[Đã kết thúc]

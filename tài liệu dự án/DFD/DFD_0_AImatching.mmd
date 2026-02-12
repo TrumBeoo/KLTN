@@ -1,0 +1,23 @@
+flowchart TD
+    %% Thực thể bên ngoài
+    A[Người thuê]
+
+    %% Quy trình chính
+    B[Hỗ trợ tìm bạn ở ghép]
+
+    %% Kho dữ liệu
+    C1[CSDL Người dùng]
+    C2[CSDL Ở ghép]
+
+    %% Luồng dữ liệu từ người thuê
+    A -->|Khai báo thông tin & nhu cầu ở ghép| B
+    A -->|Tìm kiếm bạn ở ghép| B
+
+    %% Quy trình tương tác với cơ sở dữ liệu
+    B -->|Truy xuất thông tin người dùng| C1
+    C1 -->|Thông tin cá nhân & nhu cầu| B
+    B -->|Lưu lịch sử & gợi ý| C2
+    C2 -->|Dữ liệu gợi ý / kết quả tìm kiếm| B
+
+    %% Phản hồi cho người thuê
+    B -->|Hiển thị kết quả tìm bạn ở ghép / gợi ý tự động| A

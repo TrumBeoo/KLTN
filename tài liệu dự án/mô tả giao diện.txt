@@ -1,0 +1,627 @@
+I. QUY ƯỚC THIẾT KẾ GIAO DIỆN CHUNG (UI/UX STANDARD)
+1. Phong cách giao diện
+Giao diện hiện đại – tối giản – dễ thao tác
+Tối ưu Responsive: Desktop / Tablet / Mobile
+Màu sắc trạng thái phòng thống nhất:
+Trống: xanh lá (success)
+Đang đặt lịch xem / chờ duyệt: xanh dương (info/primary)
+Đã thuê: đỏ (danger)
+Bảo trì: vàng (warning)
+Sắp hết hợp đồng: cam (orange)
+
+2. Quy ước thành phần
+Form: dùng Bootstrap form-control, form-select
+Danh sách: dùng card hoặc table
+Thông báo: toast / alert
+Popup: modal
+Phân trang: pagination
+Tìm kiếm: input-group
+Icon: Bootstrap Icons
+
+3. Quy tắc phân quyền hiển thị
+Tenant: chỉ xem – tìm – đặt lịch – đánh giá – ở ghép
+Landlord: quản lý chung cư/phòng/tin đăng/lịch xem/hợp đồng
+Admin: quản trị user + báo cáo thống kê + kiểm duyệt tin đăng (nếu có)
+
+II. THÀNH PHẦN GIAO DIỆN CHUNG (COMMON COMPONENTS)
+1. Thanh điều hướng (Navbar – dùng cho mọi vai trò)
+Vị trí: trên cùng, cố định (sticky)
+Thành phần:
+Logo + tên hệ thống: Rentify
+Thanh tìm kiếm nhanh (Search bar):
+Placeholder: “Tìm phòng theo khu vực, giá, tiện nghi…”
+Gợi ý autocomplete (AJAX)
+Menu điều hướng:
+Trang chủ
+Tin đăng
+Bản đồ
+Tìm bạn ở ghép
+Khu vực tài khoản:
+Khi chưa đăng nhập: Đăng nhập | Đăng ký
+Khi đã đăng nhập:
+Avatar + tên
+Dropdown: Hồ sơ / Đổi mật khẩu / Đăng xuất
+Nút thông báo (Bell icon):
+badge số lượng thông báo chưa đọc
+
+2. Footer (Chân trang)
+Thành phần:
+Thông tin liên hệ hệ thống
+Chính sách bảo mật
+Điều khoản sử dụng
+Liên kết mạng xã hội
+Copyright
+
+3. Sidebar (Dành cho Landlord/Admin)
+Vị trí: trái màn hình, dạng menu dọc
+Sidebar Landlord:
+Dashboard
+Quản lý chung cư
+Quản lý phòng
+Tin đăng
+Lịch xem phòng
+Hợp đồng & Thanh toán
+Báo cáo
+Sidebar Admin:
+Dashboard Admin
+Quản lý người dùng
+Quản lý tin đăng (kiểm duyệt)
+Báo cáo – thống kê
+Cấu hình hệ thống
+
+4. Thành phần phụ trợ (dùng xuyên suốt)
+Breadcrumb (định vị trang)
+Modal xác nhận xóa / thao tác quan trọng
+Toast hiển thị kết quả: thành công / lỗi
+Loading spinner khi gọi AJAX
+
+III. GIAO DIỆN DÀNH CHO NGƯỜI THUÊ (TENANT INTERFACE)
+1. Trang chủ & Tìm kiếm phòng (index.php)
+Mục tiêu:
+Người thuê tìm phòng nhanh
+dropdown cho loại phòng, tìm kiếm theo quận,...(đảm bảo ở thanh điều hướng phải có dropdown)
+Lọc theo tiêu chí
+Xem vị trí trên bản đồ
+Xem trạng thái phòng còn trống hay không
+Bố cục tổng:
+2 cột (Desktop):
+Cột trái (30%): bộ lọc
+Cột phải (70%): danh sách tin + bản đồ
+Mobile:
+Bộ lọc chuyển thành modal hoặc accordion
+Thành phần chi tiết:
+(1) Bộ lọc tìm kiếm (Filter Panel)
+Khu vực: Ward / District / City (dropdown)
+Khoảng giá:
+MinPrice – MaxPrice (slider hoặc select)
+Diện tích:
+MinArea – MaxArea
+Tiện nghi (checkbox):
+Wifi, Điều hòa, Nóng lạnh, Máy giặt, Tủ lạnh…
+Trạng thái:
+Trống / Đang đặt lịch / Đã thuê
+Loại phòng:
+Khép kín / Studio / Ở ghép / 1 ngủ 1 khách / Duplex…
+Nút:
+Áp dụng
+Xóa bộ lọc
+
+(2) Danh sách tin đăng (Listing Grid)
+Hiển thị theo dạng Card:
+Ảnh phòng (thumbnail)
+Tiêu đề
+Giá thuê
+Diện tích
+Tiện nghi nổi bật (icon)
+Trạng thái phòng (badge)
+Nút:
+Xem chi tiết
+Yêu thích (heart)
+
+(3) Bản đồ tương tác (Map Section)
+Google Map hiển thị marker
+Marker màu theo trạng thái phòng
+Click marker: hiển thị popup:
+Ảnh
+Giá
+Trạng thái
+Nút “Xem phòng”
+
+(4) Gợi ý phòng phù hợp (AI/Rule-based)
+Gợi ý dựa trên:
+lịch sử xem
+budget
+khu vực quan tâm
+Hiển thị khối “Phòng phù hợp với bạn”
+
+2. Trang chi tiết phòng (room-detail.php)
+Mục tiêu:
+Xem đầy đủ thông tin phòng
+Đặt lịch xem phòng
+Xem review, hình ảnh thực tế
+Bố cục:
+Trên: slider ảnh
+Dưới: chia 2 cột:
+Cột trái: thông tin phòng
+Cột phải: map + đặt lịch
+
+Thành phần:
+(1) Slider hình ảnh
+Carousel ảnh từ ROOM_IMAGE
+Thứ tự theo Order
+(2) Thông tin chi tiết
+Giá thuê
+Diện tích
+Loại phòng
+Số người tối đa
+Trạng thái
+Mô tả
+Danh sách tiện nghi dạng tag
+(3) Review & Rating
+Trung bình rating
+Danh sách review:
+tên người thuê
+thời gian
+nội dung
+Form viết review (chỉ khi đã thuê phòng)
+(4) Chức năng tương tác
+Đặt lịch xem → mở modal
+Yêu thích
+Chia sẻ
+
+3. Modal đặt lịch xem phòng
+Tên modal: BookingModal
+Trường dữ liệu:
+Ngày xem (Date picker)
+Giờ xem (Time)
+Ghi chú (optional)
+Nút:
+Gửi yêu cầu
+Hủy
+Luồng xử lý:
+AJAX gửi yêu cầu
+Hệ thống tạo VIEWING_SCHEDULE (status = chờ duyệt)
+Gửi NOTIFICATION cho chủ nhà
+
+4. Trang “Phòng đã yêu thích” (favorites.php)
+Danh sách card phòng đã lưu
+Cho phép:
+bỏ yêu thích
+đặt lịch xem nhanh
+
+5. Giao diện tìm bạn ở ghép (roommate-matching.php)
+Mục tiêu:
+Người thuê khai báo nhu cầu
+Hệ thống gợi ý bạn ở ghép phù hợp
+Thành phần:
+(1) Form khai báo nhu cầu
+Ngân sách
+Khu vực mong muốn
+Thói quen:
+ngủ sớm/muộn
+sạch sẽ
+hút thuốc/không
+nuôi thú cưng
+Giới tính (tùy chọn)
+Nút: Tìm kiếm
+(2) Danh sách gợi ý
+Card gợi ý gồm:
+Avatar
+Tên
+Budget
+Điểm tương thích (Score)
+Lý do gợi ý (Reason)
+Nút:
+Xem hồ sơ
+Liên hệ
+
+6. Trang quản lý lịch xem của người thuê (my-schedules.php)
+Danh sách lịch đã đặt:
+phòng nào
+thời gian
+trạng thái
+Cho phép:
+hủy lịch (nếu chưa duyệt)
+xem lại thông tin phòng
+
+IV. GIAO DIỆN DÀNH CHO CHỦ NHÀ (LANDLORD INTERFACE)
+1. Dashboard chủ nhà (landlord-dashboard.php)
+Thành phần:
+KPI cards:
+Tổng phòng
+Phòng trống
+Đang thuê
+Sắp hết hợp đồng
+Biểu đồ:
+Tỉ lệ lấp đầy phòng
+Doanh thu theo tháng (nếu có payment)
+Danh sách nhanh:
+Lịch xem chờ duyệt
+Phòng trống mới
+
+2. Quản lý chung cư mini (manage-building.php)
+(Bổ sung vì đề tài có “chung cư mini”)
+Bố cục:
+Form tạo chung cư mini:
+Tên chung cư (optional)
+Địa chỉ
+Khu vực (Ward/District)
+Số tầng
+Danh sách chung cư:
+sửa / xóa
+xem phòng thuộc chung cư
+
+3. Quản lý phòng (manage-rooms.php)
+Thành phần:
+(1) Danh sách phòng (Table)
+RoomID
+RoomType
+Price
+Status (badge màu)
+UpdatedAt
+Action: Sửa | Xóa | Xem
+
+(2) Form thêm/sửa phòng (Modal)
+Diện tích
+Giá thuê
+Loại phòng
+Số người tối đa
+Tiện nghi (multi-select)
+Mô tả
+Upload ảnh (multi file)
+
+4. Tự động hóa đăng tin (listing-automation.php)
+Thành phần:
+Khu vực upload file (drag & drop)
+Hỗ trợ:
+Excel/CSV
+Nút:
+Tải lên
+Xem trước dữ liệu
+Tạo tin đăng tự động
+Màn hình xem trước:
+Table preview dữ liệu:
+RoomType
+Price
+Area
+Amenities
+Lỗi dữ liệu highlight đỏ
+Nút Xác nhận tạo tin
+
+5. Quản lý tin đăng (manage-listings.php)
+Danh sách tin đăng:
+trạng thái: đang hiển thị / ẩn
+liên kết phòng
+Action:
+sửa nội dung
+cập nhật ảnh
+bật/tắt hiển thị
+Ràng buộc:
+Tin đăng tự đồng bộ theo trạng thái phòng:
+phòng đã thuê → tin chuyển “Hết phòng” hoặc “Ẩn”
+
+6. Quản lý lịch xem (viewing-management.php)
+Thành phần:
+Danh sách lịch xem chờ duyệt:
+Tenant
+Room
+DateTime
+Ghi chú
+Action:
+Xác nhận
+Từ chối
+Khi xác nhận:
+Cập nhật VIEWING_SCHEDULE status = đã duyệt
+ROOM status = đang được đặt lịch xem
+Tạo NOTIFICATION cho tenant
+
+7. Hợp đồng & thanh toán (contracts.php)
+Bố cục:
+Tab:
+Hợp đồng đang hiệu lực
+Hợp đồng sắp hết hạn
+Lịch sử hợp đồng
+Form tạo hợp đồng:
+TenantID (select từ danh sách người xem phòng)
+RoomID
+StartDate / EndDate
+Deposit
+Điều khoản (textarea)
+TotalPrice
+Khi tạo hợp đồng:
+ROOM status = đã thuê
+LISTING cập nhật trạng thái
+Quản lý thanh toán:
+Danh sách payment theo contract
+Thêm payment:
+amount
+date
+method
+status
+
+V. GIAO DIỆN DÀNH CHO QUẢN TRỊ VIÊN (ADMIN INTERFACE)
+1. Dashboard admin (admin-dashboard.php)
+Tổng user
+Tổng landlord/tenant
+Tổng tin đăng
+Tổng hợp phòng trống/đã thuê
+Thống kê hoạt động
+
+2. Quản lý người dùng (user-admin.php)
+Danh sách user:
+Username
+Role
+Status
+Ngày tạo
+Action:
+Khóa
+Mở khóa
+Xem chi tiết
+Ràng buộc:
+User bị khóa → không thể đăng nhập
+
+3. Báo cáo – thống kê (analytics.php)
+Biểu đồ Chart.js:
+Doanh thu theo tháng (Payment)
+Tỉ lệ lấp đầy phòng theo thời gian
+Top khu vực có nhu cầu cao
+Số lượt đặt lịch xem
+
+VI. GIAO DIỆN QUẢN LÝ BẢN ĐỒ & VỊ TRÍ
+1. Trang bản đồ (map.php)
+Bản đồ toàn màn hình
+Bộ lọc nhanh
+Card info khi click marker
+Tính khoảng cách:
+người dùng nhập địa điểm (trường/đi làm)
+hiển thị km & thời gian di chuyển
+
+VII. MÀN HÌNH HỆ THỐNG & BẢO MẬT
+1. Trang đăng ký (register.php)
+Username
+Password + Confirm
+Role chọn: Tenant / Landlord
+Email / Phone
+Validation JS:
+email đúng định dạng
+password mạnh
+
+2. Trang hồ sơ cá nhân (profile.php)
+Thông tin người dùng
+Đổi mật khẩu
+Cập nhật sở thích/nhu cầu (phục vụ matching)
+
+3. Trang đổi mật khẩu (change-password.php)
+Form:
+Mật khẩu cũ
+Mật khẩu mới
+Nhập lại mật khẩu
+Validation:
+Mật khẩu mới khác mật khẩu cũ
+Mật khẩu mới đủ mạnh
+Mật khẩu mới giống nhau
+4. Trang thông báo (notifications.php)
+Danh sách thông báo:
+Tiêu đề
+Nội dung
+Thời gian
+Đã đọc
+Action:
+Đánh dấu
+Xóa
+5. Trang lỗi
+404 Not Found
+500 Internal Server Error
+Hiển thị giao diện thân thiện, hướng dẫn người dùng quay lại trang chính
+
+---GIAO DIỆN & NGHIỆP VỤ: ĐỔI MẬT KHẨU (CHANGE PASSWORD)
+1) Vị trí chức năng trên giao diện
+Cách 1 (chuẩn nhất)
+Navbar → Avatar/Tài khoản → chọn Đổi mật khẩu
+
+Cách 2
+Trang Hồ sơ cá nhân (profile.php) → tab Bảo mật
+
+2) Màn hình Đổi mật khẩu (change-password.php)
+2.1 Bố cục giao diện (Bootstrap Form)
+Tên trang: change-password.php
+Đối tượng: Tenant / Landlord / Admin (mọi role)
+Thành phần UI
+Tiêu đề: “Đổi mật khẩu”
+Form gồm 3 trường:
+Mật khẩu hiện tại
+Mật khẩu mới
+Nhập lại mật khẩu mới
+Checkbox: “Hiển thị mật khẩu”
+Nút:
+Lưu thay đổi
+Hủy
+
+---3) Quy tắc kiểm tra dữ liệu (Validation)
+3.1 Validation phía client (JavaScript)
+Không được để trống 3 trường
+Mật khẩu mới:
+tối thiểu 8 ký tự
+có ít nhất:
+1 chữ hoa
+1 chữ thường
+1 số
+1 ký tự đặc biệt
+Mật khẩu mới ≠ mật khẩu hiện tại
+Nhập lại mật khẩu phải khớp
+ Khi sai:
+Hiển thị lỗi ngay dưới input (invalid-feedback)
+Disable nút lưu nếu chưa hợp lệ
+
+3.2 Validation phía server (PHP)
+Bắt buộc:
+Kiểm tra user đã đăng nhập (Session)
+Kiểm tra mật khẩu hiện tại đúng với DB
+Hash mật khẩu mới (không lưu plain text)
+
+4) Luồng xử lý nghiệp vụ (Flow)
+4.1 Luồng đổi mật khẩu thành công
+User mở trang đổi mật khẩu
+Nhập mật khẩu hiện tại + mật khẩu mới
+Bấm Lưu thay đổi
+Server:
+xác thực mật khẩu hiện tại
+cập nhật mật khẩu mới
+Hiển thị toast:
+“Đổi mật khẩu thành công”
+(Khuyến nghị) Đăng xuất toàn bộ phiên đăng nhập cũ
+
+4.2 Luồng lỗi
+Sai mật khẩu hiện tại → báo lỗi: “Mật khẩu hiện tại không đúng”
+Mật khẩu mới yếu → báo lỗi tiêu chí
+Nhập lại không khớp → báo lỗi “Không khớp”
+5) Dữ liệu liên quan trong CSDL
+5.1 Bảng ACCOUNT
+Trường sử dụng:
+Username
+Password (hash)
+Status
+Role
+ Khi đổi mật khẩu:
+cập nhật ACCOUNT.Password
+
+5.2 Gợi ý bổ sung để bảo mật tốt hơn (đưa vào báo cáo)
+Bạn có thể thêm:
+UpdatedAt trong ACCOUNT
+PasswordChangedAt
+LoginFailedCount (chống brute force)
+
+6) Chức năng QUÊN MẬT KHẨU (NÊN CÓ – tăng điểm)
+6.1 Giao diện Quên mật khẩu
+Trang: forgot-password.php
+Nhập email/username
+Gửi mã OTP / link reset
+
+6.2 Luồng
+Nhập email → nhận mã → nhập mã → đặt mật khẩu mới
+Nếu đồ án bạn chưa làm email thật, bạn có thể mô tả dạng:
+“Hệ thống giả lập OTP trên màn hình để kiểm thử”.
+
+VIII. ĐỀ XUẤT CẤU TRÚC FILE GIAO DIỆN (PHP)/views
+  /common
+    navbar.php
+    footer.php
+    sidebar_landlord.php
+    sidebar_admin.php
+
+  /tenant
+    index.php
+    room-detail.php
+    roommate-matching.php
+    favorites.php
+    my-schedules.php
+
+  /landlord
+    landlord-dashboard.php
+    manage-building.php
+    manage-rooms.php
+    listing-automation.php
+    manage-listings.php
+    viewing-management.php
+    contracts.php
+
+  /admin
+    admin-dashboard.php
+    user-admin.php
+    analytics.php
+
+/map.php
+/error.php
+
+
+Tone “Xanh tin cậy” (Modern SaaS)
+Màu thương hiệu chung (dùng toàn hệ thống)
+Primary (Brand): Xanh dương (#2563EB)
+Secondary: Xanh ngọc nhẹ (#14B8A6)
+Background: Trắng xám (#F8FAFC)
+Text: Đen xám (#0F172A)
+Border: Xám nhạt (#E2E8F0)
+
+
+A) Giao diện Người thuê (Tenant)
+Mục tiêu cảm xúc: “Dễ tìm – sạch – đáng tin”
+Primary: #2563EB (Xanh dương)
+Accent: #22C55E (Xanh lá – tạo cảm giác “đặt lịch thành công”)
+CTA button (Đặt lịch xem): xanh dương đậm #1D4ED8
+Favorite/Save: hồng đỏ #F43F5E
+Map highlight: xanh ngọc #14B8A6
+UI Tenant nên sáng, thoáng, ít màu mạnh.
+
+B) Giao diện Chủ nhà (Landlord)
+Mục tiêu cảm xúc: “Quản lý – theo dõi trạng thái phòng”
+Primary: #0EA5E9 (Xanh sky)
+Accent: #F59E0B (Cam vàng – nổi bật trạng thái/nhắc nhở)
+Background: #F8FAFC
+Màu trạng thái phòng (quan trọng nhất)
+Trống: #22C55E (Xanh lá)
+Đã thuê: #EF4444 (Đỏ)
+Đã đặt lịch xem: #3B82F6 (Xanh dương)
+Bảo trì: #F59E0B (Vàng cam)
+Sắp hết hợp đồng: #A855F7 (Tím)
+Chủ nhà nhìn dashboard là hiểu ngay.
+
+C) Giao diện Admin
+Mục tiêu cảm xúc: “Kiểm soát – an toàn – quyền lực”
+Primary: #111827 (Đen than)
+Accent: #DC2626 (Đỏ cảnh báo)
+Info: #2563EB
+Background: #F3F4F6
+Admin nên “tối hơn” để tạo cảm giác hệ thống quản trị.
+
+
+THIẾT KẾ GIAO DIỆN CHỨC NĂNG
+BƯỚC 1: Hoàn thiện flow tổng thể (quan trọng nhất)
+Trước khi code tiếp, bạn phải trả lời rõ:
+User vào trang chủ → click phòng → chuyện gì xảy ra?
+Bấm “Đặt lịch xem” → xử lý thế nào?
+Landlord đăng nhập → thấy gì đầu tiên?
+Sau khi tạo hợp đồng → trạng thái phòng thay đổi ra sao?
+
+BƯỚC 2: Thiết kế các trang quan trọng theo thứ tự
+Sau Home Page, bạn nên làm theo thứ tự nghiệp vụ:
+1️⃣ Trang Chi tiết phòng (room-detail.php)
+Đây là trang quan trọng nhất vì:
+Có hình ảnh
+Có đánh giá
+Có nút đặt lịch
+Có trạng thái phòng
+
+2️⃣ Trang Đặt lịch xem (Modal + logic)
+Thiết kế:
+Chọn ngày giờ
+Hiển thị trạng thái
+Confirm
+
+3️⃣ Trang Dashboard theo vai trò
+Tenant dashboard:
+Lịch xem sắp tới
+Phòng đã lưu
+Gợi ý AI
+Landlord dashboard:
+Phòng đang trống
+Lịch chờ duyệt
+Tạo hợp đồng
+
+---Bắt đầu code theo module
+Nên làm theo module:
+Authentication (login/register)
+Listing + Room display
+Viewing schedule
+Contract
+Matching
+Notification
+
+---Làm theo thứ tự:
+Xem phòng
+Đặt lịch
+Tạo hợp đồng
+Thanh toán
+Matching AI có thể làm sau.
+
+phòng đó đã được thuê nhưng nó khá rộng hoặc người đã thuê có nhu cầu tìm người ở ghép thì nên thêm button liên hệ ở ghép, 
+đối với phòng khép kín thì không cần

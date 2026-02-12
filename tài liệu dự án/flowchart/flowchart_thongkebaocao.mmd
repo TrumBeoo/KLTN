@@ -1,0 +1,18 @@
+flowchart TD
+    A[Bắt đầu] --> B[Người dùng truy cập Module thống kê & báo cáo]
+    B --> C{Chọn loại thống kê / báo cáo}
+    C -->|Phòng| D[Lấy dữ liệu phòng từ DB]
+    C -->|Hợp đồng sắp hết hạn| E[Lấy dữ liệu hợp đồng từ DB]
+    C -->|Tin đăng hoạt động| F[Lấy dữ liệu tin đăng từ DB]
+    C -->|Hiệu quả AI| G[Lấy dữ liệu AI Matching từ DB]
+
+    D --> H[Xử lý & tính toán số liệu]
+    E --> H
+    F --> H
+    G --> H
+
+    H --> I[Hiển thị dashboard trực quan: chart / table]
+    I --> J{Người dùng muốn xuất báo cáo?}
+    J -->|Có| K[Export PDF / Excel]
+    J -->|Không| L[Kết thúc]
+    K --> L

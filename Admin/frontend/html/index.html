@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Quản lý Hệ thống</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            color: #2c3e50;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 0 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+
+        .sidebar-logo i {
+            font-size: 2rem;
+        }
+
+        .admin-badge {
+            background: #fbbf24;
+            color: #1e3a8a;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .menu-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-item a:hover,
+        .menu-item a.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: #60a5fa;
+        }
+
+        .menu-item a i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            padding: 2rem;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .top-bar h1 {
+            color: #1e3a8a;
+            font-size: 1.8rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1e3a8a;
+            font-weight: bold;
+        }
+
+        .notification-btn {
+            position: relative;
+            background: #eff6ff;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #1e40af;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .notification-btn:hover {
+            background: #dbeafe;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ef4444;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-info h3 {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-info p {
+            color: #1e3a8a;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-icon.blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .stat-icon.green {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .stat-icon.yellow {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .stat-icon.red {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        /* Content Card */
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            color: #1e3a8a;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .btn-outline:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        /* Search Bar */
+        .search-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        /* User Table */
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table thead {
+            background: #f8fafc;
+        }
+
+        .user-table th {
+            padding: 1rem;
+            text-align: left;
+            color: #475569;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .user-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .user-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .user-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .role-landlord {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .role-tenant {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .role-admin {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-locked {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            margin-bottom: 0.5rem;
+            color: #475569;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 0.6rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 90%;
+            animation: modalSlide 0.3s;
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            color: #1e3a8a;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #f1f5f9;
+            color: #1e3a8a;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem 2rem;
+            border-top: 2px solid #f1f5f9;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #1e3a8a;
+            font-weight: 600;
+        }
+
+        /* Activity Log */
+        .activity-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .activity-icon.success {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .activity-icon.warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .activity-icon.danger {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .activity-content h4 {
+            color: #1e3a8a;
+            margin-bottom: 0.3rem;
+        }
+
+        .activity-content p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <i class="fas fa-shield-halved"></i>
+                <span>Admin Panel</span>
+                <span class="admin-badge">ADMIN</span>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="#" class="active" onclick="showSection('dashboard')">
+                    <i class="fas fa-th-large"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" onclick="showSection('users')">
+                    <i class="fas fa-users"></i>
+                    <span>Quản lý Người dùng</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" onclick="showSection('analytics')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Báo cáo & Thống kê</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" onclick="showSection('rooms')">
+                    <i class="fas fa-door-open"></i>
+                    <span>Quản lý Phòng</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" onclick="showSection('contracts')">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Quản lý Hợp đồng</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" onclick="showSection('posts')">
+                    <i class="fas fa-newspaper"></i>
+                    <span>Kiểm duyệt Tin đăng</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" onclick="showSection('activities')">
+                    <i class="fas fa-history"></i>
+                    <span>Nhật ký Hệ thống</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <i class="fas fa-cog"></i>
+                    <span>Cài đặt Hệ thống</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <h1>Admin Dashboard</h1>
+            <div class="user-info">
+                <button class="notification-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">12</span>
+                </button>
+                <div class="user-avatar">AD</div>
+                <div>
+                    <div style="font-weight: 600; color: #1e3a8a;">Administrator</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">Quản trị viên</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="section active">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Tổng người dùng</h3>
+                        <p>1,248</p>
+                        <span style="font-size: 0.85rem; color: #059669;">
+                            <i class="fas fa-arrow-up"></i> +12% tháng này
+                        </span>
+                    </div>
+                    <div class="stat-icon blue">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Tổng phòng</h3>
+                        <p>856</p>
+                        <span style="font-size: 0.85rem; color: #059669;">
+                            <i class="fas fa-arrow-up"></i> +8% tháng này
+                        </span>
+                    </div>
+                    <div class="stat-icon green">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Doanh thu tháng này</h3>
+                        <p>2.4B</p>
+                        <span style="font-size: 0.85rem; color: #64748b;">VNĐ</span>
+                    </div>
+                    <div class="stat-icon yellow">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Tin đăng chờ duyệt</h3>
+                        <p>24</p>
+                        <span style="font-size: 0.85rem; color: #dc2626;">
+                            <i class="fas fa-exclamation-circle"></i> Cần xử lý
+                        </span>
+                    </div>
+                    <div class="stat-icon red">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-activity"></i> Hoạt động gần đây</h2>
+                    <button class="btn btn-outline" onclick="showSection('activities')">
+                        Xem tất cả
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="activity-log">
+                        <div class="activity-item">
+                            <div class="activity-icon success">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Người dùng mới đăng ký</h4>
+                                <p>Nguyễn Văn A đã đăng ký tài khoản Tenant - 2 giờ trước</p>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon info">
+                                <i class="fas fa-file-contract"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Hợp đồng mới được tạo</h4>
+                                <p>Chủ nhà Trần B tạo hợp đồng #HD456 - 3 giờ trước</p>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Báo cáo vi phạm</h4>
+                                <p>Tin đăng #TD123 bị báo cáo spam - 5 giờ trước</p>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon danger">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Tài khoản bị khóa</h4>
+                                <p>Tài khoản user@email.com bị khóa do vi phạm - 1 ngày trước</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users-section" class="section" style="display: none;">
+            <div class="content-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-users"></i> Quản lý Người dùng</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline">
+                            <i class="fas fa-file-export"></i> Xuất danh sách
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Search and Filter -->
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Tìm kiếm theo tên, email, số điện thoại..." id="user-search">
+                        <select class="search-input" style="flex: 0 0 200px;">
+                            <option value="">Tất cả vai trò</option>
+                            <option value="tenant">Người thuê</option>
+                            <option value="landlord">Chủ nhà</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <select class="search-input" style="flex: 0 0 200px;">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="active">Hoạt động</option>
+                            <option value="locked">Đã khóa</option>
+                        </select>
+                    </div>
+
+                    <!-- Users Table -->
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Người dùng</th>
+                                <th>Email</th>
+                                <th>Số điện thoại</th>
+                                <th>Vai trò</th>
+                                <th>Ngày đăng ký</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Users data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="section" style="display: none;">
+            <div class="content-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-chart-line"></i> Báo cáo & Thống kê</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </button>
+                        <button class="btn btn-outline">
+                            <i class="fas fa-file-pdf"></i> Xuất PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filter -->
+                    <div class="filter-bar">
+                        <div class="filter-group">
+                            <label>Từ ngày</label>
+                            <input type="date" value="2025-01-01">
+                        </div>
+                        <div class="filter-group">
+                            <label>Đến ngày</label>
+                            <input type="date" value="2026-01-31">
+                        </div>
+                        <div class="filter-group">
+                            <label>Loại báo cáo</label>
+                            <select>
+                                <option>Tổng quan</option>
+                                <option>Doanh thu</option>
+                                <option>Người dùng</option>
+                                <option>Phòng trọ</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" style="width: 100%;">
+                                <i class="fas fa-search"></i> Lọc dữ liệu
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Revenue Chart -->
+                    <div class="content-card" style="margin-bottom: 2rem;">
+                        <div class="card-header">
+                            <h3 style="color: #1e3a8a; font-size: 1.1rem;">
+                                <i class="fas fa-chart-bar"></i> Doanh thu theo tháng
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="chart-grid">
+                        <div class="content-card">
+                            <div class="card-header">

@@ -1,0 +1,40 @@
+flowchart TD
+    NT[Người thuê]
+
+    %% Processes
+    P51[Quản lý hồ sơ người thuê]
+    P52[Yêu cầu tìm ở ghép]
+    P53[Tính điểm tương thích]
+    P54[Xếp hạng & lọc kết quả]
+    P55[Giải thích gợi ý]
+    P56[Ghi nhận phản hồi]
+    P57[Điều chỉnh trọng số AI]
+
+    %% Data Stores
+    DS3[DB Hồ sơ người thuê]
+    DS6[DB Kết quả gợi ý]
+    DS10[DB Phản hồi người dùng]
+    DS11[DB Trọng số / Mô hình]
+
+    %% Flows
+    NT --> P51
+    P51 --> DS3
+
+    NT --> P52
+    P52 --> P53
+
+    P53 --> DS3
+    DS3 --> P53
+
+    P53 --> P54
+    P54 --> P55
+    P55 --> NT
+
+    NT --> P56
+    P56 --> DS10
+
+    DS10 --> P57
+    P57 --> DS11
+    DS11 --> P53
+
+    P54 --> DS6

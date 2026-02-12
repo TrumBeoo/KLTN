@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="../../../logo/5.png">
+  <title>Dashboard - Rentify</title>
+  
+  <link rel="stylesheet" href="../css/landlord-styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="landlord-layout">
+  
+  <!-- Sidebar -->
+  <aside class="landlord-sidebar" id="landlordSidebar">
+    <div class="sidebar-brand">
+      <img src="../../../logo/5.png" alt="Rentify Logo" class="navbar-logo-img" style="height: 40px; width: auto;">
+      <span class="sidebar-brand-text">Rentify</span>
+    </div>
+    
+    <nav>
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+          <a href="landlord-dashboard.html" class="sidebar-nav-link active">
+            <i class="bi bi-speedometer2 sidebar-nav-icon"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="manage-building.html" class="sidebar-nav-link">
+            <i class="bi bi-building sidebar-nav-icon"></i>
+            <span>Quản lý chung cư</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="manage-rooms.html" class="sidebar-nav-link">
+            <i class="bi bi-door-closed sidebar-nav-icon"></i>
+            <span>Quản lý phòng</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="manage-listings.html" class="sidebar-nav-link">
+            <i class="bi bi-megaphone sidebar-nav-icon"></i>
+            <span>Tin đăng</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="viewing-management.html" class="sidebar-nav-link">
+            <i class="bi bi-calendar-check sidebar-nav-icon"></i>
+            <span>Lịch xem phòng</span>
+            <span class="sidebar-nav-badge">5</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="contracts.html" class="sidebar-nav-link">
+            <i class="bi bi-file-text sidebar-nav-icon"></i>
+            <span>Hợp đồng & Thanh toán</span>
+          </a>
+        </li>
+        
+        <div class="sidebar-divider"></div>
+        
+        <li class="sidebar-nav-item">
+          <a href="listing-automation.html" class="sidebar-nav-link">
+            <i class="bi bi-lightning sidebar-nav-icon"></i>
+            <span>Tự động đăng tin</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="reports.html" class="sidebar-nav-link">
+            <i class="bi bi-graph-up sidebar-nav-icon"></i>
+            <span>Báo cáo</span>
+          </a>
+        </li>
+        
+        <div class="sidebar-divider"></div>
+        
+        <li class="sidebar-nav-item">
+          <a href="landlord-profile.html" class="sidebar-nav-link">
+            <i class="bi bi-person-circle sidebar-nav-icon"></i>
+            <span>Hồ sơ của tôi</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-nav-item">
+          <a href="settings.html" class="sidebar-nav-link">
+            <i class="bi bi-gear sidebar-nav-icon"></i>
+            <span>Cài đặt</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <div class="sidebar-user">
+      <a href="landlord-profile.html" class="sidebar-user-info" style="text-decoration: none; color: inherit;">
+        <img src="https://i.pravatar.cc/150?img=8" alt="Avatar" class="sidebar-user-avatar">
+        <div class="sidebar-user-details">
+          <div class="sidebar-user-name">Nguyễn Văn Chủ</div>
+          <div class="sidebar-user-role">Chủ nhà</div>
+        </div>
+      </a>
+    </div>
+  </aside>
+  
+  <!-- Main Content -->
+  <main class="landlord-main">
+    
+    <!-- Navbar -->
+    <nav class="landlord-navbar">
+      <h1 class="navbar-title">Dashboard</h1>
+      
+      <div class="navbar-actions">
+        <div class="navbar-search">
+          <i class="bi bi-search navbar-search-icon"></i>
+          <input type="text" placeholder="Tìm phòng, hợp đồng...">
+        </div>
+        
+        <button class="navbar-notification">
+          <i class="bi bi-bell" style="font-size: 1.25rem;"></i>
+          <span class="navbar-notification-badge">3</span>
+        </button>
+        
+        <button class="btn-ll-primary" id="addRoomBtn">
+          <i class="bi bi-plus-circle"></i>
+          Thêm phòng
+        </button>
+      </div>
+    </nav>
+    
+    <!-- Content -->
+    <div class="landlord-content">
+      
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card available">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Tổng số phòng</div>
+              <div class="kpi-value">24</div>
+              <div class="kpi-change positive">
+                <i class="bi bi-arrow-up kpi-change-icon"></i>
+                <span>+2 phòng mới</span>
+              </div>
+            </div>
+            <div class="kpi-icon" style="--kpi-icon-bg: var(--ll-status-available-bg);">
+              <i class="bi bi-house-door"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card available">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Phòng trống</div>
+              <div class="kpi-value">8</div>
+              <div class="kpi-change negative">
+                <i class="bi bi-arrow-down kpi-change-icon"></i>
+                <span>-3 so với tháng trước</span>
+              </div>
+            </div>
+            <div class="kpi-icon" style="--kpi-icon-bg: var(--ll-status-available-bg);">
+              <i class="bi bi-door-open"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card rented">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Đang cho thuê</div>
+              <div class="kpi-value">14</div>
+              <div class="kpi-change positive">
+                <i class="bi bi-arrow-up kpi-change-icon"></i>
+                <span>+3 hợp đồng mới</span>
+              </div>
+            </div>
+            <div class="kpi-icon" style="--kpi-icon-bg: var(--ll-status-rented-bg);">
+              <i class="bi bi-people"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card expiring">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Sắp hết hợp đồng</div>
+              <div class="kpi-value">3</div>
+              <div class="kpi-change" style="color: var(--ll-accent);">
+                <i class="bi bi-exclamation-triangle kpi-change-icon"></i>
+                <span>Cần gia hạn</span>
+              </div>
+            </div>
+            <div class="kpi-icon" style="--kpi-icon-bg: var(--ll-status-expiring-bg);">
+              <i class="bi bi-calendar-x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Charts Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+        
+        <!-- Occupancy Chart -->
+        <div class="data-table-container">
+          <div class="data-table-header">
+            <h2 class="data-table-title">Tỷ lệ lấp đầy phòng</h2>
+            <select class="form-select" style="width: 150px; border: 1px solid var(--ll-border); border-radius: 0.5rem; padding: 0.5rem;">
+              <option>Tháng này</option>
+              <option>Tháng trước</option>
+              <option>3 tháng</option>
+              <option>6 tháng</option>
+            </select>
+          </div>
+          <div style="padding: 2rem;">
+            <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--ll-primary-subtle) 0%, var(--ll-bg-main) 100%); border-radius: 1rem;">
+              <div style="text-align: center;">
+                <div style="font-size: 3.5rem; font-weight: 800; color: var(--ll-primary); font-family: var(--ll-font-display);">58%</div>
+                <div style="font-size: 1rem; color: var(--ll-text-secondary); margin-top: 0.5rem;">14/24 phòng đang thuê</div>
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; font-size: 0.875rem;">
+                  <div>
+                    <span style="color: var(--ll-status-available); font-weight: 600;">●</span>
+                    Trống: 8
+                  </div>
+                  <div>
+                    <span style="color: var(--ll-status-rented); font-weight: 600;">●</span>
+                    Đã thuê: 14
+                  </div>
+                  <div>
+                    <span style="color: var(--ll-status-viewing); font-weight: 600;">●</span>
+                    Đặt lịch: 2
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Revenue Chart -->
+        <div class="data-table-container">
+          <div class="data-table-header">
+            <h2 class="data-table-title">Doanh thu theo tháng</h2>
+            <select class="form-select" style="width: 150px; border: 1px solid var(--ll-border); border-radius: 0.5rem; padding: 0.5rem;">
+              <option>6 tháng gần đây</option>
+              <option>Năm nay</option>
+              <option>Năm trước</option>
+            </select>
+          </div>
+          <div style="padding: 2rem;">
+            <div style="height: 250px; display: flex; align-items: flex-end; justify-content: space-around; gap: 0.5rem;">
+              <div style="flex: 1; background: linear-gradient(180deg, var(--ll-primary) 0%, var(--ll-primary-dark) 100%); border-radius: 0.5rem 0.5rem 0 0; height: 40%;"></div>
+              <div style="flex: 1; background: linear-gradient(180deg, var(--ll-primary) 0%, var(--ll-primary-dark) 100%); border-radius: 0.5rem 0.5rem 0 0; height: 55%;"></div>
+              <div style="flex: 1; background: linear-gradient(180deg, var(--ll-primary) 0%, var(--ll-primary-dark) 100%); border-radius: 0.5rem 0.5rem 0 0; height: 70%;"></div>
+              <div style="flex: 1; background: linear-gradient(180deg, var(--ll-primary) 0%, var(--ll-primary-dark) 100%); border-radius: 0.5rem 0.5rem 0 0; height: 45%;"></div>
+              <div style="flex: 1; background: linear-gradient(180deg, var(--ll-primary) 0%, var(--ll-primary-dark) 100%); border-radius: 0.5rem 0.5rem 0 0; height: 85%;"></div>
+              <div style="flex: 1; background: linear-gradient(180deg, var(--ll-accent) 0%, var(--ll-accent-dark) 100%); border-radius: 0.5rem 0.5rem 0 0; height: 95%; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);"></div>
+            </div>
+            <div style="margin-top: 1.5rem; text-align: center;">
+              <div style="font-size: 0.875rem; color: var(--ll-text-muted);">Tháng này</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--ll-text-primary); font-family: var(--ll-font-display);">75.5tr VND</div>
+              <div style="font-size: 0.875rem; color: var(--ll-success); font-weight: 600; margin-top: 0.25rem;">
+                <i class="bi bi-arrow-up"></i> +12.5% so với tháng trước
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      
+      <!-- Pending Viewings -->
+      <div class="data-table-container" style="margin-bottom: 2rem;">
+        <div class="data-table-header">
+          <h2 class="data-table-title">Lịch xem phòng chờ duyệt</h2>
+          <a href="viewing-management.html" class="btn-ll-outline" style="padding: 0.5rem 1rem; text-decoration: none; font-size: 0.875rem;">
+            Xem tất cả
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Người thuê</th>
+              <th>Phòng</th>
+              <th>Ngày & Giờ</th>
+              <th>Ghi chú</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://i.pravatar.cc/150?img=1" alt="Avatar" style="width: 2rem; height: 2rem; border-radius: 9999px;">
+                  <div>
+                    <div style="font-weight: 600;">Trần Văn A</div>
+                    <div style="font-size: 0.75rem; color: var(--ll-text-muted);">0912 345 678</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div style="font-weight: 600;">Studio A-101</div>
+                  <div style="font-size: 0.75rem; color: var(--ll-text-muted);">Tầng 1, Tòa A</div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div style="font-weight: 600;">15/02/2025</div>
+                  <div style="font-size: 0.75rem; color: var(--ll-text-muted);">10:00 - 11:00</div>
+                </div>
+              </td>
+              <td>
+                <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ll-text-secondary);">
+                  Tôi muốn xem phòng vào buổi sáng
+                </div>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xác nhận" style="color: var(--ll-success); border-color: var(--ll-success);">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="action-btn danger" title="Từ chối">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://i.pravatar.cc/150?img=2" alt="Avatar" style="width: 2rem; height: 2rem; border-radius: 9999px;">
+                  <div>
+                    <div style="font-weight: 600;">Nguyễn Thị B</div>
+                    <div style="font-size: 0.75rem; color: var(--ll-text-muted);">0987 654 321</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div style="font-weight: 600;">1PN B-205</div>
+                  <div style="font-size: 0.75rem; color: var(--ll-text-muted);">Tầng 2, Tòa B</div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div style="font-weight: 600;">16/02/2025</div>
+                  <div style="font-size: 0.75rem; color: var(--ll-text-muted);">14:00 - 15:00</div>
+                </div>
+              </td>
+              <td>
+                <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ll-text-secondary);">
+                  Có thể xem vào cuối tuần không?
+                </div>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xác nhận" style="color: var(--ll-success); border-color: var(--ll-success);">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="action-btn danger" title="Từ chối">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://i.pravatar.cc/150?img=3" alt="Avatar" style="width: 2rem; height: 2rem; border-radius: 9999px;">
+                  <div>
+                    <div style="font-weight: 600;">Lê Văn C</div>
+                    <div style="font-size: 0.75rem; color: var(--ll-text-muted);">0901 234 567</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div style="font-weight: 600;">Studio C-302</div>
+                  <div style="font-size: 0.75rem; color: var(--ll-text-muted);">Tầng 3, Tòa C</div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div style="font-weight: 600;">17/02/2025</div>
+                  <div style="font-size: 0.75rem; color: var(--ll-text-muted);">17:00 - 18:00</div>
+                </div>
+              </td>
+              <td>
+                <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ll-text-secondary);">
+                  Muốn xem phòng sau giờ làm
+                </div>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xác nhận" style="color: var(--ll-success); border-color: var(--ll-success);">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="action-btn danger" title="Từ chối">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Recent Available Rooms -->
+      <div class="data-table-container">
+        <div class="data-table-header">
+          <h2 class="data-table-title">Phòng trống mới</h2>
+          <a href="manage-rooms.html" class="btn-ll-outline" style="padding: 0.5rem 1rem; text-decoration: none; font-size: 0.875rem;">
+            Quản lý phòng
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mã phòng</th>
+              <th>Loại phòng</th>
+              <th>Giá thuê</th>
+              <th>Diện tích</th>
+              <th>Trạng thái</th>
+              <th>Cập nhật</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>A-101</strong></td>
+              <td>Studio</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">5.5tr/tháng</td>
+              <td>25m²</td>
+              <td><span class="status-badge available"><span class="status-badge-dot"></span>Trống</span></td>
+              <td>2 ngày trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>B-203</strong></td>
+              <td>1 phòng ngủ</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">7.0tr/tháng</td>
+              <td>35m²</td>
+              <td><span class="status-badge available"><span class="status-badge-dot"></span>Trống</span></td>
+              <td>3 ngày trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>C-405</strong></td>
+              <td>Studio</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">4.8tr/tháng</td>
+              <td>22m²</td>
+              <td><span class="status-badge viewing"><span class="status-badge-dot"></span>Đã đặt lịch</span></td>
+              <td>1 tuần trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+    </div>
+  </main>
+  
+  <script src="../js/auth-state.js"></script>
+  <script src="../js/permission-middleware.js"></script>
+  <script src="../js/landlord-script.js"></script>
+</body>
+</html>

@@ -1,0 +1,1060 @@
+/* ============================================
+   RENTIFY - PROFILE STYLES
+   Shared styles for Landlord & Tenant profiles
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ============================================
+   PROFILE DESIGN TOKENS
+   ============================================ */
+
+:root {
+  /* Tenant Colors */
+  --tenant-primary: #2563EB;
+  --tenant-primary-light: #3B82F6;
+  --tenant-success: #22C55E;
+  
+  /* Landlord Colors */
+  --landlord-primary: #0EA5E9;
+  --landlord-primary-light: #06B6D4;
+  --landlord-accent: #F59E0B;
+  
+  /* Shared */
+  --profile-success: #22C55E;
+  --profile-warning: #F59E0B;
+  --profile-error: #EF4444;
+  --profile-info: #3B82F6;
+  
+  --profile-bg: #F8FAFC;
+  --profile-card: #FFFFFF;
+  --profile-text-dark: #1E293B;
+  --profile-text-gray: #64748B;
+  --profile-text-muted: #94A3B8;
+  --profile-border: #E2E8F0;
+  
+  --profile-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --profile-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --profile-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  
+  --profile-font-display: 'Outfit', sans-serif;
+  --profile-font-body: 'Inter', sans-serif;
+}
+
+/* ============================================
+   BASE LAYOUT
+   ============================================ */
+
+.profile-page {
+  min-height: 100vh;
+  background: var(--profile-bg);
+  padding: 2rem 0 4rem;
+}
+
+.profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* ============================================
+   PROFILE HEADER CARD
+   ============================================ */
+
+.profile-header {
+  background: linear-gradient(135deg, var(--header-color-1) 0%, var(--header-color-2) 100%);
+  border-radius: 1.5rem;
+  padding: 3rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--profile-shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tenant Header */
+.profile-header.tenant {
+  --header-color-1: #2563EB;
+  --header-color-2: #3B82F6;
+}
+
+/* Landlord Header */
+.profile-header.landlord {
+  --header-color-1: #0EA5E9;
+  --header-color-2: #06B6D4;
+}
+
+.profile-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+  transform: translate(30%, -30%);
+}
+
+.profile-header-content {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-avatar-wrapper {
+  position: relative;
+}
+
+.profile-avatar {
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  border: 4px solid white;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
+}
+
+.profile-avatar-badge {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  background: var(--profile-success);
+  border: 3px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: white;
+}
+
+.profile-info {
+  flex: 1;
+  color: white;
+}
+
+.profile-name {
+  font-family: var(--profile-font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.profile-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  margin-bottom: 1rem;
+}
+
+.profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+}
+
+.profile-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.profile-meta-icon {
+  font-size: 1.125rem;
+}
+
+.profile-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  margin-top: 0.5rem;
+}
+
+.profile-status.active {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.profile-status.blocked {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.profile-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: currentColor;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.profile-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.profile-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  font-family: var(--profile-font-body);
+}
+
+.profile-btn-primary {
+  background: white;
+  color: var(--tenant-primary);
+}
+
+.landlord .profile-btn-primary {
+  color: var(--landlord-primary);
+}
+
+.profile-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.profile-btn-outline {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.profile-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: white;
+}
+
+/* ============================================
+   TAB NAVIGATION
+   ============================================ */
+
+.profile-tabs {
+  background: white;
+  border-radius: 1rem;
+  padding: 0.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--profile-shadow-md);
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.profile-tab {
+  flex: 1;
+  min-width: fit-content;
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.75rem;
+  font-family: var(--profile-font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--profile-text-gray);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.profile-tab:hover {
+  background: var(--profile-bg);
+  color: var(--profile-text-dark);
+}
+
+.profile-tab.active {
+  background: var(--tab-active-color);
+  color: white;
+}
+
+.tenant .profile-tab.active {
+  --tab-active-color: #2563EB;
+}
+
+.landlord .profile-tab.active {
+  --tab-active-color: #0EA5E9;
+}
+
+/* ============================================
+   TAB CONTENT
+   ============================================ */
+
+.profile-tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.profile-tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: var(--profile-shadow-md);
+  margin-bottom: 1.5rem;
+}
+
+.profile-card-title {
+  font-family: var(--profile-font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--profile-text-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-card-icon {
+  font-size: 1.5rem;
+  color: var(--card-icon-color);
+}
+
+.tenant .profile-card-icon {
+  --card-icon-color: #2563EB;
+}
+
+.landlord .profile-card-icon {
+  --card-icon-color: #0EA5E9;
+}
+
+/* ============================================
+   FORM ELEMENTS
+   ============================================ */
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.profile-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--profile-text-dark);
+}
+
+.profile-label-required::after {
+  content: ' *';
+  color: var(--profile-error);
+}
+
+.profile-input {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--profile-border);
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-family: var(--profile-font-body);
+  color: var(--profile-text-dark);
+  transition: all 0.2s ease;
+}
+
+.profile-input:focus {
+  outline: none;
+  border-color: var(--input-focus-color);
+  box-shadow: 0 0 0 3px var(--input-focus-shadow);
+}
+
+.tenant .profile-input:focus {
+  --input-focus-color: #2563EB;
+  --input-focus-shadow: rgba(37, 99, 235, 0.1);
+}
+
+.landlord .profile-input:focus {
+  --input-focus-color: #0EA5E9;
+  --input-focus-shadow: rgba(14, 165, 233, 0.1);
+}
+
+.profile-input.error {
+  border-color: var(--profile-error);
+}
+
+.profile-input::placeholder {
+  color: var(--profile-text-muted);
+}
+
+.profile-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.profile-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 3rem;
+}
+
+.profile-error-message {
+  font-size: 0.8125rem;
+  color: var(--profile-error);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* ============================================
+   FILE UPLOAD
+   ============================================ */
+
+.profile-avatar-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-avatar-preview {
+  width: 10rem;
+  height: 10rem;
+  border-radius: 50%;
+  border: 4px solid var(--preview-border-color);
+  overflow: hidden;
+  position: relative;
+}
+
+.tenant .profile-avatar-preview {
+  --preview-border-color: #2563EB;
+}
+
+.landlord .profile-avatar-preview {
+  --preview-border-color: #0EA5E9;
+}
+
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-upload-btn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid var(--upload-btn-color);
+  background: transparent;
+  color: var(--upload-btn-color);
+  font-family: var(--profile-font-body);
+}
+
+.tenant .profile-avatar-upload-btn {
+  --upload-btn-color: #2563EB;
+}
+
+.landlord .profile-avatar-upload-btn {
+  --upload-btn-color: #0EA5E9;
+}
+
+.profile-avatar-upload-btn:hover {
+  background: var(--upload-btn-color);
+  color: white;
+}
+
+/* ============================================
+   STATS GRID (Landlord)
+   ============================================ */
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.profile-stat-card {
+  background: linear-gradient(135deg, var(--stat-bg-1) 0%, var(--stat-bg-2) 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-stat-card.primary {
+  --stat-bg-1: #EFF6FF;
+  --stat-bg-2: #DBEAFE;
+}
+
+.profile-stat-card.success {
+  --stat-bg-1: #F0FDF4;
+  --stat-bg-2: #DCFCE7;
+}
+
+.profile-stat-card.warning {
+  --stat-bg-1: #FFFBEB;
+  --stat-bg-2: #FEF3C7;
+}
+
+.profile-stat-card.info {
+  --stat-bg-1: #F0F9FF;
+  --stat-bg-2: #E0F2FE;
+}
+
+.profile-stat-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  background: var(--stat-icon-bg);
+  color: var(--stat-icon-color);
+}
+
+.profile-stat-card.primary .profile-stat-icon {
+  --stat-icon-bg: #DBEAFE;
+  --stat-icon-color: #2563EB;
+}
+
+.profile-stat-card.success .profile-stat-icon {
+  --stat-icon-bg: #DCFCE7;
+  --stat-icon-color: #22C55E;
+}
+
+.profile-stat-card.warning .profile-stat-icon {
+  --stat-icon-bg: #FEF3C7;
+  --stat-icon-color: #F59E0B;
+}
+
+.profile-stat-card.info .profile-stat-icon {
+  --stat-icon-bg: #E0F2FE;
+  --stat-icon-color: #0EA5E9;
+}
+
+.profile-stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--profile-text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.profile-stat-label {
+  font-size: 0.875rem;
+  color: var(--profile-text-gray);
+  font-weight: 500;
+}
+
+/* ============================================
+   BUILDING LIST (Landlord)
+   ============================================ */
+
+.profile-building-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-building-item {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--profile-border);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+
+.profile-building-item:hover {
+  border-color: var(--landlord-primary);
+  box-shadow: var(--profile-shadow-md);
+}
+
+.profile-building-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  background: linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.profile-building-info {
+  flex: 1;
+}
+
+.profile-building-name {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--profile-text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.profile-building-address {
+  font-size: 0.875rem;
+  color: var(--profile-text-gray);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.profile-building-rooms {
+  font-size: 0.875rem;
+  color: var(--landlord-primary);
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.profile-building-action {
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--landlord-primary);
+  color: var(--landlord-primary);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-building-action:hover {
+  background: var(--landlord-primary);
+  color: white;
+}
+
+/* ============================================
+   RENTAL HISTORY (Tenant)
+   ============================================ */
+
+.profile-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-history-item {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--profile-border);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+
+.profile-history-item:hover {
+  border-color: var(--tenant-primary);
+  box-shadow: var(--profile-shadow-md);
+}
+
+.profile-history-image {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.profile-history-info {
+  flex: 1;
+}
+
+.profile-history-title {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--profile-text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.profile-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--profile-text-gray);
+  margin-bottom: 0.75rem;
+}
+
+.profile-history-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.profile-contract-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.profile-contract-badge.active {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.profile-contract-badge.expired {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.profile-history-action {
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--tenant-primary);
+  color: var(--tenant-primary);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.profile-history-action:hover {
+  background: var(--tenant-primary);
+  color: white;
+}
+
+/* ============================================
+   FAVORITES (Tenant)
+   ============================================ */
+
+.profile-favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.profile-favorite-card {
+  background: white;
+  border: 1px solid var(--profile-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.profile-favorite-card:hover {
+  border-color: var(--tenant-primary);
+  box-shadow: var(--profile-shadow-lg);
+  transform: translateY(-4px);
+}
+
+.profile-favorite-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  position: relative;
+}
+
+.profile-favorite-content {
+  padding: 1.25rem;
+}
+
+.profile-favorite-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--profile-text-dark);
+  margin-bottom: 0.75rem;
+}
+
+.profile-favorite-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--tenant-primary);
+  margin-bottom: 0.5rem;
+}
+
+.profile-favorite-price span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--profile-text-gray);
+}
+
+.profile-favorite-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.profile-favorite-status.available {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.profile-favorite-status.rented {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.profile-favorite-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.profile-favorite-btn {
+  flex: 1;
+  padding: 0.625rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-favorite-btn.primary {
+  background: var(--tenant-primary);
+  color: white;
+}
+
+.profile-favorite-btn.primary:hover {
+  background: var(--tenant-primary-light);
+}
+
+.profile-favorite-btn.outline {
+  background: transparent;
+  border: 1px solid var(--profile-border);
+  color: var(--profile-text-dark);
+}
+
+.profile-favorite-btn.outline:hover {
+  border-color: var(--profile-error);
+  color: var(--profile-error);
+}
+
+/* ============================================
+   PREFERENCES (Tenant AI Matching)
+   ============================================ */
+
+.profile-preferences-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.profile-preference-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.profile-tag {
+  padding: 0.5rem 1rem;
+  background: #EFF6FF;
+  color: var(--tenant-primary);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.profile-tag:hover {
+  background: var(--tenant-primary);
+  color: white;
+}
+
+.profile-tag.active {
+  background: var(--tenant-primary);
+  color: white;
+  border-color: var(--tenant-primary);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.profile-submit-btn {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-family: var(--profile-font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.profile-submit-btn.primary {
+  background: var(--btn-primary-color);
+  color: white;
+}
+
+.tenant .profile-submit-btn.primary {
+  --btn-primary-color: #2563EB;
+}
+
+.landlord .profile-submit-btn.primary {
+  --btn-primary-color: #0EA5E9;
+}
+
+.profile-submit-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.profile-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 0 1rem;
+  }
+  
+  .profile-header {
+    padding: 2rem 1.5rem;
+  }
+  
+  .profile-header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .profile-avatar {
+    width: 6rem;
+    height: 6rem;
+  }
+  
+  .profile-meta {
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  
+  .profile-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .profile-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .profile-tabs {
+    overflow-x: auto;
+  }
+  
+  .profile-tab {
+    min-width: 120px;
+  }
+  
+  .profile-card {
+    padding: 1.5rem;
+  }
+  
+  .profile-form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-favorites-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-building-item {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .profile-building-action {
+    width: 100%;
+  }
+  
+  .profile-history-item {
+    flex-direction: column;
+  }
+  
+  .profile-history-image {
+    width: 100%;
+    height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-name {
+    font-size: 1.5rem;
+  }
+  
+  .profile-stat-value {
+    font-size: 1.5rem;
+  }
+}

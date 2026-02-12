@@ -1,0 +1,36 @@
+flowchart TB
+    %% Thực thể bên ngoài
+    CHU_NHA[Chủ nhà]
+    NGUOI_THUE[Người thuê]
+
+    %% Kho dữ liệu
+    D_CHUNGCU[(Du lieu chung cu)]
+    D_PHONG[(Du lieu phong)]
+
+    %% Process chính
+    P1[Quan ly thong tin chung cu]
+    P2[Quan ly danh sach phong]
+    P3[Quan ly thong tin phong]
+    P4[Theo doi trang thai phong]
+
+    %% Luong du lieu - Chung cu
+    CHU_NHA -->|Nhap thong tin chung cu| P1
+    P1 -->|Luu thong tin chung cu| D_CHUNGCU
+    D_CHUNGCU -->|Thong tin chung cu| P2
+
+    %% Luong du lieu - Phong
+    CHU_NHA -->|Them sua xoa phong| P2
+    P2 -->|Danh sach phong| D_PHONG
+    D_PHONG -->|Thong tin phong| P3
+
+    %% Thong tin chi tiet phong
+    CHU_NHA -->|Cap nhat thong tin phong| P3
+    P3 -->|Luu thong tin phong| D_PHONG
+
+    %% Theo doi trang thai phong
+    P3 -->|Trang thai phong| P4
+    P4 -->|Cap nhat trang thai| D_PHONG
+
+    %% Nguoi thue xem thong tin
+    NGUOI_THUE -->|Xem danh sach phong| P4
+    P4 -->|Thong tin phong va trang thai| NGUOI_THUE

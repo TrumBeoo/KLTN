@@ -1,0 +1,31 @@
+flowchart TD
+    ET1[Người thuê]
+
+    %% Processes
+    P221[Quản lý hồ sơ người thuê]
+    P222[Quản lý lịch sử thuê phòng]
+    P223[Gửi yêu cầu đặt lịch xem]
+    P224[Thu thập dữ liệu cho AI Matching]
+
+    %% Data Stores
+    DS2[DB Người thuê]
+    DS3[DB Hợp đồng]
+    DS4[DB Lịch xem phòng]
+    DS6[DB AI / Matching]
+
+    %% Flows
+    ET1 --> P221
+    P221 --> DS2
+
+    ET1 --> P222
+    P222 --> DS3
+
+    ET1 --> P223
+    P223 --> DS4
+
+    ET1 --> P224
+    P224 --> DS6
+
+    DS2 --> ET1
+    DS3 --> ET1
+    DS4 --> ET1

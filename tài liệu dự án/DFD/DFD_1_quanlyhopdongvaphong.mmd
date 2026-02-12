@@ -1,0 +1,29 @@
+flowchart TB
+    %% Thuc the ben ngoai
+    CHU_NHA[Chu nha]
+    NGUOI_THUE[Nguoi thue]
+
+    %% Kho du lieu
+    D_HOPDONG[(Du lieu hop dong)]
+    D_PHONG[(Du lieu phong)]
+    D_LICHSU[(Du lieu lich su thue)]
+
+    %% Process chinh
+    P1[Tao hop dong thue]
+    P2[Cap nhat trang thai phong]
+    P3[Luu lich su thue]
+
+    %% Tao hop dong thue
+    CHU_NHA -->|Nhap thong tin hop dong| P1
+    NGUOI_THUE -->|Xac nhan hop dong| P1
+    P1 -->|Luu thong tin hop dong| D_HOPDONG
+
+    %% Cap nhat trang thai phong
+    P1 -->|Hop dong duoc tao| P2
+    P2 -->|Trang thai phong| D_PHONG
+    D_PHONG -->|Thong tin phong cap nhat| CHU_NHA
+    D_PHONG -->|Thong tin phong cap nhat| NGUOI_THUE
+
+    %% Luu lich su thue
+    P1 -->|Thong tin hop dong| P3
+    P3 -->|Luu lich su thue| D_LICHSU

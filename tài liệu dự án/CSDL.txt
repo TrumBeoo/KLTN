@@ -1,0 +1,152 @@
+1. Table ROOM (Phòng)
+| Tên trường  | Kiểu DL     | Khóa | Khuôn dạng       | Ghi chú                                                       |
+| ----------- | ----------- | ---- | ---------------- | ------------------------------------------------------------- |
+| RoomID      | Char(10)    | PK   | Chữ + Số         | Mã phòng                                                      |
+| LandlordID  | Char(10)    | FK   | Chữ + Số         | Chủ nhà quản lý phòng                                         |
+| RoomType    | Char(20)    |      | Chữ              | Loại phòng: khép kín / ở ghép                                 |
+| Status      | Char(20)    |      | Chữ              | Trạng thái: trống, đã thuê, đã đặt, bảo trì, sắp hết hợp đồng |
+| Price       | Float(10,2) |      | Số thực          | Giá thuê cơ bản                                               |
+| Description | Char(255)   |      | Chữ + Số         | Mô tả phòng                                                   |
+| CreatedAt   | Datetime    |      | dd/mm/yyyy hh:mm | Ngày tạo phòng                                                |
+| UpdatedAt   | Datetime    |      | dd/mm/yyyy hh:mm | Ngày cập nhật cuối                                            |
+
+2. Table AMENITY (Tiện nghi)
+| Tên trường  | Kiểu DL   | Khóa | Khuôn dạng | Ghi chú                              |
+| ----------- | --------- | ---- | ---------- | ------------------------------------ |
+| AmenityID   | Char(10)  | PK   | Chữ + Số   | Mã tiện nghi                         |
+| Name        | Char(50)  |      | Chữ + Số   | Tên tiện nghi (Điều hòa, Nóng lạnh…) |
+| Description | Char(255) |      | Chữ + Số   | Mô tả (nếu cần)                      |
+
+3. Table ROOM_AMENITY (Liên kết phòng & tiện nghi)
+| Tên trường | Kiểu DL  | Khóa | Khuôn dạng | Ghi chú                |
+| ---------- | -------- | ---- | ---------- | ---------------------- |
+| RoomID     | Char(10) | PK   | Chữ + Số   | FK → ROOM.RoomID       |
+| AmenityID  | Char(10) | PK   | Chữ + Số   | FK → AMENITY.AmenityID |
+
+4. Table LANDLORD (Chủ nhà)
+| Tên trường | Kiểu DL  | Khóa | Khuôn dạng       | Ghi chú       |
+| ---------- | -------- | ---- | ---------------- | ------------- |
+| LandlordID | Char(10) | PK   | Chữ + Số         | Mã chủ nhà    |
+| Name       | Char(50) |      | Chữ + Số         | Tên chủ nhà   |
+| Phone      | Char(15) |      | Chữ + Số         | Số điện thoại |
+| Email      | Char(50) |      | Chữ + Số         | Email liên hệ |
+| CreatedAt  | Datetime |      | dd/mm/yyyy hh:mm | Ngày tạo      |
+| UpdatedAt  | Datetime |      | dd/mm/yyyy hh:mm | Ngày cập nhật |
+
+5. Table TENANT (Người thuê)
+| Tên trường | Kiểu DL     | Khóa | Khuôn dạng       | Ghi chú                |
+| ---------- | ----------- | ---- | ---------------- | ---------------------- |
+| TenantID   | Char(10)    | PK   | Chữ + Số         | Mã người thuê          |
+| Name       | Char(50)    |      | Chữ + Số         | Tên                    |
+| Age        | Int(3)      |      | Số nguyên        | Tuổi                   |
+| Budget     | Float(10,2) |      | Số thực          | Ngân sách              |
+| Habit      | Char(255)   |      | Chữ + Số         | Thói quen sinh hoạt    |
+| Preference | Char(255)   |      | Chữ + Số         | Sở thích, yêu cầu ghép |
+| Phone      | Char(15)    |      | Chữ + Số         | Số điện thoại          |
+| Email      | Char(50)    |      | Chữ + Số         | Email liên hệ          |
+| CreatedAt  | Datetime    |      | dd/mm/yyyy hh:mm | Ngày tạo               |
+| UpdatedAt  | Datetime    |      | dd/mm/yyyy hh:mm | Ngày cập nhật          |
+
+6. Table CONTRACT (Hợp đồng)
+| Tên trường | Kiểu DL     | Khóa | Khuôn dạng       | Ghi chú                                             |
+| ---------- | ----------- | ---- | ---------------- | --------------------------------------------------- |
+| ContractID | Char(10)    | PK   | Chữ + Số         | Mã hợp đồng                                         |
+| TenantID   | Char(10)    | FK   | Chữ + Số         | Người thuê                                          |
+| RoomID     | Char(10)    | FK   | Chữ + Số         | Phòng thuê                                          |
+| StartDate  | Datetime    |      | dd/mm/yyyy       | Ngày bắt đầu thuê                                   |
+| EndDate    | Datetime    |      | dd/mm/yyyy       | Ngày kết thúc thuê                                  |
+| Status     | Char(20)    |      | Chữ              | Trạng thái: đang thuê, sắp hết hạn, đã hết hợp đồng |
+| TotalPrice | Float(10,2) |      | Số thực          | Tổng tiền hợp đồng                                  |
+| Deposit    | Float(10,2) |      | Số thực          | Tiền cọc                                            |
+| CreatedAt  | Datetime    |      | dd/mm/yyyy hh:mm | Ngày tạo                                            |
+| UpdatedAt  | Datetime    |      | dd/mm/yyyy hh:mm | Ngày cập nhật                                       |
+
+7. Table VIEWING_SCHEDULE (Lịch xem phòng)
+| Tên trường | Kiểu DL  | Khóa | Khuôn dạng       | Ghi chú                                  |
+| ---------- | -------- | ---- | ---------------- | ---------------------------------------- |
+| ScheduleID | Char(10) | PK   | Chữ + Số         | Mã lịch xem                              |
+| TenantID   | Char(10) | FK   | Chữ + Số         | Người thuê                               |
+| RoomID     | Char(10) | FK   | Chữ + Số         | Phòng muốn xem                           |
+| DateTime   | Datetime |      | dd/mm/yyyy hh:mm | Ngày giờ xem                             |
+| Status     | Char(20) |      | Chữ              | Trạng thái: chờ duyệt, đã duyệt, từ chối |
+| CreatedAt  | Datetime |      | dd/mm/yyyy hh:mm | Ngày tạo                                 |
+| UpdatedAt  | Datetime |      | dd/mm/yyyy hh:mm | Ngày cập nhật                            |
+
+8. Table LISTING (Tin đăng)
+| Tên trường  | Kiểu DL   | Khóa | Khuôn dạng       | Ghi chú        |
+| ----------- | --------- | ---- | ---------------- | -------------- |
+| ListingID   | Char(10)  | PK   | Chữ + Số         | Mã tin đăng    |
+| RoomID      | Char(10)  | FK   | Chữ + Số         | Phòng liên kết |
+| LandlordID  | Char(10)  | FK   | Chữ + Số         | Chủ nhà        |
+| Title       | Char(100) |      | Chữ + Số         | Tiêu đề tin    |
+| Description | Char(255) |      | Chữ + Số         | Mô tả chi tiết |
+| CreatedAt   | Datetime  |      | dd/mm/yyyy hh:mm | Ngày tạo tin   |
+| UpdatedAt   | Datetime  |      | dd/mm/yyyy hh:mm | Ngày cập nhật  |
+
+9. Table AI_MATCHING (Gợi ý AI / Hybrid)
+| Tên trường | Kiểu DL    | Khóa | Khuôn dạng       | Ghi chú          |
+| ---------- | ---------- | ---- | ---------------- | ---------------- |
+| MatchingID | Char(10)   | PK   | Chữ + Số         | Mã gợi ý         |
+| TenantID   | Char(10)   | FK   | Chữ + Số         | Người thuê       |
+| RoomID     | Char(10)   | FK   | Chữ + Số         | Phòng gợi ý      |
+| Score      | Float(5,2) |      | Số thực          | Điểm tương thích |
+| Reason     | Char(255)  |      | Chữ + Số         | Giải thích gợi ý |
+| CreatedAt  | Datetime   |      | dd/mm/yyyy hh:mm | Ngày gợi ý       |
+
+10. Table NOTIFICATION (Thông báo)
+| Tên trường     | Kiểu DL   | Khóa | Khuôn dạng       | Ghi chú                               |
+| -------------- | --------- | ---- | ---------------- | ------------------------------------- |
+| NotificationID | Char(10)  | PK   | Chữ + Số         | Mã thông báo                          |
+| TargetID       | Char(10)  |      | Chữ + Số         | Mã người nhận (Tenant hoặc Landlord)  |
+| Content        | Char(MAX) |      | Chữ + Số         | Nội dung thông báo                    |
+| Type           | Char(20)  |      | Chữ              | Loại: hợp đồng, phòng trống, lịch xem |
+| CreatedAt      | Datetime  |      | dd/mm/yyyy hh:mm | Ngày tạo                              |
+| Status         | Char(20)  |      | Chữ              | Trạng thái: đã đọc / chưa đọc         |
+
+11. Table ACCOUNT (TÀI KHOẢN)
+| Tên trường  | Kiểu DL  | Khóa | Khuôn dạng                | Ghi chú              |
+| ----------- | -------- | ---- | ------------------------- | -------------------- |
+| AccountID   | Char(10) | PK   | Chữ + Số                  | Mã tài khoản         |
+| Username    | Char(30) |      | Chữ + Số                  | Tên đăng nhập        |
+| Password    | Char(64) |      | Chuỗi mã hóa              | Mật khẩu             |
+| Role        | Char(20) |      | Tenant / Landlord / Admin | Phân quyền           |
+| Status      | Char(15) |      | Active / Block            | Trạng thái tài khoản |
+
+12. Table LOCATION (VỊ TRÍ / ĐỊNH VỊ)
+| Tên trường | Kiểu DL   | Khóa | Khuôn dạng | Ghi chú          |
+| ---------- | --------- | ---- | ---------- | ---------------- |
+| LocationID | Char(10)  | PK   | Chữ + Số   | Mã vị trí        |
+| Address    | Char(100) |      | Chữ        | Địa chỉ chi tiết |
+| Ward       | Char(30)  |      | Chữ        | Phường           |
+| District   | Char(30)  |      | Chữ        | Quận             |
+| City       | Char(30)  |      | Chữ        | Thành phố        |
+| Latitude   | Float(8)  |      | Số thực    | Latitude         |
+| Longitude  | Float(8)  |      | Số thực    | Longitude        |
+
+13. Table ROOM_IMAGE (HÌNH ẢNH PHÒNG)
+| Tên trường  | Kiểu DL   | Khóa | Khuôn dạng | Ghi chú         |
+| ----------- | --------- | ---- | ---------- | --------------- |
+| ImageID     | Char(10)  | PK   | Chữ + Số   | Mã ảnh          |
+| RoomID      | Char(10)  | FK   | Chữ + Số   | Liên kết phòng  |
+| ImageURL    | Char(150) |      | URL        | Đường dẫn ảnh   |
+| Order       | Int(3)    |      | Số nguyên  | Thứ tự hiển thị |
+
+14. Table PAYMENT (THANH TOÁN)
+| Tên trường    | Kiểu DL   | Khóa | Khuôn dạng              | Ghi chú         |
+| ------------- | --------- | ---- | ----------------------- | --------------- |
+| PaymentID     | Char(10)  | PK   | Chữ + Số                | Mã thanh toán   |
+| ContractID    | Char(10)  | FK   | Chữ + Số                | Hợp đồng        |
+| PaymentDate   | Date      |      | dd/mm/yyyy              | Ngày thanh toán |
+| Amount        | Float(10) |      | Số thực dương           | Số tiền         |
+| Method        | Char(20)  |      | Tiền mặt / Chuyển khoản | Hình thức       |
+| Status        | Char(20)  |      | Đã TT / Chưa TT         | Trạng thái      |
+
+15. Table REVIEW (ĐÁNH GIÁ)
+| Tên trường  | Kiểu DL   | Khóa | Khuôn dạng | Ghi chú             |
+| ----------- | --------- | ---- | ---------- | ------------------- |
+| ReviewID    | Char(10)  | PK   | Chữ + Số   | Mã đánh giá         |
+| RoomID      | Char(10)  | FK   | Chữ + Số   | Phòng được đánh giá |
+| TenantID    | Char(10)  | FK   | Chữ + Số   | Người đánh giá      |
+| Rating      | Int(1)    |      | 1–5        | Điểm đánh giá       |
+| Content     | Char(200) |      | Chữ        | Nội dung đánh giá   |
+| ReviewDate  | Date      |      | dd/mm/yyyy | Ngày đánh giá       |

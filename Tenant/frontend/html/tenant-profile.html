@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hồ sơ của tôi - Rentify</title>
+  
+  <link rel="stylesheet" href="../css/profile-styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="profile-page tenant">
+  
+  <div class="profile-container">
+    
+    <!-- Back Button -->
+    <div style="padding: 1.5rem 0; border-bottom: 1px solid var(--profile-border);">
+      <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.5rem; color: var(--profile-text-secondary); text-decoration: none; font-size: 0.95rem;">
+        <i class="bi bi-arrow-left"></i>
+        <span>Quay lại Trang chủ</span>
+      </a>
+    </div>
+    
+    <!-- Profile Header -->
+    <div class="profile-header tenant">
+      <div class="profile-header-content">
+        
+        <div class="profile-avatar-wrapper">
+          <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" class="profile-avatar">
+          <div class="profile-avatar-badge">
+            <i class="bi bi-check"></i>
+          </div>
+        </div>
+        
+        <div class="profile-info">
+          <h1 class="profile-name">Nguyễn Văn A</h1>
+          <div class="profile-role">
+            <i class="bi bi-person-check"></i>
+            <span>Người thuê</span>
+          </div>
+          
+          <div class="profile-meta">
+            <div class="profile-meta-item">
+              <i class="bi bi-envelope profile-meta-icon"></i>
+              <span>nguyenvana@email.com</span>
+            </div>
+            <div class="profile-meta-item">
+              <i class="bi bi-telephone profile-meta-icon"></i>
+              <span>0912 345 678</span>
+            </div>
+            <div class="profile-meta-item">
+              <i class="bi bi-calendar profile-meta-icon"></i>
+              <span>25 tuổi</span>
+            </div>
+          </div>
+          
+          <div class="profile-status active">
+            <span class="profile-status-dot"></span>
+            <span>Tài khoản hoạt động</span>
+          </div>
+        </div>
+        
+        <div class="profile-actions">
+          <button class="profile-btn profile-btn-primary" id="editProfileBtn">
+            <i class="bi bi-pencil"></i>
+            <span>Chỉnh sửa</span>
+          </button>
+          <button class="profile-btn profile-btn-outline" onclick="logout()">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Đăng xuất</span>
+          </button>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="profile-tabs">
+      <button class="profile-tab active" data-tab="personal">
+        <i class="bi bi-person profile-tab-icon"></i>
+        <span>Thông tin cá nhân</span>
+      </button>
+      <button class="profile-tab" data-tab="preferences">
+        <i class="bi bi-sliders profile-tab-icon"></i>
+        <span>Sở thích & Tiêu chí</span>
+      </button>
+      <button class="profile-tab" data-tab="history">
+        <i class="bi bi-clock-history profile-tab-icon"></i>
+        <span>Lịch sử thuê phòng</span>
+      </button>
+      <button class="profile-tab" data-tab="favorites">
+        <i class="bi bi-heart profile-tab-icon"></i>
+        <span>Phòng yêu thích</span>
+      </button>
+      <button class="profile-tab" data-tab="password">
+        <i class="bi bi-key profile-tab-icon"></i>
+        <span>Đổi mật khẩu</span>
+      </button>
+    </div>
+    
+    <!-- Tab Content: Personal Info -->
+    <div class="profile-tab-content active" id="personal">
+      <div class="profile-card">
+        <h2 class="profile-card-title">
+          <i class="bi bi-person-circle profile-card-icon"></i>
+          <span>Thông tin cá nhân</span>
+        </h2>
+        
+        <form class="profile-form" id="personalInfoForm">
+          
+          <!-- Avatar Upload -->
+          <div class="profile-form-group">
+            <label class="profile-label">Ảnh đại diện</label>
+            <div class="profile-avatar-upload">
+              <div class="profile-avatar-preview">
+                <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" id="avatarPreview">
+              </div>
+              <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+              <button type="button" class="profile-avatar-upload-btn" onclick="document.getElementById('avatarInput').click()">
+                <i class="bi bi-upload"></i>
+                Tải ảnh lên
+              </button>
+            </div>
+          </div>
+          
+          <div class="profile-form-row">
+            <div class="profile-form-group">
+              <label class="profile-label profile-label-required">Họ và tên</label>
+              <input type="text" class="profile-input" value="Nguyễn Văn A" required>
+            </div>
+            
+            <div class="profile-form-group">
+              <label class="profile-label profile-label-required">Tuổi</label>
+              <input type="number" class="profile-input" value="25" min="18" max="100" required>
+            </div>
+          </div>
+          
+          <div class="profile-form-row">
+            <div class="profile-form-group">
+              <label class="profile-label profile-label-required">Số điện thoại</label>
+              <input type="tel" class="profile-input" value="0912 345 678" id="phoneInput" required>
+              <div class="profile-error-message" id="phoneError" style="display: none;">
+                <i class="bi bi-exclamation-circle"></i>
+                <span>Số điện thoại không hợp lệ (10-11 số)</span>
+              </div>
+            </div>
+            
+            <div class="profile-form-group">
+              <label class="profile-label profile-label-required">Email</label>
+              <input type="email" class="profile-input" value="nguyenvana@email.com" id="emailInput" required>
+              <div class="profile-error-message" id="emailError" style="display: none;">
+                <i class="bi bi-exclamation-circle"></i>
+                <span>Email không hợp lệ</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-form-row">
+            <div class="profile-form-group">
+              <label class="profile-label">Nghề nghiệp</label>
+              <input type="text" class="profile-input" value="Nhân viên văn phòng" placeholder="Nhập nghề nghiệp">
+            </div>
+            
+            <div class="profile-form-group">
+              <label class="profile-label">Giới tính</label>
+              <select class="profile-input profile-select">
+                <option>Nam</option>
+                <option>Nữ</option>
+                <option>Khác</option>
+              </select>
+            </div>
+          </div>
+          
+          <button type="submit" class="profile-submit-btn primary">
+            <i class="bi bi-check-circle"></i>
+            <span>Lưu thay đổi</span>
+          </button>
+          
+        </form>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Preferences (AI Matching) -->
+    <div class="profile-tab-content" id="preferences">
+      <div class="profile-card">
+        <h2 class="profile-card-title">
+          <i class="bi bi-robot profile-card-icon"></i>
+          <span>Thông tin cho AI Matching</span>
+        </h2>
+        
+        <form class="profile-form">
+          
+          <div class="profile-preferences-grid">
+            
+            <div class="profile-preference-item">
+              <label class="profile-label">Ngân sách dự kiến (triệu VNĐ/tháng)</label>
+              <div class="profile-form-row">
+                <div class="profile-form-group">
+                  <input type="number" class="profile-input" value="3" placeholder="Từ" min="0">
+                </div>
+                <div class="profile-form-group">
+                  <input type="number" class="profile-input" value="5" placeholder="Đến" min="0">
+                </div>
+              </div>
+            </div>
+            
+            <div class="profile-preference-item">
+              <label class="profile-label">Thói quen sinh hoạt</label>
+              <div class="profile-tags">
+                <span class="profile-tag active">🌙 Đi ngủ sớm</span>
+                <span class="profile-tag">🌅 Dậy sớm</span>
+                <span class="profile-tag active">🎵 Thích yên tĩnh</span>
+                <span class="profile-tag">🎸 Thích nhạc</span>
+                <span class="profile-tag">🍳 Nấu ăn thường xuyên</span>
+                <span class="profile-tag active">🚭 Không hút thuốc</span>
+                <span class="profile-tag">🍺 Uống rượu bia</span>
+                <span class="profile-tag active">🐕 Nuôi thú cưng</span>
+              </div>
+            </div>
+            
+            <div class="profile-preference-item">
+              <label class="profile-label">Tiêu chí ở ghép (quan trọng → ít quan trọng)</label>
+              <div class="profile-tags">
+                <span class="profile-tag active">👥 Cùng giới tính</span>
+                <span class="profile-tag active">💰 Cùng mức thu nhập</span>
+                <span class="profile-tag">🎓 Cùng độ tuổi</span>
+                <span class="profile-tag active">🧹 Gọn gàng sạch sẽ</span>
+                <span class="profile-tag">🎮 Cùng sở thích</span>
+                <span class="profile-tag active">🕐 Cùng lịch sinh hoạt</span>
+              </div>
+            </div>
+            
+            <div class="profile-preference-item">
+              <label class="profile-label">Khu vực ưu tiên</label>
+              <textarea class="profile-input profile-textarea" placeholder="VD: Quận 1, Quận 3, Phú Nhuận">Quận 1, Quận 3, Phú Nhuận</textarea>
+            </div>
+            
+            <div class="profile-preference-item">
+              <label class="profile-label">Tiện nghi cần thiết</label>
+              <div class="profile-tags">
+                <span class="profile-tag active">📶 Wifi</span>
+                <span class="profile-tag active">❄️ Điều hòa</span>
+                <span class="profile-tag">🔥 Nóng lạnh</span>
+                <span class="profile-tag active">🚿 Khép kín</span>
+                <span class="profile-tag">🧺 Máy giặt chung</span>
+                <span class="profile-tag active">🏍️ Chỗ để xe</span>
+                <span class="profile-tag">🔒 An ninh 24/7</span>
+              </div>
+            </div>
+            
+          </div>
+          
+          <button type="submit" class="profile-submit-btn primary">
+            <i class="bi bi-check-circle"></i>
+            <span>Lưu sở thích</span>
+          </button>
+          
+        </form>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Rental History -->
+    <div class="profile-tab-content" id="history">
+      <div class="profile-card">
+        <h2 class="profile-card-title">
+          <i class="bi bi-clock-history profile-card-icon"></i>
+          <span>Lịch sử thuê phòng</span>
+        </h2>
+        
+        <div class="profile-history-list">
+          
+          <div class="profile-history-item">
+            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400" alt="Room" class="profile-history-image">
+            <div class="profile-history-info">
+              <h3 class="profile-history-title">Phòng Studio Quận 1</h3>
+              <div class="profile-history-meta">
+                <div class="profile-history-meta-item">
+                  <i class="bi bi-calendar"></i>
+                  <span>01/01/2024 - 31/12/2024</span>
+                </div>
+                <div class="profile-history-meta-item">
+                  <i class="bi bi-cash"></i>
+                  <span>4.5 triệu/tháng</span>
+                </div>
+              </div>
+              <span class="profile-contract-badge active">
+                <i class="bi bi-check-circle"></i>
+                Đang thuê
+              </span>
+            </div>
+            <button class="profile-history-action">
+              <i class="bi bi-file-text"></i>
+              Xem hợp đồng
+            </button>
+          </div>
+          
+          <div class="profile-history-item">
+            <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400" alt="Room" class="profile-history-image">
+            <div class="profile-history-info">
+              <h3 class="profile-history-title">Phòng trọ Tân Bình</h3>
+              <div class="profile-history-meta">
+                <div class="profile-history-meta-item">
+                  <i class="bi bi-calendar"></i>
+                  <span>01/06/2023 - 31/12/2023</span>
+                </div>
+                <div class="profile-history-meta-item">
+                  <i class="bi bi-cash"></i>
+                  <span>3.2 triệu/tháng</span>
+                </div>
+              </div>
+              <span class="profile-contract-badge expired">
+                <i class="bi bi-x-circle"></i>
+                Đã kết thúc
+              </span>
+            </div>
+            <button class="profile-history-action">
+              <i class="bi bi-file-text"></i>
+              Xem hợp đồng
+            </button>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Favorites -->
+    <div class="profile-tab-content" id="favorites">
+      <div class="profile-card">
+        <h2 class="profile-card-title">
+          <i class="bi bi-heart-fill profile-card-icon"></i>
+          <span>Phòng yêu thích (3)</span>
+        </h2>
+        
+        <div class="profile-favorites-grid">
+          
+          <div class="profile-favorite-card">
+            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400" alt="Room" class="profile-favorite-image">
+            <div class="profile-favorite-content">
+              <h3 class="profile-favorite-title">Phòng Studio Cao Cấp</h3>
+              <div class="profile-favorite-price">
+                4.5 triệu <span>/tháng</span>
+              </div>
+              <span class="profile-favorite-status available">
+                <i class="bi bi-check-circle"></i>
+                Còn trống
+              </span>
+              <div class="profile-favorite-actions">
+                <button class="profile-favorite-btn primary">
+                  <i class="bi bi-eye"></i>
+                  Xem chi tiết
+                </button>
+                <button class="profile-favorite-btn outline">
+                  <i class="bi bi-heart-fill"></i>
+                  Bỏ thích
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-favorite-card">
+            <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400" alt="Room" class="profile-favorite-image">
+            <div class="profile-favorite-content">
+              <h3 class="profile-favorite-title">Phòng Quận 3 Tiện Nghi</h3>
+              <div class="profile-favorite-price">
+                3.8 triệu <span>/tháng</span>
+              </div>
+              <span class="profile-favorite-status available">
+                <i class="bi bi-check-circle"></i>
+                Còn trống
+              </span>
+              <div class="profile-favorite-actions">
+                <button class="profile-favorite-btn primary">
+                  <i class="bi bi-eye"></i>
+                  Xem chi tiết
+                </button>
+                <button class="profile-favorite-btn outline">
+                  <i class="bi bi-heart-fill"></i>
+                  Bỏ thích
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-favorite-card">
+            <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400" alt="Room" class="profile-favorite-image">
+            <div class="profile-favorite-content">
+              <h3 class="profile-favorite-title">Chung Cư Mini Phú Nhuận</h3>
+              <div class="profile-favorite-price">
+                5.2 triệu <span>/tháng</span>
+              </div>
+              <span class="profile-favorite-status rented">
+                <i class="bi bi-x-circle"></i>
+                Đã thuê
+              </span>
+              <div class="profile-favorite-actions">
+                <button class="profile-favorite-btn primary">
+                  <i class="bi bi-eye"></i>
+                  Xem chi tiết
+                </button>
+                <button class="profile-favorite-btn outline">
+                  <i class="bi bi-heart-fill"></i>
+                  Bỏ thích
+                </button>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Password -->
+    <div class="profile-tab-content" id="password">
+      <div class="profile-card">
+        <h2 class="profile-card-title">
+          <i class="bi bi-shield-lock profile-card-icon"></i>
+          <span>Đổi mật khẩu</span>
+        </h2>
+        
+        <form class="profile-form" id="passwordForm">
+          
+          <div class="profile-form-group">
+            <label class="profile-label profile-label-required">Mật khẩu hiện tại</label>
+            <input type="password" class="profile-input" id="currentPassword" placeholder="Nhập mật khẩu hiện tại" required>
+            <div class="profile-error-message" id="currentPasswordError" style="display: none;">
+              <i class="bi bi-exclamation-circle"></i>
+              <span>Mật khẩu hiện tại không đúng</span>
+            </div>
+          </div>
+          
+          <div class="profile-form-group">
+            <label class="profile-label profile-label-required">Mật khẩu mới</label>
+            <input type="password" class="profile-input" id="newPassword" placeholder="Tối thiểu 8 ký tự, có chữ và số" required>
+            <div class="profile-error-message" id="newPasswordError" style="display: none;">
+              <i class="bi bi-exclamation-circle"></i>
+              <span>Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ và số</span>
+            </div>
+          </div>
+          
+          <div class="profile-form-group">
+            <label class="profile-label profile-label-required">Xác nhận mật khẩu mới</label>
+            <input type="password" class="profile-input" id="confirmPassword" placeholder="Nhập lại mật khẩu mới" required>
+            <div class="profile-error-message" id="confirmPasswordError" style="display: none;">
+              <i class="bi bi-exclamation-circle"></i>
+              <span>Mật khẩu xác nhận không khớp</span>
+            </div>
+          </div>
+          
+          <button type="submit" class="profile-submit-btn primary">
+            <i class="bi bi-shield-check"></i>
+            <span>Cập nhật mật khẩu</span>
+          </button>
+          
+        </form>
+      </div>
+    </div>
+    
+  </div>
+  
+  <script src="../js/profile-script.js"></script>
+</body>
+</html>

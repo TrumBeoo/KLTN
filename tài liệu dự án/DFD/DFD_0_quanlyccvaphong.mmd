@@ -1,0 +1,25 @@
+flowchart TD
+    %% Thực thể bên ngoài
+    A1[Chủ nhà]
+    A2[Người thuê]
+
+    %% Quy trình chính
+    B[Quản lý chung cư & phòng]
+
+    %% Kho dữ liệu
+    C1[CSDL Chung cư]
+    C2[CSDL Phòng]
+
+    %% Luồng dữ liệu từ Chủ nhà
+    A1 -->|Khai báo / cập nhật chung cư| B
+    A1 -->|Quản lý phòng| B
+
+    %% Quy trình tương tác với cơ sở dữ liệu
+    B -->|Lưu thông tin chung cư| C1
+    B -->|Lưu / cập nhật thông tin phòng| C2
+    C1 -->|Thông tin chung cư| B
+    C2 -->|Thông tin phòng / trạng thái| B
+
+    %% Người thuê tra cứu trạng thái phòng
+    A2 -->|Xem trạng thái phòng| B
+    B -->|Hiển thị trạng thái phòng| A2

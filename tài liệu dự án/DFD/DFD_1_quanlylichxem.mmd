@@ -1,0 +1,35 @@
+flowchart TB
+    %% Thuc the ben ngoai
+    NGUOI_THUE[Nguoi thue]
+    CHU_NHA[Chu nha]
+
+    %% Kho du lieu
+    D_LICHXEM[(Du lieu lich xem)]
+    D_PHONG[(Du lieu phong)]
+    D_THONGBAO[(Du lieu thong bao)]
+
+    %% Process chinh
+    P1[Dat lich xem phong]
+    P2[Xac nhan hoac tu choi lich xem]
+    P3[Cap nhat trang thai phong]
+    P4[Gui thong bao]
+
+    %% Dat lich xem
+    NGUOI_THUE -->|Yeu cau dat lich| P1
+    P1 -->|Luu lich xem| D_LICHXEM
+    P1 -->|Thong tin phong| D_PHONG
+
+    %% Chu nha xu ly lich xem
+    CHU_NHA -->|Xac nhan hoac tu choi| P2
+    D_LICHXEM -->|Thong tin lich xem| P2
+    P2 -->|Cap nhat lich xem| D_LICHXEM
+
+    %% Cap nhat trang thai phong
+    P2 -->|Trang thai lich| P3
+    P3 -->|Trang thai phong| D_PHONG
+
+    %% Gui thong bao
+    P3 -->|Su kien cap nhat| P4
+    P4 -->|Thong bao cho nguoi thue| NGUOI_THUE
+    P4 -->|Thong bao cho chu nha| CHU_NHA
+    P4 -->|Luu thong bao| D_THONGBAO

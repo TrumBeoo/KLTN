@@ -1,0 +1,36 @@
+flowchart TD
+    A[Bắt đầu] --> B[Truy cập chức năng<br/>Quản lý phòng]
+    B --> C[Hiển thị danh sách phòng]
+
+    C --> D{Chọn hành động}
+
+    %% ===== ADD ROOM =====
+    D -->|Thêm phòng| E[Nhập thông tin phòng]
+    E --> F[Tạo / Kiểm tra Room ID]
+    F --> G[Chọn loại phòng<br/>Khép kín / Ở ghép]
+    G --> H[Gắn tiện nghi<br/>Điều hòa, nóng lạnh, giường...]
+    H --> I[Thiết lập trạng thái phòng<br/>Trống / Đã thuê / Đặt lịch / Bảo trì]
+    I --> J[Lưu phòng vào hệ thống]
+    J --> C
+
+    %% ===== EDIT ROOM =====
+    D -->|Sửa phòng| K[Chọn phòng cần sửa]
+    K --> L[Cập nhật thông tin phòng]
+    L --> H
+    L --> I
+    L --> J
+
+    %% ===== DELETE ROOM =====
+    D -->|Xóa phòng| M[Chọn phòng cần xóa]
+    M --> N{Phòng đang được thuê?}
+    N -->|Có| O[Thông báo không thể xóa]
+    O --> C
+    N -->|Không| P[Xóa phòng]
+    P --> C
+
+    %% ===== VIEW ROOM =====
+    D -->|Xem chi tiết| Q[Hiển thị thông tin phòng]
+    Q --> R[Hiển thị lịch sử thuê<br/>Người thuê + thời gian]
+    R --> C
+
+    C --> S[Kết thúc]

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý phòng - Rentify Landlord</title>
+  
+  <link rel="stylesheet" href="../css/landlord-styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <style>
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+    
+    .form-group-full {
+      grid-column: 1 / -1;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ll-text-primary);
+      margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select, .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--ll-border);
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-family: var(--ll-font-body);
+      transition: all 0.2s ease;
+    }
+    
+    .form-control:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--ll-primary);
+      box-shadow: 0 0 0 3px var(--ll-primary-subtle);
+    }
+    
+    .form-textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .amenities-checkboxes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem;
+      border: 1px solid var(--ll-border);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .checkbox-item:hover {
+      background-color: var(--ll-bg-hover);
+      border-color: var(--ll-primary);
+    }
+    
+    .checkbox-item input:checked + label {
+      font-weight: 600;
+      color: var(--ll-primary);
+    }
+    
+    .upload-zone {
+      border: 2px dashed var(--ll-border);
+      border-radius: 0.75rem;
+      padding: 2rem;
+      text-align: center;
+      background-color: var(--ll-bg-hover);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .upload-zone:hover {
+      border-color: var(--ll-primary);
+      background-color: var(--ll-primary-subtle);
+    }
+    
+    .upload-zone.active {
+      border-color: var(--ll-primary);
+      background-color: var(--ll-primary-subtle);
+    }
+    
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .modal-overlay.show {
+      display: flex;
+    }
+    
+    .modal-dialog {
+      background-color: white;
+      border-radius: 1rem;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--ll-shadow-xl);
+    }
+    
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--ll-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .modal-title {
+      font-family: var(--ll-font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ll-text-primary);
+    }
+    
+    .modal-close {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.5rem;
+      border: none;
+      background-color: transparent;
+      color: var(--ll-text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .modal-close:hover {
+      background-color: var(--ll-bg-hover);
+    }
+    
+    .modal-body {
+      padding: 1.5rem;
+    }
+    
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid var(--ll-border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+    
+    .filter-bar {
+      background-color: var(--ll-bg-card);
+      border: 1px solid var(--ll-border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    
+    .filter-item {
+      flex: 1;
+      min-width: 200px;
+    }
+  </style>
+</head>
+<body class="landlord-layout">
+  
+  <!-- Sidebar (same as dashboard) -->
+  <aside class="landlord-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🏠</div>
+      <span class="sidebar-brand-text">Rentify</span>
+    </div>
+    
+    <nav>
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+          <a href="landlord-dashboard.html" class="sidebar-nav-link">
+            <i class="bi bi-speedometer2 sidebar-nav-icon"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li class="sidebar-nav-item">
+          <a href="manage-building.html" class="sidebar-nav-link">
+            <i class="bi bi-building sidebar-nav-icon"></i>
+            <span>Quản lý chung cư</span>
+          </a>
+        </li>
+        <li class="sidebar-nav-item">
+          <a href="manage-rooms.html" class="sidebar-nav-link active">
+            <i class="bi bi-door-closed sidebar-nav-icon"></i>
+            <span>Quản lý phòng</span>
+          </a>
+        </li>
+        <li class="sidebar-nav-item">
+          <a href="manage-listings.html" class="sidebar-nav-link">
+            <i class="bi bi-megaphone sidebar-nav-icon"></i>
+            <span>Tin đăng</span>
+          </a>
+        </li>
+        <li class="sidebar-nav-item">
+          <a href="viewing-management.html" class="sidebar-nav-link">
+            <i class="bi bi-calendar-check sidebar-nav-icon"></i>
+            <span>Lịch xem phòng</span>
+            <span class="sidebar-nav-badge">5</span>
+          </a>
+        </li>
+        <li class="sidebar-nav-item">
+          <a href="contracts.html" class="sidebar-nav-link">
+            <i class="bi bi-file-text sidebar-nav-icon"></i>
+            <span>Hợp đồng & Thanh toán</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+  
+  <!-- Main Content -->
+  <main class="landlord-main">
+    
+    <!-- Navbar -->
+    <nav class="landlord-navbar">
+      <h1 class="navbar-title">Quản lý phòng</h1>
+      
+      <div class="navbar-actions">
+        <div class="navbar-search">
+          <i class="bi bi-search navbar-search-icon"></i>
+          <input type="text" placeholder="Tìm phòng...">
+        </div>
+        
+        <button class="btn-ll-primary" id="addRoomBtn">
+          <i class="bi bi-plus-circle"></i>
+          Thêm phòng mới
+        </button>
+      </div>
+    </nav>
+    
+    <!-- Content -->
+    <div class="landlord-content">
+      
+      <!-- Quick Stats -->
+      <div class="kpi-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 2rem;">
+        <div class="kpi-card" style="--kpi-color: var(--ll-text-primary); --kpi-icon-bg: var(--ll-bg-hover);">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Tổng phòng</div>
+              <div class="kpi-value" style="font-size: 2rem;">24</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card available">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Trống</div>
+              <div class="kpi-value" style="font-size: 2rem;">8</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card rented">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Đã thuê</div>
+              <div class="kpi-value" style="font-size: 2rem;">14</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card viewing">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Đặt lịch</div>
+              <div class="kpi-value" style="font-size: 2rem;">2</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="kpi-card" style="--kpi-color: var(--ll-status-maintenance); --kpi-icon-bg: var(--ll-status-maintenance-bg);">
+          <div class="kpi-header">
+            <div>
+              <div class="kpi-title">Bảo trì</div>
+              <div class="kpi-value" style="font-size: 2rem;">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-item">
+          <label class="form-label">Chung cư</label>
+          <select class="form-select">
+            <option>Tất cả</option>
+            <option>Tòa A</option>
+            <option>Tòa B</option>
+            <option>Tòa C</option>
+          </select>
+        </div>
+        
+        <div class="filter-item">
+          <label class="form-label">Trạng thái</label>
+          <select class="form-select">
+            <option>Tất cả</option>
+            <option>Trống</option>
+            <option>Đã thuê</option>
+            <option>Đã đặt lịch</option>
+            <option>Bảo trì</option>
+          </select>
+        </div>
+        
+        <div class="filter-item">
+          <label class="form-label">Loại phòng</label>
+          <select class="form-select">
+            <option>Tất cả</option>
+            <option>Studio</option>
+            <option>1 phòng ngủ</option>
+            <option>2 phòng ngủ</option>
+            <option>Duplex</option>
+          </select>
+        </div>
+        
+        <div class="filter-item">
+          <label class="form-label">Sắp xếp</label>
+          <select class="form-select">
+            <option>Mới nhất</option>
+            <option>Giá: Thấp → Cao</option>
+            <option>Giá: Cao → Thấp</option>
+            <option>Diện tích</option>
+          </select>
+        </div>
+        
+        <button class="btn-ll-outline" style="padding: 0.75rem 1.5rem;">
+          <i class="bi bi-arrow-clockwise"></i>
+          Reset
+        </button>
+      </div>
+      
+      <!-- Rooms Table -->
+      <div class="data-table-container">
+        <div class="data-table-header">
+          <h2 class="data-table-title">Danh sách phòng (24)</h2>
+          <div style="display: flex; gap: 1rem;">
+            <button class="btn-ll-outline">
+              <i class="bi bi-download"></i>
+              Xuất Excel
+            </button>
+          </div>
+        </div>
+        
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mã phòng</th>
+              <th>Tòa</th>
+              <th>Loại phòng</th>
+              <th>Diện tích</th>
+              <th>Giá thuê</th>
+              <th>Số người</th>
+              <th>Trạng thái</th>
+              <th>Cập nhật</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1 -->
+            <tr>
+              <td><strong>A-101</strong></td>
+              <td>Tòa A</td>
+              <td>Studio</td>
+              <td>25m²</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">5.500.000đ</td>
+              <td>2 người</td>
+              <td><span class="status-badge available"><span class="status-badge-dot"></span>Trống</span></td>
+              <td>2 ngày trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn edit-room-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Row 2 -->
+            <tr>
+              <td><strong>A-102</strong></td>
+              <td>Tòa A</td>
+              <td>1 phòng ngủ</td>
+              <td>35m²</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">7.000.000đ</td>
+              <td>2 người</td>
+              <td><span class="status-badge rented"><span class="status-badge-dot"></span>Đã thuê</span></td>
+              <td>1 tuần trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn edit-room-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa" disabled><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Row 3 -->
+            <tr>
+              <td><strong>B-201</strong></td>
+              <td>Tòa B</td>
+              <td>Studio</td>
+              <td>22m²</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">4.800.000đ</td>
+              <td>2 người</td>
+              <td><span class="status-badge viewing"><span class="status-badge-dot"></span>Đã đặt lịch</span></td>
+              <td>3 ngày trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn edit-room-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Row 4 -->
+            <tr>
+              <td><strong>B-202</strong></td>
+              <td>Tòa B</td>
+              <td>2 phòng ngủ</td>
+              <td>50m²</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">10.000.000đ</td>
+              <td>4 người</td>
+              <td><span class="status-badge rented"><span class="status-badge-dot"></span>Đã thuê</span></td>
+              <td>2 tuần trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn edit-room-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa" disabled><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Row 5 -->
+            <tr>
+              <td><strong>C-301</strong></td>
+              <td>Tòa C</td>
+              <td>Duplex</td>
+              <td>65m²</td>
+              <td style="font-weight: 600; color: var(--ll-primary);">15.000.000đ</td>
+              <td>4 người</td>
+              <td><span class="status-badge available"><span class="status-badge-dot"></span>Trống</span></td>
+              <td>1 ngày trước</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="action-btn" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                  <button class="action-btn edit-room-btn" title="Sửa"><i class="bi bi-pencil"></i></button>
+                  <button class="action-btn danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        <div style="padding: 1.5rem; border-top: 1px solid var(--ll-border); display: flex; justify-content: space-between; align-items: center;">
+          <div style="color: var(--ll-text-muted); font-size: 0.875rem;">
+            Hiển thị 1-5 trong tổng số 24 phòng
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="action-btn" disabled><i class="bi bi-chevron-left"></i></button>
+            <button class="action-btn" style="background-color: var(--ll-primary); color: white; border-color: var(--ll-primary);">1</button>
+            <button class="action-btn">2</button>
+            <button class="action-btn">3</button>
+            <button class="action-btn">4</button>
+            <button class="action-btn"><i class="bi bi-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+  
+  <!-- Modal Thêm/Sửa Phòng -->
+  <div class="modal-overlay" id="roomModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">Thêm phòng mới</h2>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <form id="roomForm">
+          <div class="form-grid">
+            
+            <div>
+              <label class="form-label">Tòa nhà *</label>
+              <select class="form-select" required>
+                <option value="">Chọn tòa</option>
+                <option>Tòa A</option>
+                <option>Tòa B</option>
+                <option>Tòa C</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="form-label">Mã phòng *</label>
+              <input type="text" class="form-control" placeholder="VD: A-101" required>
+            </div>
+            
+            <div>
+              <label class="form-label">Loại phòng *</label>
+              <select class="form-select" required>
+                <option value="">Chọn loại phòng</option>
+                <option>Studio</option>
+                <option>1 phòng ngủ</option>
+                <option>2 phòng ngủ</option>
+                <option>Duplex</option>
+                <option>Ở ghép</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="form-label">Diện tích (m²) *</label>
+              <input type="number" class="form-control" placeholder="25" required>
+            </div>
+            
+            <div>
+              <label class="form-label">Giá thuê (VND) *</label>
+              <input type="number" class="form-control" placeholder="5500000" required>
+            </div>
+            
+            <div>
+              <label class="form-label">Số người tối đa *</label>
+              <input type="number" class="form-control" placeholder="2" required>
+            </div>
+            
+            <div class="form-group-full">
+              <label class="form-label">Tiện nghi</label>
+              <div class="amenities-checkboxes">
+                <label class="checkbox-item">
+                  <input type="checkbox" value="wifi">
+                  <span><i class="bi bi-wifi"></i> Wifi</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="ac">
+                  <span><i class="bi bi-snow"></i> Điều hòa</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="heater">
+                  <span><i class="bi bi-droplet"></i> Nóng lạnh</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="washer">
+                  <span><i class="bi bi-moisture"></i> Máy giặt</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="fridge">
+                  <span><i class="bi bi-subtract"></i> Tủ lạnh</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="tv">
+                  <span><i class="bi bi-tv"></i> Ti vi</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="balcony">
+                  <span><i class="bi bi-building"></i> Ban công</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="parking">
+                  <span><i class="bi bi-car-front"></i> Bãi xe</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" value="security">
+                  <span><i class="bi bi-shield-check"></i> Bảo vệ 24/7</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-group-full">
+              <label class="form-label">Mô tả phòng</label>
+              <textarea class="form-textarea" placeholder="Mô tả chi tiết về phòng..."></textarea>
+            </div>
+            
+            <div class="form-group-full">
+              <label class="form-label">Hình ảnh phòng</label>
+              <div class="upload-zone" id="uploadZone">
+                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--ll-primary); margin-bottom: 1rem;"></i>
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">Kéo thả ảnh vào đây hoặc click để chọn</div>
+                <div style="font-size: 0.875rem; color: var(--ll-text-muted);">PNG, JPG lên đến 10MB (Tối đa 10 ảnh)</div>
+                <input type="file" multiple accept="image/*" style="display: none;" id="fileInput">
+              </div>
+              <div id="previewContainer" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;"></div>
+            </div>
+            
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn-ll-ghost" id="cancelBtn">Hủy</button>
+        <button class="btn-ll-primary" id="saveRoomBtn">
+          <i class="bi bi-check-circle"></i>
+          Lưu phòng
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="../js/auth-state.js"></script>
+  <script src="../js/permission-middleware.js"></script>
+  <script src="../js/landlord-script.js"></script>
+</body>
+</html>

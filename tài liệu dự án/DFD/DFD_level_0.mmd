@@ -1,0 +1,143 @@
+
+flowchart LR
+    %% ======================
+    %% TÁC NHÂN NGOÀI
+    %% ======================
+    Tenant([Người thuê])
+    Landlord([Chủ nhà])
+    Notify([Email / Notification System])
+
+    %% ======================
+    %% PROCESS CHÍNH
+    %% ======================
+    P1[Quản lý phòng & tiện nghi]
+    P2[Quản lý người dùng & hợp đồng]
+    P3[Quản lý đặt lịch xem phòng]
+    P4[Tự động hóa đăng tin]
+    P5[Matching AI / Hybrid]
+    P6[Thống kê & báo cáo]
+    P7[Thông báo & nhắc nhở]
+    P8[Bản đồ & định vị]
+
+    %% ======================
+    %% DATA STORE
+    %% ======================
+    DB1[(DB Phòng)]
+    DB2[(DB Người dùng)]
+    DB3[(DB Hợp đồng)]
+    DB4[(DB Lịch xem)]
+    DB5[(DB Tin đăng)]
+    DB6[(DB Matching / AI)]
+
+    %% ======================
+    %% LUỒNG TỪ TÁC NHÂN
+    %% ======================
+    Tenant -->|Tìm phòng / Hồ sơ cá nhân| P2
+    Tenant -->|Yêu cầu gợi ý| P5
+    Tenant -->|Đặt lịch xem| P3
+
+    Landlord -->|Cập nhật phòng & tiện nghi| P1
+    Landlord -->|Duyệt lịch xem| P3
+    Landlord -->|Quản lý hợp đồng| P2
+
+    %% ======================
+    %% PROCESS → DATA STORE
+    %% ======================
+    P1 --> DB1
+    P2 --> DB2
+    P2 --> DB3
+    P3 --> DB4
+    P4 --> DB5
+    P5 --> DB6
+
+    %% ======================
+    %% LIÊN KẾT GIỮA PROCESS
+    %% ======================
+    P1 --> P4
+    P4 --> P5
+    P2 --> P5
+    P3 --> P7
+    P5 --> P7
+    P8 --> P1
+    P8 --> P3
+
+    %% ======================
+    %% THỐNG KÊ & BÁO CÁO
+    %% ======================
+    DB1 --> P6
+    DB2 --> P6
+    DB3 --> P6
+    DB4 --> P6
+    DB5 --> P6
+    DB6 --> P6
+
+    P6 -->|Dashboard / Báo cáo| Landlord
+
+    %% ======================
+    %% THÔNG BÁO
+    %% ======================
+    P7 --> Notify
+    Notify --> Tenant
+    Notify --> Landlord
+
+    %% ======================
+    %% OUTPUT NGƯỜI DÙNG
+    %% ======================
+    P5 -->|Top N gợi ý| Tenant
+
+
+
+
+%%Thực thể ngoài (External Entities)
+
+%%Người thuê: tìm phòng, đặt lịch xem, nhận gợi ý AI, phản hồi thông báo
+
+%%Chủ nhà: quản lý phòng, upload dữ liệu, duyệt lịch xem
+
+%%Hệ thống Email / Notification: nhận dữ liệu để gửi cảnh báo
+
+%%Process (Quy trình / xử lý)
+
+%%P1: Quản lý phòng & tiện nghi → lưu trạng thái phòng, thông tin tiện nghi, hình ảnh
+
+%%P2: Quản lý người dùng & hợp đồng → xử lý hồ sơ người thuê, chủ nhà, hợp đồng
+
+%%P3: Quản lý đặt lịch xem phòng → kiểm tra phòng trống, duyệt lịch, lưu lịch sử
+
+%%P4: Tự động hóa đăng tin → xử lý dữ liệu phòng & tiện nghi → tạo tin đăng
+
+%%P5: Matching AI / Hybrid → tính điểm tương thích, trả Top N người phù hợp
+
+%%P6: Thống kê & báo cáo → tổng hợp dữ liệu từ các module → dashboard, báo cáo
+
+%%P7: Thông báo & nhắc nhở → cảnh báo hợp đồng, phòng trống, lịch xem
+
+%%P8: Hỗ trợ bản đồ / định vị → tính khoảng cách, lọc phòng, hiển thị bản đồ
+
+%%Data Store (Kho dữ liệu)
+
+%%DS1: Database phòng → trạng thái, loại phòng, tiện nghi, ảnh
+
+%%DS2: Database người thuê & chủ nhà → hồ sơ, lịch sử thuê, lịch sử tin đăng
+
+%%DS3: Database hợp đồng → thông tin hợp đồng, thời hạn, trạng thái
+
+%%DS4: Database đặt lịch xem → lịch xem phòng, phản hồi
+
+%%DS5: Database tin đăng → dữ liệu tin đăng, lượt xem, lượt liên hệ
+
+%%DS6: Database AI / Matching → hồ sơ, kết quả gợi ý, lịch sử chọn thích/bỏ qua
+
+%%Giải thích sơ đồ
+
+%%Người thuê (ET1): gửi dữ liệu hồ sơ, yêu cầu tìm phòng, nhận gợi ý AI, nhận cảnh báo.
+
+%%Chủ nhà (ET2): upload dữ liệu phòng, duyệt lịch, quản lý hợp đồng, nhận cảnh báo.
+
+%%Hệ thống Email/Notification (ET3): nhận dữ liệu từ module Thông báo & nhắc nhở để gửi cảnh báo.
+
+%%Các process (P1 → P8): xử lý nghiệp vụ riêng, chia sẻ dữ liệu qua Data Store.
+
+%%Data Store (DS1 → DS6): lưu trữ dữ liệu cốt lõi cho các module.
+
+%%Luồng dữ liệu: chỉ rõ dữ liệu đi từ đâu → đâu, tập trung vào tác nhân ngoài, process và kho dữ liệu, không đi sâu logic thực hiện chi tiết.

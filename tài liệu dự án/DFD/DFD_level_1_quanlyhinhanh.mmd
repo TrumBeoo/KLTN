@@ -1,0 +1,13 @@
+flowchart TD
+    ET1[Chủ nhà]
+    ET2[Người thuê]
+
+    ET1 --> P131(Upload ảnh phòng)
+    P131 --> P132(Chuẩn hóa ảnh resize, format)
+    P132 --> P133(Lưu metadata ảnh)
+    P133 --> DS1b[(DB Hình ảnh)]
+    P133 --> DS1[(DB Phòng)]
+    DS1 --> P134(Hiển thị ảnh trên tin đăng)
+    DS1b --> P134
+    P134 -- Hiển thị cho Chủ nhà --> ET1
+    P134 -- Hiển thị cho Người thuê --> ET2

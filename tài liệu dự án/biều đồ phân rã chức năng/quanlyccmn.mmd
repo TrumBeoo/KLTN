@@ -1,0 +1,60 @@
+flowchart TB
+    A[Quản lý chung cư mini và phòng trọ]
+
+    %% Cấp 1
+    A --> B[Khai báo chung cư]
+    A --> C[Thêm phòng]
+    A --> D[Sửa / Xóa phòng]
+    A --> E[Quản lý trạng thái phòng]
+
+    %% 2.1 Khai báo chung cư
+    B --> B1[Nhập thông tin chung cư]
+    B --> B2[Lưu thông tin chung cư]
+    B --> B3[Gán phòng thuộc chung cư]
+
+    B1 --> B11[Địa chỉ]
+    B1 --> B12[Khu vực]
+    B1 --> B13[Số tầng]
+    B1 --> B14[Mô tả chung cư]
+
+    %% 2.2 Thêm phòng
+    C --> C1[Nhập thông tin phòng]
+    C --> C2[Gắn tiện nghi và hình ảnh]
+    C --> C3[Kiểm tra dữ liệu hợp lệ]
+    C --> C4[Lưu phòng vào hệ thống]
+
+    C1 --> C11[Diện tích]
+    C1 --> C12[Giá thuê]
+    C1 --> C13[Loại phòng]
+    C1 --> C14[Số người tối đa]
+    C1 --> C15[Trạng thái]
+    C1 --> C16[Mô tả phòng]
+
+    C2 --> C21[Gắn tiện nghi]
+    C2 --> C22[Upload hình ảnh phòng]
+
+    %% 2.3 Sửa / Xóa phòng
+    D --> D1[Cập nhật thông tin phòng]
+    D --> D2[Xóa phòng]
+    D --> D3[Kiểm tra ràng buộc hợp đồng]
+
+    D1 --> D11[Sửa giá, diện tích, mô tả]
+    D1 --> D12[Cập nhật tiện nghi, hình ảnh]
+
+    D2 --> D21[Xác nhận xóa phòng]
+
+    D3 --> D31[Phòng có hợp đồng hiệu lực]
+    D3 --> D32[Cảnh báo trước khi xóa]
+
+    %% 2.4 Quản lý trạng thái phòng
+    E --> E1[Tự động cập nhật trạng thái]
+    E --> E2[Theo dõi điều kiện thay đổi]
+
+    E1 --> E11[Trạng thái: Trống]
+    E1 --> E12[Trạng thái: Đang thuê]
+    E1 --> E13[Trạng thái: Đang đặt lịch xem]
+    E1 --> E14[Trạng thái: Bảo trì]
+
+    E2 --> E21[Căn cứ hợp đồng]
+    E2 --> E22[Căn cứ lịch xem]
+    E2 --> E23[Căn cứ yêu cầu bảo trì]
