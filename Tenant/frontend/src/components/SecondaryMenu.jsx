@@ -19,7 +19,9 @@ const MenuContainer = styled(Box)(({ theme }) => ({
   zIndex: 99,
 }))
 
-const CategoryButton = styled(Button)(({ theme, isActive }) => ({
+const CategoryButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})(({ theme, isActive }) => ({
   textTransform: 'none',
   fontSize: '0.95rem',
   fontWeight: isActive ? 600 : 500,

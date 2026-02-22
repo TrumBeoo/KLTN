@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNotification } from '../hooks/useNotification'
+import NotificationModal from '../components/NotificationModal'
 import {
   Box,
   Container,
@@ -31,6 +33,7 @@ const API_URL = import.meta.env.VITE_API_URL
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [formData, setFormData] = useState({
     username: '',
     name: '',
@@ -70,19 +73,19 @@ export default function RegisterPage() {
     setLoading(true)
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp')
+      showError('Lỗi!', 'Mật khẩu xác nhận không khớp')
       setLoading(false)
       return
     }
 
     if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự')
+      showError('Lỗi!', 'Mật khẩu phải có ít nhất 6 ký tự')
       setLoading(false)
       return
     }
 
     if (!agreeTerms) {
-      setError('Vui lòng đồng ý với Điều khoản sử dụng')
+      showError('Lỗi!', 'Vui lòng đồng ý với Điều khoản sử dụng')
       setLoading(false)
       return
     }
@@ -106,9 +109,10 @@ export default function RegisterPage() {
         throw new Error(data.message || 'Đăng ký thất bại')
       }
 
-      navigate('/login')
+      showSuccess('Thành công!', 'Đăng ký thành công! Vui lòng đăng nhập.')
+      setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
-      setError(err.message)
+      showError('Lỗi đăng ký!', err.message)
     } finally {
       setLoading(false)
     }
@@ -329,6 +333,14 @@ export default function RegisterPage() {
             </Typography>
           </Box>
         </Card>
+        
+        <NotificationModal
+          open={notification.open}
+          onClose={hideNotification}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+        />
       </Container>
     </Box>
   )

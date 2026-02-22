@@ -17,7 +17,9 @@ import {
   IconButton,
   Badge,
   Button,
-  Container
+  Container,
+  Menu,
+  MenuItem
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -37,14 +39,14 @@ import {
 } from '@mui/icons-material'
 
 const SIDEBAR_WIDTH = 260
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
 
 const menuItems = [
   { label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { label: 'Quản lý chung cư', icon: ApartmentIcon, path: '/manage-building' },
+  { label: 'Quản lý chung cư', icon: ApartmentIcon, path: '/manage-buildings' },
   { label: 'Quản lý phòng', icon: DoorIcon, path: '/manage-rooms' },
   { label: 'Tin đăng', icon: AnnouncementIcon, path: '/listings' },
-  { label: 'Lịch xem phòng', icon: CalendarIcon, path: '/viewing', badge: 5 },
+  { label: 'Lịch xem phòng', icon: CalendarIcon, path: '/viewing-schedules' },
   { label: 'Hợp đồng & Thanh toán', icon: ContractIcon, path: '/contracts' }
 ]
 
@@ -60,6 +62,8 @@ export default function LandlordLayout() {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [user, setUser] = useState(null)
+  const [notificationAnchor, setNotificationAnchor] = useState(null)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -89,6 +93,9 @@ export default function LandlordLayout() {
   }
 
   const isActive = (path) => location.pathname === path
+
+  const handleNotificationOpen = (e) => setNotificationAnchor(e.currentTarget)
+  const handleNotificationClose = () => setNotificationAnchor(null)
 
   const SidebarContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -260,11 +267,31 @@ export default function LandlordLayout() {
                 }}
               />
 
-              <IconButton>
-                <Badge badgeContent={3} color="error">
+              <IconButton onClick={handleNotificationOpen}>
+                <Badge badgeContent={unreadCount} color="error">
                   <NotificationsIcon />
                 </Badge>
               </IconButton>
+
+              <Menu
+                anchorEl={notificationAnchor}
+                open={!!notificationAnchor}
+                onClose={handleNotificationClose}
+              >
+                {unreadCount > 0 ? (
+                  <>
+                    <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                      {unreadCount} thông báo chưa đọc
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={handleNotificationClose}>Xem tất cả thông báo</MenuItem>
+                  </>
+                ) : (
+                  <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'black' }}>
+                    Không có thông báo nào
+                  </MenuItem>
+                )}
+              </Menu>
 
               <Button
                 variant="contained"

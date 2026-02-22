@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Grid,
@@ -18,7 +18,9 @@ import {
   Button,
   Select,
   MenuItem,
-  FormControl
+  FormControl,
+  CircularProgress,
+  Alert
 } from '@mui/material'
 import {
   TrendingUp as TrendingUpIcon,
@@ -30,6 +32,7 @@ import {
   Close as CloseIcon,
   ArrowRight as ArrowRightIcon
 } from '@mui/icons-material'
+import { dashboardService } from '../utils/dashboardService'
 
 const KPICard = ({ title, value, change, isPositive, icon: Icon, color = 'primary' }) => (
   <Card sx={{ position: 'relative', overflow: 'hidden' }}>
@@ -77,67 +80,159 @@ const KPICard = ({ title, value, change, isPositive, icon: Icon, color = 'primar
   </Card>
 )
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, displayStatus }) => {
+  const currentStatus = displayStatus || status;
   const statusConfig = {
     available: { label: 'Trống', color: 'success' },
+    pending_viewing: { label: 'Chờ duyệt', color: 'warning' },
+    viewing: { label: 'Đã đặt lịch', color: 'info' },
     rented: { label: 'Đã thuê', color: 'error' },
-    viewing: { label: 'Đã đặt lịch', color: 'info' }
+    maintenance: { label: 'Bảo trì', color: 'warning' }
   }
-  const config = statusConfig[status] || statusConfig.available
+  const config = statusConfig[currentStatus] || statusConfig.available
   return <Chip label={config.label} color={config.color} variant="outlined" size="small" />
 }
 
 export default function LandlordDashboard() {
-  const [timeRange, setTimeRange] = useState('month')
+  const [timeRange, setTimeRange] = useState('6months')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [dashboardData, setDashboardData] = useState({
+    stats: null,
+    pendingViewings: [],
+    availableRooms: []
+  })
 
-  const pendingViewings = [
-    {
-      id: 1,
-      tenant: { name: 'Trần Văn A', phone: '0912 345 678', avatar: 'https://i.pravatar.cc/150?img=1' },
-      room: { code: 'Studio A-101', floor: 'Tầng 1, Tòa A' },
-      date: '15/02/2025',
-      time: '10:00 - 11:00',
-      note: 'Tôi muốn xem phòng vào buổi sáng'
-    },
-    {
-      id: 2,
-      tenant: { name: 'Nguyễn Thị B', phone: '0987 654 321', avatar: 'https://i.pravatar.cc/150?img=2' },
-      room: { code: '1PN B-205', floor: 'Tầng 2, Tòa B' },
-      date: '16/02/2025',
-      time: '14:00 - 15:00',
-      note: 'Có thể xem vào cuối tuần không?'
-    },
-    {
-      id: 3,
-      tenant: { name: 'Lê Văn C', phone: '0901 234 567', avatar: 'https://i.pravatar.cc/150?img=3' },
-      room: { code: 'Studio C-302', floor: 'Tầng 3, Tòa C' },
-      date: '17/02/2025',
-      time: '17:00 - 18:00',
-      note: 'Muốn xem phòng sau giờ làm'
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Check if user is authenticated
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Vui lòng đăng nhập để xem dashboard')
+        return
+      }
+      
+      const [statsResponse, viewingsResponse, roomsResponse] = await Promise.all([
+        dashboardService.getStats(),
+        dashboardService.getPendingViewings(),
+        dashboardService.getAvailableRooms()
+      ])
+
+      setDashboardData({
+        stats: statsResponse.data,
+        pendingViewings: viewingsResponse.data,
+        availableRooms: roomsResponse.data
+      })
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      if (error.message.includes('Authentication failed')) {
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+      } else if (error.message.includes('No authentication token')) {
+        setError('Vui lòng đăng nhập để xem dashboard')
+      } else {
+        setError('Không thể tải dữ liệu dashboard')
+      }
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
-  const availableRooms = [
-    { code: 'A-101', type: 'Studio', price: '5.500.000đ', area: '25m²', status: 'available', updated: '2 ngày trước' },
-    { code: 'B-203', type: '1 phòng ngủ', price: '7.000.000đ', area: '35m²', status: 'available', updated: '3 ngày trước' },
-    { code: 'C-405', type: 'Studio', price: '4.800.000đ', area: '22m²', status: 'viewing', updated: '1 tuần trước' }
-  ]
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount)
+  }
+
+  const formatDateTime = (dateTimeString) => {
+    const date = new Date(dateTimeString)
+    return {
+      date: date.toLocaleDateString('vi-VN'),
+      time: date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    }
+  }
+
+  const getTimeSince = (dateString) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffTime = Math.abs(now - date)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 1) return '1 ngày trước'
+    if (diffDays < 7) return `${diffDays} ngày trước`
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} tuần trước`
+    return `${Math.ceil(diffDays / 30)} tháng trước`
+  }
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+        <Button onClick={fetchDashboardData} sx={{ ml: 2 }}>Thử lại</Button>
+      </Alert>
+    )
+  }
+
+  const { stats, pendingViewings, availableRooms } = dashboardData
 
   return (
     <Box>
       {/* KPI Grid */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <KPICard title="Tổng số phòng" value="24" change="+2 phòng mới" isPositive color="primary" icon={() => '🏠'} />
+          <KPICard 
+            title="Tổng số phòng" 
+            value={stats?.totalRooms || 0} 
+            change={`${stats?.availableRooms || 0} phòng trống`} 
+            isPositive 
+            color="primary" 
+            icon={() => '🏠'} 
+          />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <KPICard title="Phòng trống" value="8" change="-3 so với tháng trước" isPositive={false} color="success" icon={() => '🚪'} />
+          <KPICard 
+            title="Phòng trống" 
+            value={stats?.availableRooms || 0} 
+            change={`${(stats?.pendingViewingRooms || 0) + (stats?.viewingRooms || 0)} có lịch xem`} 
+            isPositive={stats?.availableRooms > 0} 
+            color="success" 
+            icon={() => '🚪'} 
+          />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <KPICard title="Đang cho thuê" value="14" change="+3 hợp đồng mới" isPositive color="error" icon={() => '👥'} />
+          <KPICard 
+            title="Đang cho thuê" 
+            value={stats?.rentedRooms || 0} 
+            change={`Tỷ lệ: ${stats?.occupancyRate || 0}%`} 
+            isPositive 
+            color="error" 
+            icon={() => '👥'} 
+          />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <KPICard title="Sắp hết hợp đồng" value="3" change="Cần gia hạn" isPositive={false} color="warning" icon={() => '📅'} />
+          <KPICard 
+            title="Sắp hết hợp đồng" 
+            value={stats?.expiringContracts || 0} 
+            change="Trong 30 ngày tới" 
+            isPositive={false} 
+            color="warning" 
+            icon={() => '📅'} 
+          />
         </Grid>
       </Grid>
 
@@ -151,29 +246,32 @@ export default function LandlordDashboard() {
               </Typography>
               <FormControl size="small" sx={{ width: 150 }}>
                 <Select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
-                  <MenuItem value="month">Tháng này</MenuItem>
+                  <MenuItem value="6months">Tháng này</MenuItem>
                   <MenuItem value="lastMonth">Tháng trước</MenuItem>
                   <MenuItem value="3months">3 tháng</MenuItem>
-                  <MenuItem value="6months">6 tháng</MenuItem>
+                  <MenuItem value="year">6 tháng</MenuItem>
                 </Select>
               </FormControl>
             </Box>
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>
-                58%
+                {stats?.occupancyRate || 0}%
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                14/24 phòng đang thuê
+                {stats?.rentedRooms || 0}/{stats?.totalRooms || 0} phòng đang thuê
               </Typography>
               <Stack direction="row" spacing={2} justifyContent="center" sx={{ fontSize: '0.875rem' }}>
                 <Box>
-                  <Box component="span" sx={{ color: 'success.main', fontWeight: 600 }}>●</Box> Trống: 8
+                  <Box component="span" sx={{ color: 'success.main', fontWeight: 600 }}>●</Box> Trống: {stats?.availableRooms || 0}
                 </Box>
                 <Box>
-                  <Box component="span" sx={{ color: 'error.main', fontWeight: 600 }}>●</Box> Đã thuê: 14
+                  <Box component="span" sx={{ color: 'error.main', fontWeight: 600 }}>●</Box> Đã thuê: {stats?.rentedRooms || 0}
                 </Box>
                 <Box>
-                  <Box component="span" sx={{ color: 'info.main', fontWeight: 600 }}>●</Box> Đặt lịch: 2
+                  <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>●</Box> Chờ duyệt: {stats?.pendingViewingRooms || 0}
+                </Box>
+                <Box>
+                  <Box component="span" sx={{ color: 'info.main', fontWeight: 600 }}>●</Box> Đã đặt lịch: {stats?.viewingRooms || 0}
                 </Box>
               </Stack>
             </Box>
@@ -196,10 +294,10 @@ export default function LandlordDashboard() {
             </Box>
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>
-                75.5tr VND
+                {formatCurrency(stats?.currentMonthRevenue || 0)}
               </Typography>
-              <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
-                ↑ +12.5% so với tháng trước
+              <Typography variant="body2" sx={{ color: stats?.revenueChangePositive ? 'success.main' : 'error.main', fontWeight: 600 }}>
+                {stats?.revenueChangePositive ? '↑' : '↓'} {Math.abs(stats?.revenueChange || 0)}% so với tháng trước
               </Typography>
             </Box>
           </Card>
@@ -223,22 +321,26 @@ export default function LandlordDashboard() {
                 <TableCell>Người thuê</TableCell>
                 <TableCell>Phòng</TableCell>
                 <TableCell>Ngày & Giờ</TableCell>
-                <TableCell>Ghi chú</TableCell>
+                <TableCell>Trạng thái</TableCell>
                 <TableCell>Hành động</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {pendingViewings.map((viewing) => (
-                <TableRow key={viewing.id} hover>
+              {pendingViewings.length > 0 ? pendingViewings.map((viewing) => {
+                const dateTime = formatDateTime(viewing.DateTime)
+                return (
+                <TableRow key={viewing.ScheduleID} hover>
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <Avatar src={viewing.tenant.avatar} sx={{ width: 32, height: 32 }} />
+                      <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                        {viewing.TenantName?.charAt(0) || 'T'}
+                      </Avatar>
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {viewing.tenant.name}
+                          {viewing.TenantName}
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                          {viewing.tenant.phone}
+                          {viewing.TenantPhone}
                         </Typography>
                       </Box>
                     </Stack>
@@ -246,25 +348,25 @@ export default function LandlordDashboard() {
                   <TableCell>
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {viewing.room.code}
+                        {viewing.RoomCode}
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                        {viewing.room.floor}
+                        {viewing.BuildingName}
                       </Typography>
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {viewing.date}
+                        {dateTime.date}
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                        {viewing.time}
+                        {dateTime.time}
                       </Typography>
                     </Box>
                   </TableCell>
                   <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {viewing.note}
+                    {viewing.Status}
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={0.5}>
@@ -277,7 +379,15 @@ export default function LandlordDashboard() {
                     </Stack>
                   </TableCell>
                 </TableRow>
-              ))}
+              )}) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Không có lịch xem phòng chờ duyệt
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -307,16 +417,16 @@ export default function LandlordDashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {availableRooms.map((room) => (
-                <TableRow key={room.code} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{room.code}</TableCell>
-                  <TableCell>{room.type}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>{room.price}</TableCell>
-                  <TableCell>{room.area}</TableCell>
+              {availableRooms.length > 0 ? availableRooms.map((room) => (
+                <TableRow key={room.RoomID} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{room.RoomCode}</TableCell>
+                  <TableCell>{room.RoomType}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>{formatCurrency(room.Price)}</TableCell>
+                  <TableCell>{room.Area}m²</TableCell>
                   <TableCell>
-                    <StatusBadge status={room.status} />
+                    <StatusBadge status={room.Status} displayStatus={room.DisplayStatus} />
                   </TableCell>
-                  <TableCell>{room.updated}</TableCell>
+                  <TableCell>{getTimeSince(room.UpdatedAt)}</TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={0.5}>
                       <IconButton size="small" title="Xem">
@@ -331,7 +441,15 @@ export default function LandlordDashboard() {
                     </Stack>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Không có phòng trống
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>

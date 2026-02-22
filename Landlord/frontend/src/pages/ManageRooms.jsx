@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNotification } from '../hooks/useNotification'
+import NotificationModal from '../components/NotificationModal'
 import {
   Box,
   Card,
@@ -40,28 +42,32 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material'
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, displayStatus }) => {
+  const currentStatus = displayStatus || status;
   const statusConfig = {
     available: { label: 'Trống', color: 'success' },
-    rented: { label: 'Đã thuê', color: 'error' },
+    pending_viewing: { label: 'Chờ duyệt', color: 'warning' },
     viewing: { label: 'Đã đặt lịch', color: 'info' },
+    rented: { label: 'Đã thuê', color: 'error' },
     maintenance: { label: 'Bảo trì', color: 'warning' }
   }
-  const config = statusConfig[status] || statusConfig.available
+  const config = statusConfig[currentStatus] || statusConfig.available
   return <Chip label={config.label} color={config.color} variant="outlined" size="small" />
 }
 
-const RoomForm = ({ open, onClose, room = null }) => {
-  const [formData, setFormData] = useState(room || {
-    building: '',
-    code: '',
-    type: '',
+const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
+  const { notification, showSuccess, showError, hideNotification } = useNotification()
+  const [formData, setFormData] = useState({
+    buildingId: '',
+    roomCode: '',
+    roomType: '',
     area: '',
     price: '',
     maxPeople: '',
     amenities: [],
     description: ''
   })
+  const [loading, setLoading] = useState(false)
 
   const amenitiesList = [
     { value: 'wifi', label: 'Wifi' },
@@ -74,6 +80,43 @@ const RoomForm = ({ open, onClose, room = null }) => {
     { value: 'parking', label: 'Bãi xe' },
     { value: 'security', label: 'Bảo vệ 24/7' }
   ]
+
+  useEffect(() => {
+    if (room) {
+      setFormData({
+        buildingId: room.BuildingID || '',
+        roomCode: room.RoomCode || '',
+        roomType: room.RoomType || '',
+        area: room.Area || '',
+        price: room.Price || '',
+        maxPeople: room.MaxPeople || '',
+        amenities: (() => {
+          if (!room.Amenities) return [];
+          if (typeof room.Amenities === 'string') {
+            // Nếu là string, thử parse JSON trước, nếu không được thì split bằng comma
+            try {
+              return JSON.parse(room.Amenities);
+            } catch {
+              return room.Amenities.split(',').map(a => a.trim());
+            }
+          }
+          return Array.isArray(room.Amenities) ? room.Amenities : [];
+        })(),
+        description: room.Description || ''
+      })
+    } else {
+      setFormData({
+        buildingId: '',
+        roomCode: '',
+        roomType: '',
+        area: '',
+        price: '',
+        maxPeople: '',
+        amenities: [],
+        description: ''
+      })
+    }
+  }, [room, open])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -89,9 +132,20 @@ const RoomForm = ({ open, onClose, room = null }) => {
     }))
   }
 
-  const handleSubmit = () => {
-    console.log('Form data:', formData)
-    onClose()
+  const handleSubmit = async () => {
+    if (!formData.buildingId || !formData.roomCode || !formData.roomType || !formData.area || !formData.price || !formData.maxPeople) {
+      showError('Lỗi!', 'Vui lòng nhập đầy đủ thông tin bắt buộc')
+      return
+    }
+    setLoading(true)
+    try {
+      await onSubmit(formData)
+      onClose()
+    } catch (error) {
+      console.error('Submit error:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -107,22 +161,24 @@ const RoomForm = ({ open, onClose, room = null }) => {
           <FormControl fullWidth>
             <FormLabel>Tòa nhà *</FormLabel>
             <Select
-              name="building"
-              value={formData.building}
+              name="buildingId"
+              value={formData.buildingId}
               onChange={handleChange}
               size="small"
             >
               <MenuItem value="">Chọn tòa</MenuItem>
-              <MenuItem value="A">Tòa A</MenuItem>
-              <MenuItem value="B">Tòa B</MenuItem>
-              <MenuItem value="C">Tòa C</MenuItem>
+              {buildings.map(b => (
+                <MenuItem key={b.BuildingID} value={b.BuildingID}>
+                  {b.BuildingName}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
           <TextField
             label="Mã phòng *"
-            name="code"
-            value={formData.code}
+            name="roomCode"
+            value={formData.roomCode}
             onChange={handleChange}
             placeholder="VD: A-101"
             size="small"
@@ -132,8 +188,8 @@ const RoomForm = ({ open, onClose, room = null }) => {
           <FormControl fullWidth>
             <FormLabel>Loại phòng *</FormLabel>
             <Select
-              name="type"
-              value={formData.type}
+              name="roomType"
+              value={formData.roomType}
               onChange={handleChange}
               size="small"
             >
@@ -213,32 +269,125 @@ const RoomForm = ({ open, onClose, room = null }) => {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Hủy</Button>
-        <Button onClick={handleSubmit} variant="contained">
-          Lưu phòng
+        <Button onClick={onClose} disabled={loading}>Hủy</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+          {loading ? 'Đang lưu...' : 'Lưu phòng'}
         </Button>
       </DialogActions>
+      
+      <NotificationModal
+        open={notification.open}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </Dialog>
   )
 }
 
 export default function ManageRooms() {
+  const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
+  const [rooms, setRooms] = useState([])
+  const [buildings, setBuildings] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     building: '',
     status: '',
-    type: '',
-    sort: 'newest'
+    type: ''
   })
 
-  const rooms = [
-    { code: 'A-101', building: 'Tòa A', type: 'Studio', area: '25m²', price: '5.500.000đ', people: '2 người', status: 'available', updated: '2 ngày trước' },
-    { code: 'A-102', building: 'Tòa A', type: '1 phòng ngủ', area: '35m²', price: '7.000.000đ', people: '2 người', status: 'rented', updated: '1 tuần trước' },
-    { code: 'B-201', building: 'Tòa B', type: 'Studio', area: '22m²', price: '4.800.000đ', people: '2 người', status: 'viewing', updated: '3 ngày trước' },
-    { code: 'B-202', building: 'Tòa B', type: '2 phòng ngủ', area: '50m²', price: '10.000.000đ', people: '4 người', status: 'rented', updated: '2 tuần trước' },
-    { code: 'C-301', building: 'Tòa C', type: 'Duplex', area: '65m²', price: '15.000.000đ', people: '4 người', status: 'available', updated: '1 ngày trước' }
-  ]
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
+  const token = localStorage.getItem('token')
+
+  useEffect(() => {
+    fetchRooms()
+    fetchBuildings()
+  }, [filters])
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (filters.building) params.append('building', filters.building)
+      if (filters.status) params.append('status', filters.status)
+      if (filters.type) params.append('type', filters.type)
+
+      const response = await fetch(`${API_URL}/rooms?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setRooms(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch rooms error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchBuildings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/rooms/buildings/list`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setBuildings(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch buildings error:', error)
+    }
+  }
+
+  const handleSubmitRoom = async (formData) => {
+    try {
+      const method = selectedRoom ? 'PUT' : 'POST'
+      const url = selectedRoom ? `${API_URL}/rooms/${selectedRoom.RoomID}` : `${API_URL}/rooms`
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      })
+      const data = await response.json()
+      if (data.success) {
+        showSuccess('Thành công!', data.message)
+        fetchRooms()
+      } else {
+        showError('Lỗi!', data.message)
+      }
+    } catch (error) {
+      console.error('Submit room error:', error)
+      showError('Lỗi!', error.message)
+    }
+  }
+
+  const handleDeleteRoom = async (roomId) => {
+    if (!window.confirm('Bạn chắc chắn muốn xóa phòng này?')) return
+    try {
+      const response = await fetch(`${API_URL}/rooms/${roomId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (data.success) {
+        showSuccess('Thành công!', data.message)
+        fetchRooms()
+      } else {
+        showError('Lỗi!', data.message)
+      }
+    } catch (error) {
+      console.error('Delete room error:', error)
+      showError('Lỗi!', error.message)
+    }
+  }
 
   const handleOpenDialog = (room = null) => {
     setSelectedRoom(room)
@@ -250,16 +399,27 @@ export default function ManageRooms() {
     setSelectedRoom(null)
   }
 
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(price)
+  }
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('vi-VN')
+  }
+
   return (
     <Box>
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: 'Tổng phòng', value: '24' },
-          { label: 'Trống', value: '8' },
-          { label: 'Đã thuê', value: '14' },
-          { label: 'Đặt lịch', value: '2' },
-          { label: 'Bảo trì', value: '0' }
+          { label: 'Tổng phòng', value: rooms.length.toString() },
+          { label: 'Trống', value: rooms.filter(r => (r.DisplayStatus || r.Status) === 'available').length.toString() },
+          { label: 'Chờ duyệt', value: rooms.filter(r => (r.DisplayStatus || r.Status) === 'pending_viewing').length.toString() },
+          { label: 'Đã đặt lịch', value: rooms.filter(r => (r.DisplayStatus || r.Status) === 'viewing').length.toString() },
+          { label: 'Đã thuê', value: rooms.filter(r => r.Status === 'rented').length.toString() }
         ].map((stat, i) => (
           <Grid item xs={12} sm={6} md={2.4} key={i}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
@@ -286,9 +446,11 @@ export default function ManageRooms() {
                   onChange={(e) => setFilters({ ...filters, building: e.target.value })}
                 >
                   <MenuItem value="">Tất cả</MenuItem>
-                  <MenuItem value="A">Tòa A</MenuItem>
-                  <MenuItem value="B">Tòa B</MenuItem>
-                  <MenuItem value="C">Tòa C</MenuItem>
+                  {buildings.map(b => (
+                    <MenuItem key={b.BuildingID} value={b.BuildingID}>
+                      {b.BuildingName}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -341,10 +503,7 @@ export default function ManageRooms() {
             Danh sách phòng ({rooms.length})
           </Typography>
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" startIcon={<DownloadIcon />} size="small">
-              Xuất Excel
-            </Button>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} disabled={buildings.length === 0}>
               Thêm phòng
             </Button>
           </Stack>
@@ -366,46 +525,64 @@ export default function ManageRooms() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rooms.map((room) => (
-                <TableRow key={room.code} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{room.code}</TableCell>
-                  <TableCell>{room.building}</TableCell>
-                  <TableCell>{room.type}</TableCell>
-                  <TableCell>{room.area}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>{room.price}</TableCell>
-                  <TableCell>{room.people}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={room.status} />
-                  </TableCell>
-                  <TableCell>{room.updated}</TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5}>
-                      <IconButton size="small" title="Xem">
-                        <EyeIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" title="Sửa" onClick={() => handleOpenDialog(room)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" sx={{ color: 'error.main' }} title="Xóa">
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Stack>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ textAlign: 'center', py: 3 }}>
+                    <Typography>Đang tải...</Typography>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : rooms.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ textAlign: 'center', py: 3 }}>
+                    <Typography>Không có phòng nào</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rooms.map((room) => (
+                  <TableRow key={room.RoomID} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>{room.RoomCode}</TableCell>
+                    <TableCell>{room.BuildingName}</TableCell>
+                    <TableCell>{room.RoomType}</TableCell>
+                    <TableCell>{room.Area}m²</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>{formatPrice(room.Price)}</TableCell>
+                    <TableCell>{room.MaxPeople} người</TableCell>
+                    <TableCell>
+                      <StatusBadge status={room.Status} displayStatus={room.DisplayStatus} />
+                    </TableCell>
+                    <TableCell>{formatDate(room.UpdatedAt)}</TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" title="Sửa" onClick={() => handleOpenDialog(room)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" sx={{ color: 'error.main' }} title="Xóa" onClick={() => handleDeleteRoom(room.RoomID)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
 
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Hiển thị 1-5 trong tổng số {rooms.length} phòng
+            Tổng số {rooms.length} phòng
           </Typography>
-          <Pagination count={5} />
         </Box>
       </Card>
 
-      <RoomForm open={openDialog} onClose={handleCloseDialog} room={selectedRoom} />
+      <RoomForm open={openDialog} onClose={handleCloseDialog} room={selectedRoom} buildings={buildings} onSubmit={handleSubmitRoom} />
+      
+      <NotificationModal
+        open={notification.open}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </Box>
   )
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNotification } from '../hooks/useNotification'
+import NotificationModal from '../components/NotificationModal'
 import {
   Box,
   Container,
@@ -27,6 +29,7 @@ const API_URL = import.meta.env.VITE_API_URL
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [formData, setFormData] = useState({ username: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -60,7 +63,7 @@ export default function LoginPage() {
 
       navigate('/dashboard')
     } catch (err) {
-      setError(err.message)
+      showError('Lỗi đăng nhập!', err.message)
     } finally {
       setLoading(false)
     }
@@ -180,6 +183,14 @@ export default function LoginPage() {
             </Typography>
           </Box>
         </Card>
+        
+        <NotificationModal
+          open={notification.open}
+          onClose={hideNotification}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+        />
       </Container>
     </Box>
   )

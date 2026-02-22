@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box,
   Container,
@@ -55,6 +56,7 @@ const AuthCard = styled(Card)(({ theme }) => (({
 })))
 
 export default function LoginPage() {
+  useScrollToTop()
   const navigate = useNavigate()
   const { login } = useAuth()
   const [email, setEmail] = useState('')

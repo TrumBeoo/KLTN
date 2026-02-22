@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
@@ -15,6 +15,7 @@ import {
   IconButton,
   Tabs,
   Tab,
+  CircularProgress,
 } from '@mui/material'
 import {
   Star as StarIcon,
@@ -78,81 +79,51 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [tabValue, setTabValue] = useState(0)
   const [favorites, setFavorites] = useState({})
+  const [listings, setListings] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const listings = [
-    {
-      id: 1,
-      title: 'Studio cao cấp full nội thất',
-      location: '123 Nguyễn Huệ, P. Bến Nghé, Q1, TPHCM',
-      price: '5.500.000',
-      area: 25,
-      rating: 4.8,
-      reviews: 24,
-      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=350&fit=crop',
-      status: 'available',
-      views: 1200,
-    },
-    {
-      id: 2,
-      title: 'Phòng khép kín đầy đủ tiện nghi',
-      location: '456 Lê Lai, P. Bến Thành, Q1, TPHCM',
-      price: '4.200.000',
-      area: 20,
-      rating: 4.5,
-      reviews: 18,
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=350&fit=crop',
-      status: 'available',
-      views: 980,
-    },
-    {
-      id: 3,
-      title: 'Căn hộ mini view đẹp',
-      location: '789 Võ Văn Tần, P. 6, Q3, TPHCM',
-      price: '7.000.000',
-      area: 35,
-      rating: 4.9,
-      reviews: 32,
-      image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=500&h=350&fit=crop',
-      status: 'booking',
-      views: 856,
-    },
-    {
-      id: 4,
-      title: 'Phòng ở ghép sinh viên',
-      location: '321 Cách Mạng Tháng 8, P. 12, Q. Tân Bình',
-      price: '2.500.000',
-      area: 15,
-      rating: 4.2,
-      reviews: 11,
-      image: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=500&h=350&fit=crop',
-      status: 'available',
-      views: 742,
-    },
-    {
-      id: 5,
-      title: 'Duplex sang trọng 2 tầng',
-      location: '147 Đường D2, P. 25, Q. Bình Thạnh',
-      price: '12.000.000',
-      area: 55,
-      rating: 5.0,
-      reviews: 8,
-      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=500&h=350&fit=crop',
-      status: 'available',
-      views: 650,
-    },
-    {
-      id: 6,
-      title: 'Studio gần BV Chợ Rẫy',
-      location: '258 Hồng Bàng, P. 11, Q. 5',
-      price: '3.800.000',
-      area: 22,
-      rating: 4.6,
-      reviews: 15,
-      image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=500&h=350&fit=crop',
-      status: 'rented',
-      views: 520,
-    },
-  ]
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+  useEffect(() => {
+    fetchRooms()
+  }, [])
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/rooms?limit=10`)
+      const data = await response.json()
+      
+      if (data.success) {
+        const formattedRooms = data.data.map(room => ({
+          id: room.RoomID,
+          title: `${room.RoomType} - ${room.RoomCode}`,
+          location: room.BuildingAddress || 'Địa chỉ chưa cập nhật',
+          price: room.Price?.toString() || '0',
+          area: room.Area || 0,
+          rating: 4.5, // Default rating
+          reviews: Math.floor(Math.random() * 50) + 1,
+          image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=350&fit=crop',
+          status: (room.DisplayStatus || room.Status) === 'available' ? 'available' : 
+                  (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
+                  (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
+          views: Math.floor(Math.random() * 1000) + 100,
+          landlordName: room.LandlordName,
+          buildingName: room.BuildingName
+        }))
+        setListings(formattedRooms)
+      }
+    } catch (error) {
+      console.error('Fetch rooms error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatPrice = (price) => {
+    const numPrice = Math.floor(parseFloat(price))
+    return numPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  }
 
   const toggleFavorite = (id) => {
     setFavorites((prev) => ({
@@ -203,65 +174,77 @@ export default function HomePage() {
           Dựa trên lịch sử xem • ngân sách • khu vực quan tâm
         </Typography>
 
-        <Grid container spacing={3}>
-          {listings.slice(0, 3).map((listing) => (
-            <Grid item xs={12} sm={6} md={4} key={listing.id}>
-              <FeaturedCard>
-                <Box sx={{ position: 'relative', height: 250 }}>
-                  <CardMedia
-                    component="img"
-                    height="250"
-                    image={listing.image}
-                    alt={listing.title}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => toggleFavorite(listing.id)}
-                    sx={{ position: 'absolute', top: 8, left: 8, bgcolor: 'rgba(255,255,255,0.9)' }}
-                  >
-                    {favorites[listing.id] ? (
-                      <FavoriteIcon sx={{ color: '#F43F5E' }} />
-                    ) : (
-                      <FavoriteBorderIcon />
-                    )}
-                  </IconButton>
-                  <Box sx={{ position: 'absolute', top: 8, right: 8, bgcolor: listing.status === 'available' ? '#22C55E' : listing.status === 'booking' ? '#2563EB' : '#EF4444', color: 'white', px: 1, py: 0.5, borderRadius: 1, fontSize: '0.75rem', fontWeight: 600 }}>
-                    {listing.status === 'available' ? 'Trống' : listing.status === 'booking' ? 'Đang đặt lịch' : 'Đã thuê'}
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {listings.slice(0, 3).map((listing) => (
+              <Grid item xs={12} sm={6} md={4} key={listing.id}>
+                <FeaturedCard>
+                  <Box sx={{ position: 'relative', height: 250 }}>
+                    <CardMedia
+                      component="img"
+                      height="250"
+                      image={listing.image}
+                      alt={listing.title}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => toggleFavorite(listing.id)}
+                      sx={{ position: 'absolute', top: 8, left: 8, bgcolor: 'rgba(255,255,255,0.9)' }}
+                    >
+                      {favorites[listing.id] ? (
+                        <FavoriteIcon sx={{ color: '#F43F5E' }} />
+                      ) : (
+                        <FavoriteBorderIcon />
+                      )}
+                    </IconButton>
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, 
+                      bgcolor: listing.status === 'available' ? '#22C55E' : 
+                               listing.status === 'pending' ? '#F59E0B' :
+                               listing.status === 'booked' ? '#2563EB' : '#EF4444', 
+                      color: 'white', px: 1, py: 0.5, borderRadius: 1, fontSize: '0.75rem', fontWeight: 600 }}>
+                      {listing.status === 'available' ? 'Trống' : 
+                       listing.status === 'pending' ? 'Chờ duyệt' :
+                       listing.status === 'booked' ? 'Đã đặt lịch' : 'Đã thuê'}
+                    </Box>
                   </Box>
-                </Box>
-                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                    {listing.title}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} sx={{ mb: 2, alignItems: 'flex-start' }}>
-                    <LocationIcon sx={{ fontSize: '1rem', color: 'primary.main', mt: 0.25 }} />
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      {listing.location}
+                  <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                      {listing.title}
                     </Typography>
-                  </Stack>
-                  <Typography variant="h6" sx={{ color: 'primary.main', mb: 1, fontWeight: 600 }}>
-                    {listing.price.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}đ/tháng
-                  </Typography>
-                  <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                      <RulerIcon sx={{ fontSize: '1rem' }} />
-                      <Typography variant="body2">{listing.area}m²</Typography>
-                    </Stack>
-                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                      <StarIcon sx={{ fontSize: '1rem', color: '#F59E0B' }} />
-                      <Typography variant="body2">
-                        {listing.rating} ({listing.reviews})
+                    <Stack direction="row" spacing={0.5} sx={{ mb: 2, alignItems: 'flex-start' }}>
+                      <LocationIcon sx={{ fontSize: '1rem', color: 'primary.main', mt: 0.25 }} />
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {listing.buildingName || listing.location}
                       </Typography>
                     </Stack>
-                  </Stack>
-                  <Button variant="outlined" fullWidth sx={{ mt: 'auto' }} onClick={() => navigate(`/room/${listing.id}`)}>
-                    Xem chi tiết
-                  </Button>
-                </CardContent>
-              </FeaturedCard>
-            </Grid>
-          ))}
-        </Grid>
+                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 1, fontWeight: 600 }}>
+                      {formatPrice(listing.price)}đ/tháng
+                    </Typography>
+                    <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                        <RulerIcon sx={{ fontSize: '1rem' }} />
+                        <Typography variant="body2">{listing.area}m²</Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                        <StarIcon sx={{ fontSize: '1rem', color: '#F59E0B' }} />
+                        <Typography variant="body2">
+                          {listing.rating} ({listing.reviews})
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                    <Button variant="outlined" fullWidth sx={{ mt: 'auto' }} onClick={() => navigate(`/room/${listing.id}`)}>
+                      Xem chi tiết
+                    </Button>
+                  </CardContent>
+                </FeaturedCard>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Container>
 
       {/* Featured Rooms Section */}
@@ -324,7 +307,7 @@ export default function HomePage() {
                           </Typography>
                         </Stack>
                         <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                          {listing.price.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}đ/tháng
+                          {formatPrice(listing.price)}đ/tháng
                         </Typography>
                         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                           <StarIcon sx={{ fontSize: '1rem', color: '#F59E0B' }} />
@@ -368,17 +351,17 @@ export default function HomePage() {
                           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 0.5 }}>
                             <LocationIcon sx={{ fontSize: '0.875rem', color: 'primary.main' }} />
                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {listing.location.split(',')[1]}
+                              {listing.buildingName || 'Chưa cập nhật'}
                             </Typography>
                           </Stack>
                           <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                            {listing.price.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}đ
+                            {formatPrice(listing.price)}đ
                           </Typography>
                           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mt: 0.5 }}>
                             <RulerIcon sx={{ fontSize: '0.75rem' }} />
                             <Typography variant="caption">{listing.area}m²</Typography>
                             <ClockIcon sx={{ fontSize: '0.75rem', ml: 1 }} />
-                            <Typography variant="caption">2 giờ trước</Typography>
+                            <Typography variant="caption">Mới đăng</Typography>
                           </Stack>
                         </CardContent>
                       </Stack>
@@ -413,7 +396,7 @@ export default function HomePage() {
                     Khám phá bản đồ
                   </Button>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    <strong>248</strong> phòng trên bản đồ
+                    <strong>{listings.length}</strong> phòng trên bản đồ
                   </Typography>
                 </Stack>
               </Card>

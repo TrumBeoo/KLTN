@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
+const notificationRoutes = require('./routes/notifications');
+const viewingScheduleRoutes = require('./routes/viewingSchedule');
+const roomRoutes = require('./routes/rooms');
 
 const app = express();
 
@@ -25,6 +28,9 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api', viewingScheduleRoutes);
+app.use('/api', roomRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

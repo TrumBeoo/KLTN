@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNotification } from '../hooks/useNotification'
+import NotificationModal from '../components/NotificationModal'
 import {
   Box,
   Container,
@@ -26,6 +28,7 @@ import {
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
+  const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [step, setStep] = useState(0)
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -44,15 +47,16 @@ export default function ForgotPasswordPage() {
 
     try {
       if (!email) {
-        throw new Error('Vui lòng nhập email')
+        showError('Lỗi!', 'Vui lòng nhập email')
+        return
       }
 
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setSuccess('Mã xác nhận đã được gửi đến email của bạn')
+      showSuccess('Thành công!', 'Mã xác nhận đã được gửi đến email của bạn')
       setStep(1)
     } catch (err) {
-      setError(err.message)
+      showError('Lỗi!', err.message)
     } finally {
       setLoading(false)
     }
@@ -65,15 +69,16 @@ export default function ForgotPasswordPage() {
 
     try {
       if (!code) {
-        throw new Error('Vui lòng nhập mã xác nhận')
+        showError('Lỗi!', 'Vui lòng nhập mã xác nhận')
+        return
       }
 
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setSuccess('Mã xác nhận hợp lệ')
+      showSuccess('Thành công!', 'Mã xác nhận hợp lệ')
       setStep(2)
     } catch (err) {
-      setError(err.message)
+      showError('Lỗi!', err.message)
     } finally {
       setLoading(false)
     }
@@ -86,23 +91,26 @@ export default function ForgotPasswordPage() {
 
     try {
       if (!password || !confirmPassword) {
-        throw new Error('Vui lòng nhập mật khẩu')
+        showError('Lỗi!', 'Vui lòng nhập mật khẩu')
+        return
       }
 
       if (password !== confirmPassword) {
-        throw new Error('Mật khẩu xác nhận không khớp')
+        showError('Lỗi!', 'Mật khẩu xác nhận không khớp')
+        return
       }
 
       if (password.length < 8) {
-        throw new Error('Mật khẩu phải có ít nhất 8 ký tự')
+        showError('Lỗi!', 'Mật khẩu phải có ít nhất 8 ký tự')
+        return
       }
 
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setSuccess('Mật khẩu đã được đặt lại thành công')
+      showSuccess('Thành công!', 'Mật khẩu đã được đặt lại thành công')
       setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
-      setError(err.message)
+      showError('Lỗi!', err.message)
     } finally {
       setLoading(false)
     }
@@ -305,6 +313,14 @@ export default function ForgotPasswordPage() {
             </Typography>
           </Box>
         </Card>
+        
+        <NotificationModal
+          open={notification.open}
+          onClose={hideNotification}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+        />
       </Container>
     </Box>
   )

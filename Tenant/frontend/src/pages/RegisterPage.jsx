@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box,
   Container,
@@ -76,6 +77,7 @@ const StrengthBar = styled(Box)(({ theme, strength }) => (({
 })))
 
 export default function RegisterPage() {
+  useScrollToTop()
   const navigate = useNavigate()
   const { register } = useAuth()
   const [formData, setFormData] = useState({

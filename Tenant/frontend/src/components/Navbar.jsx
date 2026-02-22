@@ -30,48 +30,54 @@ import { styled } from '@mui/material/styles'
 import { useAuth } from '../hooks/useAuth'
 import FilterModal from './FilterModal'
 
-const StyledAppBar = styled(AppBar)(({ theme }) => (({
-  backgroundColor: theme.palette.background.paper,
-  color: theme.palette.text.primary,
-  borderBottom: `1px solid ${theme.palette.grey[200]}`,
-  boxShadow: theme.shadows[1],
-})))
-
-const SearchContainer = styled(Box)(({ theme }) => (({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-  backgroundColor: theme.palette.grey[50],
-  border: `2px solid ${theme.palette.grey[200]}`,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(0.4, 0.8),
-  flex: 1,
-  maxWidth: 400,
-  height: 36,
-  '&:focus-within': {
+const StyledAppBar = styled(AppBar)(({ theme }) => ((
+  {
     backgroundColor: theme.palette.background.paper,
-    borderColor: theme.palette.primary.main,
-    boxShadow: `0 0 0 3px ${theme.palette.primary.subtle}`,
-  },
-})))
+    color: theme.palette.text.primary,
+    borderBottom: `1px solid ${theme.palette.grey[200]}`,
+    boxShadow: theme.shadows[1],
+  }
+)))
 
-const NavLink = styled(Button)(({ theme }) => (({
-  color: theme.palette.text.secondary,
-  textTransform: 'none',
-  fontSize: '0.9rem',
-  fontWeight: 500,
-  transition: 'all 200ms ease',
-  '&:hover': {
-    color: theme.palette.primary.main,
-    backgroundColor: 'transparent',
-  },
-  '&.active': {
-    color: theme.palette.primary.main,
-    fontWeight: 600,
-    borderBottom: `2px solid ${theme.palette.primary.main}`,
-    paddingBottom: '2px',
-  },
-})))
+const SearchContainer = styled(Box)(({ theme }) => ((
+  {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+    backgroundColor: theme.palette.grey[50],
+    border: `2px solid ${theme.palette.grey[200]}`,
+    borderRadius: theme.shape.borderRadius,
+    padding: theme.spacing(0.4, 0.8),
+    flex: 1,
+    maxWidth: 400,
+    height: 36,
+    '&:focus-within': {
+      backgroundColor: theme.palette.background.paper,
+      borderColor: theme.palette.primary.main,
+      boxShadow: `0 0 0 3px ${theme.palette.primary.subtle}`,
+    },
+  }
+)))
+
+const NavLink = styled(Button)(({ theme }) => ((
+  {
+    color: theme.palette.text.secondary,
+    textTransform: 'none',
+    fontSize: '0.9rem',
+    fontWeight: 500,
+    transition: 'all 200ms ease',
+    '&:hover': {
+      color: theme.palette.primary.main,
+      backgroundColor: 'transparent',
+    },
+    '&.active': {
+      color: theme.palette.primary.main,
+      fontWeight: 600,
+      borderBottom: `2px solid ${theme.palette.primary.main}`,
+      paddingBottom: '2px',
+    },
+  }
+)))
 
 export default function Navbar() {
   const navigate = useNavigate()
@@ -79,12 +85,16 @@ export default function Navbar() {
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuAnchor, setUserMenuAnchor] = useState(null)
+  const [notificationAnchor, setNotificationAnchor] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const isActive = (path) => location.pathname === path
 
   const handleUserMenuOpen = (e) => setUserMenuAnchor(e.currentTarget)
   const handleUserMenuClose = () => setUserMenuAnchor(null)
+  const handleNotificationOpen = (e) => setNotificationAnchor(e.currentTarget)
+  const handleNotificationClose = () => setNotificationAnchor(null)
 
   const handleLogout = async () => {
     await logout()
@@ -198,11 +208,30 @@ export default function Navbar() {
               </Button>
             ) : (
               <>
-                <IconButton>
-                  <Badge badgeContent={3} color="error">
+                <IconButton onClick={handleNotificationOpen}>
+                  <Badge badgeContent={unreadCount} color="error">
                     <NotificationsIcon />
                   </Badge>
                 </IconButton>
+                <Menu
+                  anchorEl={notificationAnchor}
+                  open={!!notificationAnchor}
+                  onClose={handleNotificationClose}
+                >
+                  {unreadCount > 0 ? (
+                    <>
+                      <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                        {unreadCount} thông báo chưa đọc
+                      </MenuItem>
+                      <Divider />
+                      <MenuItem onClick={handleNotificationClose}>Xem tất cả thông báo</MenuItem>
+                    </>
+                  ) : (
+                    <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'black' }}>
+                      Không có thông báo
+                    </MenuItem>
+                  )}
+                </Menu>
                 <IconButton onClick={handleUserMenuOpen}>
                   <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
                     {user.name?.charAt(0).toUpperCase()}

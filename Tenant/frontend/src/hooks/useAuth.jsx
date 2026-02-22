@@ -33,7 +33,14 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = async () => {
-    await authAPI.logout()
+    const currentToken = localStorage.getItem('token')
+    if (currentToken) {
+      try {
+        await authAPI.logout()
+      } catch (error) {
+        // Ignore logout API errors (token might be expired)
+      }
+    }
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setToken(null)
