@@ -1,4 +1,7 @@
 const db = require('../config/database');
+const axios = require('axios');
+
+const LANDLORD_API_URL = process.env.LANDLORD_API_URL || 'http://localhost:3333/api';
 
 class ViewingScheduleService {
   async generateScheduleId() {
@@ -8,9 +11,9 @@ class ViewingScheduleService {
     
     if (rows.length > 0) {
       const lastId = parseInt(rows[0].ScheduleID.substring(3));
-      return 'SCH' + String(lastId + 1).padStart(7, '0');
+      return 'SCH' + String(lastId + 1).padStart(5, '0');
     }
-    return 'SCH0000001';
+    return 'SCH00001';
   }
 
   async createSchedule(tenantId, roomId, dateTime) {
@@ -22,6 +25,21 @@ class ViewingScheduleService {
       const scheduleId = await this.generateScheduleId();
       const now = new Date();
 
+      // Get tenant and room info
+      const [tenantRows] = await connection.query(
+        `SELECT Name FROM TENANT WHERE TenantID = ?`,
+        [tenantId]
+      );
+      const tenantName = tenantRows[0]?.Name || 'Người thuê';
+
+      const [roomRows] = await connection.query(
+        `SELECT r.LandlordID, CONCAT(r.RoomType, ' - ', r.RoomCode) as RoomName
+         FROM ROOM r
+         WHERE r.RoomID = ?`,
+        [roomId]
+      );
+      const roomInfo = roomRows[0];
+
       // Create viewing schedule
       await connection.query(
         `INSERT INTO VIEWING_SCHEDULE (ScheduleID, TenantID, RoomID, DateTime, Status, CreatedAt, UpdatedAt)
@@ -29,16 +47,50 @@ class ViewingScheduleService {
         [scheduleId, tenantId, roomId, dateTime, now, now]
       );
 
-      // Note: We don't change room status to "viewing" to avoid confusion
-      // Room status should remain as is until actually rented
-
       await connection.commit();
+
+      // Send notification to landlord (async, don't wait)
+      if (roomInfo) {
+        this.notifyLandlordNewSchedule(roomInfo.LandlordID, tenantName, roomInfo.RoomName, dateTime, scheduleId)
+          .catch(err => console.error('Failed to notify landlord:', err));
+      }
+
       return scheduleId;
     } catch (error) {
       await connection.rollback();
       throw error;
     } finally {
       connection.release();
+    }
+  }
+
+  async notifyLandlordNewSchedule(landlordId, tenantName, roomName, viewingDateTime, scheduleId) {
+    try {
+      console.log('=== Sending notification to Landlord ===');
+      console.log('LandlordID:', landlordId);
+      console.log('Tenant Name:', tenantName);
+      console.log('Room Name:', roomName);
+      console.log('DateTime:', viewingDateTime);
+      console.log('API URL:', LANDLORD_API_URL);
+      
+      const time = new Date(viewingDateTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const date = new Date(viewingDateTime).toLocaleDateString('vi-VN');
+      const content = `${tenantName} đã đặt lịch xem "${roomName}" vào ${time} ngày ${date}`;
+      const link = `/viewing-schedules`;
+      
+      const response = await axios.post(`${LANDLORD_API_URL}/notifications/create`, {
+        targetId: landlordId,
+        content: content,
+        type: 'Lịch xem',
+        link: link
+      });
+      
+      console.log('Notification sent successfully:', response.data);
+    } catch (error) {
+      console.error('Error notifying landlord:');
+      console.error('Message:', error.message);
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
     }
   }
 

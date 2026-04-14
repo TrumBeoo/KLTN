@@ -118,9 +118,9 @@ router.post('/', authMiddleware, async (req, res) => {
     let buildingId;
     if (lastBuilding.length > 0) {
       const lastId = parseInt(lastBuilding[0].BuildingID.substring(3));
-      buildingId = 'BLD' + String(lastId + 1).padStart(7, '0');
+      buildingId = 'BLD' + String(lastId + 1).padStart(5, '0');
     } else {
-      buildingId = 'BLD0000001';
+      buildingId = 'BLD00001';
     }
 
     const [result] = await db.query(

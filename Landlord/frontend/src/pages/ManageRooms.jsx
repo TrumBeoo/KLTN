@@ -287,7 +287,7 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
 }
 
 export default function ManageRooms() {
-  const { notification, showSuccess, showError, hideNotification } = useNotification()
+  const { notification, showSuccess, showError, showConfirm, hideNotification } = useNotification()
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [rooms, setRooms] = useState([])
@@ -370,23 +370,24 @@ export default function ManageRooms() {
   }
 
   const handleDeleteRoom = async (roomId) => {
-    if (!window.confirm('Bạn chắc chắn muốn xóa phòng này?')) return
-    try {
-      const response = await fetch(`${API_URL}/rooms/${roomId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (data.success) {
-        showSuccess('Thành công!', data.message)
-        fetchRooms()
-      } else {
-        showError('Lỗi!', data.message)
+    showConfirm('Xác nhận xóa', 'Bạn chắc chắn muốn xóa phòng này?', async () => {
+      try {
+        const response = await fetch(`${API_URL}/rooms/${roomId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const data = await response.json()
+        if (data.success) {
+          showSuccess('Thành công!', data.message)
+          fetchRooms()
+        } else {
+          showError('Lỗi!', data.message)
+        }
+      } catch (error) {
+        console.error('Delete room error:', error)
+        showError('Lỗi!', error.message)
       }
-    } catch (error) {
-      console.error('Delete room error:', error)
-      showError('Lỗi!', error.message)
-    }
+    })
   }
 
   const handleOpenDialog = (room = null) => {
@@ -582,6 +583,7 @@ export default function ManageRooms() {
         type={notification.type}
         title={notification.title}
         message={notification.message}
+        onConfirm={notification.onConfirm}
       />
     </Box>
   )

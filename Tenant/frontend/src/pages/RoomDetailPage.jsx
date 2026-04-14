@@ -239,9 +239,9 @@ export default function RoomDetailPage() {
     )
   }
 
-  const images = room.images?.map(img => img.ImageURL) || [
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
-  ]
+  const images = room.images?.length > 0 
+    ? room.images.map(img => `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${img.ImageURL}`)
+    : []
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
@@ -257,44 +257,69 @@ export default function RoomDetailPage() {
           {/* Left Column - Images & Details */}
           <Grid item xs={12} md={8}>
             {/* Image Gallery */}
-            <ImageGallery>
-              <GalleryImage
-                component="img"
-                image={images[currentImageIndex]}
-                alt={`Room ${currentImageIndex + 1}`}
-              />
-              <GalleryNav onClick={handlePrevImage} sx={{ left: 16 }}>
-                <ChevronLeftIcon />
-              </GalleryNav>
-              <GalleryNav onClick={handleNextImage} sx={{ right: 16 }}>
-                <ChevronRightIcon />
-              </GalleryNav>
+            {images.length > 0 ? (
+              <ImageGallery>
+                <GalleryImage
+                  component="img"
+                  image={images[currentImageIndex]}
+                  alt={`Room ${currentImageIndex + 1}`}
+                />
+                {images.length > 1 && (
+                  <>
+                    <GalleryNav onClick={handlePrevImage} sx={{ left: 16 }}>
+                      <ChevronLeftIcon />
+                    </GalleryNav>
+                    <GalleryNav onClick={handleNextImage} sx={{ right: 16 }}>
+                      <ChevronRightIcon />
+                    </GalleryNav>
+                  </>
+                )}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 16,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    gap: 1,
+                  }}
+                >
+                  {images.map((_, index) => (
+                    <Box
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: index === currentImageIndex ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                        cursor: 'pointer',
+                        transition: 'all 200ms ease',
+                      }}
+                    />
+                  ))}
+                </Box>
+              </ImageGallery>
+            ) : (
               <Box
                 sx={{
-                  position: 'absolute',
-                  bottom: 16,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
+                  height: 400,
+                  borderRadius: 2,
+                  bgcolor: 'grey.100',
                   display: 'flex',
-                  gap: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column'
                 }}
               >
-                {images.map((_, index) => (
-                  <Box
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: index === currentImageIndex ? 'white' : 'rgba(255, 255, 255, 0.5)',
-                      cursor: 'pointer',
-                      transition: 'all 200ms ease',
-                    }}
-                  />
-                ))}
+                <Typography variant="h6" color="text.secondary">
+                  Chưa có hình ảnh
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Chủ nhà chưa tải lên hình ảnh cho phòng này
+                </Typography>
               </Box>
-            </ImageGallery>
+            )}
 
             {/* Room Info */}
             <Card sx={{ mt: 4, p: 3 }}>

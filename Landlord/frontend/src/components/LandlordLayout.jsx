@@ -19,7 +19,9 @@ import {
   Button,
   Container,
   Menu,
-  MenuItem
+  MenuItem,
+  CircularProgress,
+  Typography
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -37,6 +39,8 @@ import {
   AddCircle as AddIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material'
+
+import notificationService from '../services/notificationService'
 
 const SIDEBAR_WIDTH = 260
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
@@ -64,13 +68,39 @@ export default function LandlordLayout() {
   const [user, setUser] = useState(null)
   const [notificationAnchor, setNotificationAnchor] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [notifications, setNotifications] = useState([])
+  const [loadingNotifications, setLoadingNotifications] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
     if (userData) {
       setUser(JSON.parse(userData))
+      fetchUnreadCount()
     }
   }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const data = await notificationService.getUnreadCount()
+      console.log('Unread count response:', data)
+      setUnreadCount(data.unreadCount || 0)
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error)
+    }
+  }
+
+  const fetchNotifications = async () => {
+    setLoadingNotifications(true)
+    try {
+      const data = await notificationService.getNotifications(50, 0)
+      console.log('Notifications response:', data)
+      setNotifications(data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error)
+    } finally {
+      setLoadingNotifications(false)
+    }
+  }
 
   const handleLogout = async () => {
     const token = localStorage.getItem('token')
@@ -94,7 +124,11 @@ export default function LandlordLayout() {
 
   const isActive = (path) => location.pathname === path
 
-  const handleNotificationOpen = (e) => setNotificationAnchor(e.currentTarget)
+  const handleNotificationOpen = (e) => {
+    setNotificationAnchor(e.currentTarget)
+    fetchUnreadCount()
+    fetchNotifications()
+  }
   const handleNotificationClose = () => setNotificationAnchor(null)
 
   const SidebarContent = (
@@ -277,18 +311,96 @@ export default function LandlordLayout() {
                 anchorEl={notificationAnchor}
                 open={!!notificationAnchor}
                 onClose={handleNotificationClose}
+                PaperProps={{
+                  sx: { width: 400, maxHeight: 500 }
+                }}
               >
-                {unreadCount > 0 ? (
+                {loadingNotifications ? (
+                  <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : notifications.length > 0 ? (
                   <>
-                    <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                    <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary', py: 1 }}>
                       {unreadCount} thông báo chưa đọc
                     </MenuItem>
                     <Divider />
-                    <MenuItem onClick={handleNotificationClose}>Xem tất cả thông báo</MenuItem>
+                    <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                      {notifications.map((notif) => (
+                        <Box
+                          key={notif.NotificationID}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            backgroundColor: notif.Status === 'Chưa đọc' ? 'action.hover' : 'transparent',
+                            '&:hover': { backgroundColor: 'action.selected' },
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 1,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Box
+                            sx={{ flex: 1, minWidth: 0 }}
+                            onClick={() => {
+                              if (notif.Link) {
+                                navigate(notif.Link)
+                              }
+                              handleNotificationClose()
+                            }}
+                          >
+                            <Typography variant="body2" sx={{ fontWeight: notif.Status === 'Chưa đọc' ? 600 : 400 }}>
+                              {notif.Content}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                              {notif.Type} • {new Date(notif.CreatedAt).toLocaleString('vi-VN')}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                            {notif.Status === 'Chưa đọc' && (
+                              <Button
+                                size="small"
+                                variant="text"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  notificationService.markAsRead(notif.NotificationID)
+                                    .then(() => fetchNotifications())
+                                    .catch(err => console.error('Failed to mark as read:', err))
+                                }}
+                                sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.75rem' }}
+                              >
+                                Đọc
+                              </Button>
+                            )}
+                            <Button
+                              size="small"
+                              variant="text"
+                              color="error"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                notificationService.deleteNotification(notif.NotificationID)
+                                  .then(() => fetchNotifications())
+                                  .catch(err => console.error('Failed to delete:', err))
+                              }}
+                              sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.75rem' }}
+                            >
+                              Xóa
+                            </Button>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                    <Divider />
+                    <MenuItem onClick={handleNotificationClose} sx={{ justifyContent: 'center', py: 1 }}>
+                      <Typography variant="body2" sx={{ color: 'primary.main' }}>Xem tất cả thông báo</Typography>
+                    </MenuItem>
                   </>
                 ) : (
                   <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'black' }}>
-                    Không có thông báo nào
+                    Không có thông báo
                   </MenuItem>
                 )}
               </Menu>

@@ -1,2 +1,0 @@
--- Dữ liệu mẫu đã được xóa
--- Sử dụng script init-db.js để khởi tạo dữ liệu nếu cần

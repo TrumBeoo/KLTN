@@ -5,15 +5,17 @@ export const useNotification = () => {
     open: false,
     type: 'info',
     title: '',
-    message: ''
+    message: '',
+    onConfirm: null
   })
 
-  const showNotification = (type, title, message) => {
+  const showNotification = (type, title, message, onConfirm = null) => {
     setNotification({
       open: true,
       type,
       title,
-      message
+      message,
+      onConfirm
     })
   }
 
@@ -29,8 +31,12 @@ export const useNotification = () => {
     showNotification('info', title, message)
   }
 
+  const showConfirm = (title, message, onConfirm) => {
+    showNotification('confirm', title, message, onConfirm)
+  }
+
   const hideNotification = () => {
-    setNotification(prev => ({ ...prev, open: false }))
+    setNotification(prev => ({ ...prev, open: false, onConfirm: null }))
   }
 
   return {
@@ -39,6 +45,7 @@ export const useNotification = () => {
     showSuccess,
     showError,
     showInfo,
+    showConfirm,
     hideNotification
   }
 }

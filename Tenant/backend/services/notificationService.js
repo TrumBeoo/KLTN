@@ -11,6 +11,7 @@ class NotificationService {
           n.Content,
           n.Type,
           n.Status,
+          n.Link,
           n.CreatedAt,
           t.TenantID
         FROM NOTIFICATION n
@@ -123,15 +124,15 @@ class NotificationService {
   }
 
   // Tạo thông báo cho tenant (được gọi từ landlord backend)
-  async createNotification(tenantId, content, type) {
+  async createNotification(tenantId, content, type, link = null) {
     try {
       const notificationId = generateID('NTF');
       const query = `
-        INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, CreatedAt)
-        VALUES (?, ?, ?, ?, 'Chưa đọc', NOW())
+        INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, Link, CreatedAt)
+        VALUES (?, ?, ?, ?, 'Chưa đọc', ?, NOW())
       `;
       
-      await db.query(query, [notificationId, tenantId, content, type]);
+      await db.query(query, [notificationId, tenantId, content, type, link]);
       return notificationId;
     } catch (error) {
       console.error('Create notification error:', error);

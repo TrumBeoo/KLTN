@@ -165,7 +165,7 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
 }
 
 export default function ManageBuildings() {
-  const { notification, showSuccess, showError, hideNotification } = useNotification()
+  const { notification, showSuccess, showError, showConfirm, hideNotification } = useNotification()
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedBuilding, setSelectedBuilding] = useState(null)
   const [buildings, setBuildings] = useState([])
@@ -222,23 +222,24 @@ export default function ManageBuildings() {
   }
 
   const handleDeleteBuilding = async (buildingId) => {
-    if (!window.confirm('Bạn chắc chắn muốn xóa tòa nhà này?')) return
-    try {
-      const response = await fetch(`${API_URL}/buildings/${buildingId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (data.success) {
-        showSuccess('Thành công!', data.message)
-        fetchBuildings()
-      } else {
-        showError('Lỗi!', data.message)
+    showConfirm('Xác nhận xóa', 'Bạn chắc chắn muốn xóa tòa nhà này?', async () => {
+      try {
+        const response = await fetch(`${API_URL}/buildings/${buildingId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const data = await response.json()
+        if (data.success) {
+          showSuccess('Thành công!', data.message)
+          fetchBuildings()
+        } else {
+          showError('Lỗi!', data.message)
+        }
+      } catch (error) {
+        console.error('Delete building error:', error)
+        showError('Lỗi!', error.message)
       }
-    } catch (error) {
-      console.error('Delete building error:', error)
-      showError('Lỗi!', error.message)
-    }
+    })
   }
 
   const handleOpenDialog = (building = null) => {
@@ -347,6 +348,7 @@ export default function ManageBuildings() {
         type={notification.type}
         title={notification.title}
         message={notification.message}
+        onConfirm={notification.onConfirm}
       />
     </Box>
   )

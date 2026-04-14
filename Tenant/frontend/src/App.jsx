@@ -13,6 +13,7 @@ import TenantProfilePage from './pages/TenantProfilePage'
 import RoomDetailPage from './pages/RoomDetailPage'
 import ListingPage from './pages/ListingPage'
 import RoommateMatchingPage from './pages/RoommateMatchingPage'
+import BlogPage from './pages/BlogPage'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/room/:id" element={<RoomDetailPage />} />
               <Route path="/listings" element={<ListingPage />} />
               <Route path="/roommate" element={<RoommateMatchingPage />} />
+              <Route path="/blog" element={<BlogPage />} />
             </Routes>
           </Box>
           <ScrollToTopButton />

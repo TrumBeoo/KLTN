@@ -168,9 +168,9 @@ router.post('/', authMiddleware, async (req, res) => {
     let roomId;
     if (lastRoom.length > 0) {
       const lastId = parseInt(lastRoom[0].RoomID.substring(3));
-      roomId = 'ROM' + String(lastId + 1).padStart(7, '0');
+      roomId = 'ROM' + String(lastId + 1).padStart(5, '0');
     } else {
-      roomId = 'ROM0000001';
+      roomId = 'ROM00001';
     }
 
     const amenitiesJson = JSON.stringify(amenities || []);

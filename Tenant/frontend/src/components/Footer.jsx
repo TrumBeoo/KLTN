@@ -86,7 +86,7 @@ export default function Footer() {
 
         <Box sx={{ borderTop: '1px solid', borderColor: 'grey.800', pt: 3, textAlign: 'center' }}>
           <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            © 2025 Rentify. All rights reserved.
+            © 2026 Rentify. All rights reserved.
           </Typography>
         </Box>
       </Container>

@@ -10,9 +10,9 @@ class UserService {
     
     if (rows.length > 0) {
       const lastId = parseInt(rows[0].AccountID.substring(3));
-      return 'ACC' + String(lastId + 1).padStart(7, '0');
+      return 'ACC' + String(lastId + 1).padStart(5, '0');
     }
-    return 'ACC0000001';
+    return 'ACC00001';
   }
 
   async generateLandlordId() {
@@ -22,9 +22,9 @@ class UserService {
     
     if (rows.length > 0) {
       const lastId = parseInt(rows[0].LandlordID.substring(3));
-      return 'LAN' + String(lastId + 1).padStart(7, '0');
+      return 'LAN' + String(lastId + 1).padStart(5, '0');
     }
-    return 'LAN0000001';
+    return 'LAN00001';
   }
 
   async checkUsernameExists(username) {

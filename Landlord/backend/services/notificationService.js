@@ -11,6 +11,7 @@ class NotificationService {
           n.Content,
           n.Type,
           n.Status,
+          n.Link,
           n.CreatedAt,
           l.LandlordID
         FROM NOTIFICATION n
@@ -123,15 +124,15 @@ class NotificationService {
   }
 
   // Tạo thông báo cho landlord
-  async createNotification(landlordId, content, type) {
+  async createNotification(landlordId, content, type, link = null) {
     try {
       const notificationId = generateID('NTF');
       const query = `
-        INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, CreatedAt)
-        VALUES (?, ?, ?, ?, 'Chưa đọc', NOW())
+        INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, Link, CreatedAt)
+        VALUES (?, ?, ?, ?, 'Chưa đọc', ?, NOW())
       `;
       
-      await db.query(query, [notificationId, landlordId, content, type]);
+      await db.query(query, [notificationId, landlordId, content, type, link]);
       return notificationId;
     } catch (error) {
       console.error('Create notification error:', error);

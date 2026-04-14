@@ -31,6 +31,7 @@ import {
   LocalLaundryService as WasherIcon,
   Kitchen as FridgeIcon,
   Balcony as BalconyIcon,
+  ImageNotSupported as NoImageIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
@@ -79,7 +80,9 @@ function ListingPage() {
           area: room.Area || 0,
           rating: 4.5, // Default rating
           reviews: Math.floor(Math.random() * 50) + 1, // Random reviews
-          image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=350&fit=crop', // Default image
+          image: room.images?.length > 0 
+            ? `${API_URL.replace('/api', '')}/uploads/${room.images[0].ImageURL}`
+            : null,
           status: (room.DisplayStatus || room.Status) === 'available' ? 'available' : 
                   (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
                   (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
@@ -197,13 +200,17 @@ function ListingPage() {
                 <ListingCard key={listing.id}>
                   <Stack direction="row" spacing={2} sx={{ p: 2 }}>
                     {/* Image */}
-                    <Box sx={{ position: 'relative', width: 200, height: 150, flexShrink: 0 }}>
-                      <CardMedia
-                        component="img"
-                        image={listing.image}
-                        alt={listing.title}
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }}
-                      />
+                    <Box sx={{ position: 'relative', width: 200, height: 150, flexShrink: 0, bgcolor: listing.image ? 'transparent' : 'grey.200', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {listing.image ? (
+                        <CardMedia
+                          component="img"
+                          image={listing.image}
+                          alt={listing.title}
+                          sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }}
+                        />
+                      ) : (
+                        <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                      )}
                       <IconButton
                         size="small"
                         onClick={() => toggleFavorite(listing.id)}
@@ -379,12 +386,18 @@ function ListingPage() {
                   {listings.slice(0, 5).map((listing) => (
                     <LatestListingItem key={listing.id}>
                       <Stack direction="row" spacing={1}>
-                        <CardMedia
-                          component="img"
-                          image={listing.image}
-                          alt={listing.title}
-                          sx={{ width: 80, height: 80, objectFit: 'cover' }}
-                        />
+                        {listing.image ? (
+                          <CardMedia
+                            component="img"
+                            image={listing.image}
+                            alt={listing.title}
+                            sx={{ width: 80, height: 80, objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <Box sx={{ width: 80, height: 80, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <NoImageIcon sx={{ fontSize: 40, color: 'grey.400' }} />
+                          </Box>
+                        )}
                         <CardContent sx={{ p: 1, flex: 1 }}>
                           <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, lineHeight: 1.2 }}>
                             {listing.title}

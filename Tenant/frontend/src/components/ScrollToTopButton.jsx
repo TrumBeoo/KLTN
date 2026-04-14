@@ -21,12 +21,14 @@ export default function ScrollToTopButton() {
   return isVisible ? (
     <Fab
       onClick={scrollToTop}
-      size="medium"
+      size="small"
       sx={{
         position: 'fixed',
-        bottom: 30,
+        bottom: 65,
         right: 33,
         zIndex: 1000,
+        width: 45,
+        height: 45,
       }}
       color="primary"
       aria-label="scroll to top"
