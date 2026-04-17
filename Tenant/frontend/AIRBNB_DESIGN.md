@@ -244,3 +244,72 @@ What distinguishes Airbnb is its palette-based token system (`--palette-*`) and 
 5. Generous radius: 8px buttons, 20px cards, 50% controls
 6. Cereal VF at 500–700 weight — no thin weights for any heading
 7. Photography is hero — every listing card is image-first
+
+PROMPT:
+Read and strictly follow DESIGN.md (Airbnb style).
+
+Refactor my existing frontend UI to match Airbnb-style design.
+
+Requirements:
+- Keep ALL existing logic, API calls, and data flow unchanged
+- Only refactor UI (layout, styling, components)
+
+Design rules (VERY IMPORTANT):
+- Use warm, modern color palette (white, light gray, subtle accent color)
+- Use soft shadows and rounded corners (friendly, approachable UI)
+- Use clear, readable typography with strong hierarchy
+- Use spacing-based layout (8px grid system)
+- Focus on visual clarity and user-friendly experience
+- Emphasize images and real-world content
+
+Layout changes:
+- Convert current layout into Airbnb-style structure:
+  + Top navigation bar (logo, search, profile)
+  + Optional sidebar or filter panel
+  + Main content as card-based grid/list
+
+Components transformation:
+- Cards → rich cards with image, title, price, and status
+- Tables → convert to card lists where possible
+- Buttons → rounded, clear call-to-action (primary actions visible)
+- Forms → clean, spacious inputs with clear labels
+- Modals → modern, centered with soft shadow
+
+For tenant dashboard (CCMN):
+- Show current room as a featured card (image + price + status)
+- Payment info as clear card with highlighted status (paid/unpaid)
+- Contract info as structured card section
+- Maintenance request as easy-to-use form with clear CTA
+
+CRITICAL UX rules:
+- DO NOT remove images (important for room visualization)
+- DO NOT hide important actions (payment, report issue)
+- Maintain strong visual hierarchy (important info must stand out)
+- Ensure users can quickly scan and make decisions
+
+Technical constraints:
+- Use reusable React components
+- Keep responsive design (mobile-friendly)
+- Optimize for both desktop and mobile experience
+- Do NOT break existing functionality
+
+Output:
+- Refactored components
+- Card-based modern UI
+- Consistent Airbnb-style design across all pages
+
+Improve the UI to feel closer to Airbnb product experience.
+
+Focus on:
+- Better use of images in cards
+- More intuitive layout for browsing rooms
+- Stronger call-to-action buttons
+- Better spacing and alignment
+
+Ensure the UI feels:
+- modern
+- friendly
+- easy to explore
+
+Do not change business logic.
+Only improve UI/UX.

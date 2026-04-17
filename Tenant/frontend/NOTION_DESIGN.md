@@ -354,3 +354,19 @@ Output:
 - Refactored components
 - Clean, modular structure
 - Consistent Notion-style UI across all pages
+
+Improve the UI further to feel closer to Notion.
+
+Focus on:
+- Better spacing and alignment
+- More consistent typography
+- Cleaner grouping of content
+- Reduce visual noise
+
+Ensure the UI feels:
+- calm
+- minimal
+- professional
+
+Do not add new features.
+Only improve design consistency.
