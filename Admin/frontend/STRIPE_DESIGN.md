@@ -323,7 +323,7 @@ What truly distinguishes Stripe is its shadow system. Rather than the flat or si
 
 
 PROMPT:
-Read and strictly follow DESIGN.md (Stripe style).
+Read and strictly follow STRIPE_DESIGN.md (Stripe style).
 
 Refactor my admin dashboard UI to match Stripe-style design.
 

@@ -246,7 +246,7 @@ What distinguishes Airbnb is its palette-based token system (`--palette-*`) and 
 7. Photography is hero — every listing card is image-first
 
 PROMPT:
-Read and strictly follow DESIGN.md (Airbnb style).
+Read and strictly follow AIRBNB_DESIGN.md (Airbnb style).
 
 Refactor my existing frontend UI to match Airbnb-style design.
 

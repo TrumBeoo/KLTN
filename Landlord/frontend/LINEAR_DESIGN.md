@@ -368,7 +368,7 @@ The color system is almost entirely achromatic — dark backgrounds with white/g
 
 
 PROMPT:
-Read and strictly follow DESIGN.md (Linear style).
+Read and strictly follow LINEAR_DESIGN.md (Linear style).
 
 Refactor my existing frontend UI to match Linear-style design.
 
