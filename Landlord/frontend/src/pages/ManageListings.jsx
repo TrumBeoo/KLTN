@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNotification } from '../hooks/useNotification'
 import NotificationModal from '../components/NotificationModal'
+import ExcelUpload from '../components/ExcelUpload'
 import {
   Box,
   Card,
@@ -32,7 +33,9 @@ import {
   Avatar,
   ImageList,
   ImageListItem,
-  ImageListItemBar
+  ImageListItemBar,
+  Tabs,
+  Tab
 } from '@mui/material'
 import {
   Edit as EditIcon,
@@ -335,6 +338,7 @@ const ImageManagementDialog = ({ open, onClose, listing, onUpdateImages }) => {
 
 export default function ManageListings() {
   const { notification, showSuccess, showError, showConfirm, hideNotification } = useNotification()
+  const [activeTab, setActiveTab] = useState(0)
   const [openDialog, setOpenDialog] = useState(false)
   const [openImageDialog, setOpenImageDialog] = useState(false)
   const [selectedListing, setSelectedListing] = useState(null)
@@ -467,6 +471,18 @@ export default function ManageListings() {
 
   return (
     <Box>
+      {/* Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+          <Tab label="Tạo tin đăng" />
+          <Tab label="Tải lên Excel" />
+        </Tabs>
+      </Paper>
+
+      {activeTab === 1 ? (
+        <ExcelUpload />
+      ) : (
+        <>
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
@@ -668,6 +684,8 @@ export default function ManageListings() {
         message={notification.message}
         onConfirm={notification.onConfirm}
       />
+        </>
+      )}
     </Box>
   )
 }

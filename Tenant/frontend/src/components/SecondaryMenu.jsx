@@ -13,7 +13,7 @@ import { styled } from '@mui/material/styles'
 const MenuContainer = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.grey[200]}`,
-  padding: theme.spacing(1.5, 0),
+  padding: theme.spacing(1, 0),
   position: 'sticky',
   top: 64,
   zIndex: 99,
@@ -23,10 +23,10 @@ const CategoryButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'isActive',
 })(({ theme, isActive }) => ({
   textTransform: 'none',
-  fontSize: '0.95rem',
+  fontSize: '0.8rem',
   fontWeight: isActive ? 600 : 500,
   color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-  padding: theme.spacing(0.75, 1.5),
+  padding: theme.spacing(0.5, 1.25),
   borderRadius: theme.spacing(0.5),
   backgroundColor: isActive ? theme.palette.primary.light + '20' : 'transparent',
   '&:hover': {
@@ -38,10 +38,10 @@ const CategoryButton = styled(Button, {
 
 const DistrictButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
-  fontSize: '0.95rem',
+  fontSize: '0.8rem',
   fontWeight: 500,
   color: theme.palette.text.secondary,
-  padding: theme.spacing(0.75, 1.5),
+  padding: theme.spacing(0.5, 1.25),
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(0.5),

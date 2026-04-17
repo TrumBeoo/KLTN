@@ -15,7 +15,7 @@ import {
   IconButton,
   Tabs,
   Tab,
-  CircularProgress,
+  Skeleton,
   Fab,
   Tooltip,
 } from '@mui/material'
@@ -45,9 +45,12 @@ import {
 import { styled } from '@mui/material/styles'
 
 const HeroSection = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(56, 189, 248, 0.05) 100%)',
+  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('img/5.jpg')`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
   padding: theme.spacing(8, 0),
   textAlign: 'center',
+  color: 'white',
 }))
 
 const FilterChip = styled(Chip)(({ theme }) => ({
@@ -67,28 +70,29 @@ const FilterChip = styled(Chip)(({ theme }) => ({
 const FeaturedCard = styled(Card)(({ theme }) => ({
   height: '100%',
   cursor: 'pointer',
-  transition: 'all 200ms ease',
+  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[4],
+    transform: 'translateY(-6px) scale(1.02)',
+    boxShadow: theme.shadows[12],
   },
 }))
 
 const LatestListingItem = styled(Card)(({ theme }) => ({
   overflow: 'hidden',
   cursor: 'pointer',
-  transition: 'all 200ms ease',
+  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    boxShadow: theme.shadows[4],
+    transform: 'translateY(-2px)',
+    boxShadow: theme.shadows[6],
   },
 }))
 
 const LocationCard = styled(Card)(({ theme }) => ({
   cursor: 'pointer',
-  transition: 'all 200ms ease',
+  transition: 'all 350ms cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[6],
+    transform: 'translateY(-8px) scale(1.03)',
+    boxShadow: theme.shadows[16],
   },
 }))
 
@@ -147,24 +151,32 @@ export default function HomePage() {
       const data = await response.json()
       
       if (data.success) {
-        const formattedRooms = data.data.map(room => ({
-          id: room.RoomID,
-          title: `${room.RoomType} - ${room.RoomCode}`,
-          location: room.BuildingAddress || 'Địa chỉ chưa cập nhật',
-          price: room.Price?.toString() || '0',
-          area: room.Area || 0,
-          rating: 4.5, // Default rating
-          reviews: Math.floor(Math.random() * 50) + 1,
-          image: room.images?.length > 0 
-            ? `${API_URL.replace('/api', '')}/uploads/${room.images[0].ImageURL}`
-            : null,
-          status: (room.DisplayStatus || room.Status) === 'available' ? 'available' : 
-                  (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
-                  (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
-          views: Math.floor(Math.random() * 1000) + 100,
-          landlordName: room.LandlordName,
-          buildingName: room.BuildingName
-        }))
+        const formattedRooms = data.data.map(room => {
+          // Get first image URL if exists
+          let imageUrl = null;
+          if (room.images && room.images.length > 0) {
+            imageUrl = `${API_URL.replace('/api', '')}${room.images[0].ImageURL}`;
+          }
+          
+          console.log('HomePage - Room:', room.RoomID, 'Image URL:', imageUrl, 'Images:', room.images);
+          
+          return {
+            id: room.RoomID,
+            title: `${room.RoomType} - ${room.RoomCode}`,
+            location: room.BuildingAddress || 'Địa chỉ chưa cập nhật',
+            price: room.Price?.toString() || '0',
+            area: room.Area || 0,
+            rating: 4.5,
+            reviews: Math.floor(Math.random() * 50) + 1,
+            image: imageUrl,
+            status: (room.DisplayStatus || room.Status) === 'available' ? 'available' : 
+                    (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
+                    (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
+            views: Math.floor(Math.random() * 1000) + 100,
+            landlordName: room.LandlordName,
+            buildingName: room.BuildingName
+          };
+        });
         setListings(formattedRooms)
       }
     } catch (error) {
@@ -194,7 +206,7 @@ export default function HomePage() {
           <Typography variant="h1" sx={{ mb: 2, fontWeight: 700 }}>
             Tìm phòng chung cư mini tại Hà Nội
           </Typography>
-          <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4 }}>
+          <Typography variant="h5" sx={{ color: 'white', mb: 4 }}>
             Xem bản đồ – đặt lịch xem – hỗ trợ ở ghép thông minh
           </Typography>
 
@@ -209,10 +221,40 @@ export default function HomePage() {
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center' }}>
-            <Button variant="contained" size="large" startIcon={<MapIcon />}>
+            <Button 
+              variant="contained" 
+              size="large" 
+              startIcon={<MapIcon />}
+              sx={{
+                transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: 6
+                },
+                '&:active': {
+                  transform: 'translateY(-1px)'
+                }
+              }}
+            >
               Xem phòng trên bản đồ
             </Button>
-            <Button variant="outlined" size="large" startIcon={<PeopleIcon />}>
+            <Button 
+              variant="outlined" 
+              size="large" 
+              startIcon={<PeopleIcon />} 
+              sx={{ 
+                bgcolor: 'grey.200',
+                transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { 
+                  bgcolor: 'grey.100',
+                  transform: 'translateY(-3px)',
+                  boxShadow: 6
+                },
+                '&:active': {
+                  transform: 'translateY(-1px)'
+                }
+              }}
+            >
               Tìm bạn ở ghép
             </Button>
           </Stack>
@@ -222,31 +264,61 @@ export default function HomePage() {
       {/* Recommendations Section */}
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Typography variant="h2" sx={{ mb: 1, fontWeight: 700 }}>
-          ⭐ Phòng phù hợp với bạn
+          Phòng phù hợp với bạn
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
           Dựa trên lịch sử xem • ngân sách • khu vực quan tâm
         </Typography>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
+          <Grid container spacing={3}>
+            {[1, 2, 3, 4].map((i) => (
+              <Grid item xs={12} sm={6} md={3} key={i}>
+                <Card>
+                  <Skeleton variant="rectangular" height={200} animation="wave" />
+                  <CardContent>
+                    <Skeleton variant="text" width="80%" height={28} />
+                    <Skeleton variant="text" width="60%" height={20} sx={{ mt: 1 }} />
+                    <Skeleton variant="text" width="40%" height={24} sx={{ mt: 1 }} />
+                    <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                      <Skeleton variant="text" width={60} />
+                      <Skeleton variant="text" width={80} />
+                    </Stack>
+                    <Skeleton variant="rectangular" height={36} sx={{ mt: 2, borderRadius: 1 }} />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         ) : (
           <Grid container spacing={3}>
-            {listings.slice(0, 3).map((listing) => (
-              <Grid item xs={12} sm={6} md={4} key={listing.id}>
+            {listings.slice(0, 4).map((listing) => (
+              <Grid item xs={12} sm={6} md={3} key={listing.id}>
                 <FeaturedCard>
-                  <Box sx={{ position: 'relative', height: 250, bgcolor: listing.image ? 'transparent' : 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Box sx={{ position: 'relative', height: 200, overflow: 'hidden' }}>
                     {listing.image ? (
                       <CardMedia
                         component="img"
-                        height="250"
+                        height="200"
                         image={listing.image}
                         alt={listing.title}
+                        sx={{ 
+                          objectFit: 'cover',
+                          transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                          '&:hover': {
+                            transform: 'scale(1.15)'
+                          }
+                        }}
+                        onError={(e) => {
+                          console.error('Image load error:', listing.image);
+                          e.target.style.display = 'none';
+                          e.target.parentElement.style.backgroundColor = '#e0e0e0';
+                        }}
                       />
                     ) : (
-                      <NoImageIcon sx={{ fontSize: 80, color: 'grey.400' }} />
+                      <Box sx={{ width: '100%', height: '100%', bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                      </Box>
                     )}
                     <IconButton
                       size="small"
@@ -269,8 +341,8 @@ export default function HomePage() {
                        listing.status === 'booked' ? 'Đã đặt lịch' : 'Đã thuê'}
                     </Box>
                   </Box>
-                  <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                  <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, fontSize: '0.95rem' }}>
                       {listing.title}
                     </Typography>
                     <Stack direction="row" spacing={0.5} sx={{ mb: 2, alignItems: 'flex-start' }}>
@@ -279,7 +351,7 @@ export default function HomePage() {
                         {listing.buildingName || listing.location}
                       </Typography>
                     </Stack>
-                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 1, fontWeight: 600 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'primary.main', mb: 1, fontWeight: 600 }}>
                       {formatPrice(listing.price)}đ/tháng
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
@@ -294,7 +366,23 @@ export default function HomePage() {
                         </Typography>
                       </Stack>
                     </Stack>
-                    <Button variant="outlined" fullWidth sx={{ mt: 'auto' }} onClick={() => navigate(`/room/${listing.id}`)}>
+                    <Button 
+                      variant="outlined" 
+                      fullWidth 
+                      size="small" 
+                      sx={{ 
+                        mt: 'auto',
+                        transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 3
+                        },
+                        '&:active': {
+                          transform: 'scale(0.98)'
+                        }
+                      }} 
+                      onClick={() => navigate(`/room/${listing.id}`)}
+                    >
                       Xem chi tiết
                     </Button>
                   </CardContent>
@@ -306,9 +394,9 @@ export default function HomePage() {
       </Container>
 
       {/* Featured Rooms Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Typography variant="h2" sx={{ mb: 4, fontWeight: 700 }}>
-          🔥 Phòng nổi bật
+      <Container maxWidth="lg" sx={{ py: 0}}>
+        <Typography variant="h2" sx={{ mb: 1, fontWeight: 700 }}>
+          Phòng nổi bật
         </Typography>
 
         <Grid container spacing={3}>
@@ -317,32 +405,52 @@ export default function HomePage() {
             <Stack spacing={3}>
               {/* Tabs */}
               <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-                <Tab label="🔥 Được xem nhiều" />
-                <Tab label="🚪 Còn trống" />
-                <Tab label="⭐ Đánh giá cao" />
+                <Tab label="Được xem nhiều" />
+                <Tab label="Còn trống" />
+                <Tab label="Đánh giá cao" />
               </Tabs>
 
               {/* Featured Cards Grid */}
               <Grid container spacing={2}>
-                {listings.slice(0, 4).map((listing) => (
-                  <Grid item xs={12} sm={6} key={listing.id}>
-                    <FeaturedCard>
-                      <Box sx={{ position: 'relative', height: 180, bgcolor: listing.image ? 'transparent' : 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {listings
+                  .filter(listing => {
+                    if (tabValue === 0) return listing.views > 500 // Được xem nhiều
+                    if (tabValue === 1) return listing.status === 'available' // Còn trống
+                    if (tabValue === 2) return listing.rating >= 4.5 // Đánh giá cao
+                    return true
+                  })
+                  .slice(0, 5)
+                  .map((listing) => (
+                  <Grid item xs={12} key={listing.id}>
+                    <FeaturedCard onClick={() => navigate(`/room/${listing.id}`)}>
+                      <Box sx={{ position: 'relative', height: 180, overflow: 'hidden' }}>
                         {listing.image ? (
                           <CardMedia
                             component="img"
-                            height="180"
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             image={listing.image}
                             alt={listing.title}
                           />
                         ) : (
-                          <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                          <Box sx={{ width: '100%', height: '100%', bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                          </Box>
                         )}
                         <Box
                           sx={{
                             position: 'absolute',
-                            top: 8,
-                            right: 8,
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.2) 100%)',
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 12,
+                            right: 12,
                             bgcolor: 'rgba(255,255,255,0.95)',
                             px: 1.5,
                             py: 0.5,
@@ -355,29 +463,46 @@ export default function HomePage() {
                           }}
                         >
                           <EyeIcon sx={{ fontSize: '1rem' }} />
-                          {listing.views} lượt xem
+                          {listing.views}
+                        </Box>
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            p: 2.5,
+                            color: 'white',
+                          }}
+                        >
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                            {listing.title}
+                          </Typography>
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
+                            <LocationIcon sx={{ fontSize: '1.1rem' }} />
+                            <Typography variant="caption" sx={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                              {listing.location.split(',')[0]}
+                            </Typography>
+                          </Stack>
+                          <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                              {formatPrice(listing.price)}đ/tháng
+                            </Typography>
+                            <Stack direction="row" spacing={1.5}>
+                              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                                <RulerIcon sx={{ fontSize: '1.1rem' }} />
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>{listing.area}m²</Typography>
+                              </Stack>
+                              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                                <StarIcon sx={{ fontSize: '1.1rem', color: '#FCD34D' }} />
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {listing.rating} ({listing.reviews})
+                                </Typography>
+                              </Stack>
+                            </Stack>
+                          </Stack>
                         </Box>
                       </Box>
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                          {listing.title}
-                        </Typography>
-                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-                          <LocationIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
-                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            {listing.location.split(',')[0]}
-                          </Typography>
-                        </Stack>
-                        <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                          {formatPrice(listing.price)}đ/tháng
-                        </Typography>
-                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                          <StarIcon sx={{ fontSize: '1rem', color: '#F59E0B' }} />
-                          <Typography variant="body2">
-                            {listing.rating} ({listing.reviews})
-                          </Typography>
-                        </Stack>
-                      </CardContent>
                     </FeaturedCard>
                   </Grid>
                 ))}
@@ -405,11 +530,11 @@ export default function HomePage() {
                             component="img"
                             image={listing.image}
                             alt={listing.title}
-                            sx={{ width: 80, height: 80, objectFit: 'cover' }}
+                            sx={{ width: 130, height: 130, objectFit: 'cover', flexShrink: 0 }}
                           />
                         ) : (
-                          <Box sx={{ width: 80, height: 80, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <NoImageIcon sx={{ fontSize: 40, color: 'grey.400' }} />
+                          <Box sx={{ width: 130, height: 130, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <NoImageIcon sx={{ fontSize: 50, color: 'grey.400' }} />
                           </Box>
                         )}
                         <CardContent sx={{ p: 1, flex: 1 }}>
@@ -449,7 +574,7 @@ export default function HomePage() {
       {/* Search by Location Section */}
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Typography variant="h2" sx={{ mb: 1, fontWeight: 700 }}>
-          📍 Tìm theo khu vực
+          Tìm theo khu vực
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
           Khám phá các khu vực phổ biến tại Hà Nội
@@ -527,7 +652,7 @@ export default function HomePage() {
               <Stack spacing={2} sx={{ textAlign: 'center' }}>
                 <ShieldIcon sx={{ fontSize: 64, mx: 'auto' }} />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Chủ trọ uy tín
+                  Chủ nhà uy tín
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Được xác minh và đánh giá bởi cộng đồng

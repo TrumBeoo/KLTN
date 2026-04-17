@@ -240,7 +240,11 @@ export default function RoomDetailPage() {
   }
 
   const images = room.images?.length > 0 
-    ? room.images.map(img => `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${img.ImageURL}`)
+    ? room.images.map(img => {
+        // Remove leading slash if exists and add proper base URL
+        const imageUrl = img.ImageURL.startsWith('/') ? img.ImageURL : `/${img.ImageURL}`;
+        return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imageUrl}`;
+      })
     : []
 
   return (

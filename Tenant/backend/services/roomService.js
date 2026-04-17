@@ -84,7 +84,8 @@ class RoomService {
     const [rooms] = await db.query(
       `SELECT r.*, l.Name as LandlordName, b.BuildingName, b.Address as BuildingAddress,
               (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Chờ duyệt') as PendingViewings,
-              (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Đã duyệt') as ApprovedViewings
+              (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Đã duyệt') as ApprovedViewings,
+              (SELECT GROUP_CONCAT(ImageURL ORDER BY \`Order\` ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
@@ -94,7 +95,7 @@ class RoomService {
       [limit, offset]
     );
     
-    // Add DisplayStatus for each room based on priority
+    // Add DisplayStatus and images for each room
     return rooms.map(room => {
       let displayStatus = room.Status;
       if (room.Status === 'available') {
@@ -104,9 +105,14 @@ class RoomService {
           displayStatus = 'pending_viewing'; // Chờ duyệt
         }
       }
+      
+      // Parse images from ImageURLs
+      const images = room.ImageURLs ? room.ImageURLs.split(',').map(url => ({ ImageURL: url })) : [];
+      
       return {
         ...room,
-        DisplayStatus: displayStatus
+        DisplayStatus: displayStatus,
+        images
       };
     });
   }

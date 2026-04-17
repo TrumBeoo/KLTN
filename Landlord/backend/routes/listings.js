@@ -1,17 +1,370 @@
 const express = require('express')
 const router = express.Router()
+const multer = require('multer')
+const xlsx = require('xlsx')
 const db = require('../config/database')
 const authMiddleware = require('../middleware/auth')
 
-// Apply auth middleware
+const upload = multer({ storage: multer.memoryStorage() })
+
 router.use(authMiddleware)
 
-// GET /api/listings - Lấy danh sách tin đăng
+const validDistricts = [
+  'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10', 'Quận 11', 'Quận 12',
+  'Quận Bình Thạnh', 'Quận Tân Bình', 'Quận Tân Phú', 'Quận Phú Nhuận', 'Quận Bình Tân', 'Quận Gò Vấp', 'Quận Thủ Đức',
+  'Huyện Bình Chánh', 'Huyện Hóc Môn', 'Huyện Củ Chi', 'Huyện Nhà Bè', 'Huyện Cần Giờ'
+]
+
+const validateRow = (row) => {
+  const errors = []
+  if (!row.roomCode) errors.push('Thiếu mã phòng')
+  if (!row.title) errors.push('Thiếu tiêu đề')
+  if (!row.price || isNaN(row.price) || row.price <= 0) errors.push('Giá không hợp lệ')
+  if (!row.area || isNaN(row.area) || row.area <= 0) errors.push('Diện tích không hợp lệ')
+  if (!row.district) errors.push('Thiếu quận')
+  else if (!validDistricts.includes(row.district)) errors.push('Quận không hợp lệ')
+  
+  if (row.imageUrl && row.imageUrl.trim()) {
+    try {
+      new URL(row.imageUrl)
+    } catch {
+      errors.push('URL ảnh không hợp lệ')
+    }
+  }
+  
+  return errors
+}
+
+router.post('/preview-excel', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Không có file được tải lên' })
+    }
+
+    if (!req.file.originalname.match(/\.(xlsx|xls)$/)) {
+      return res.status(400).json({ success: false, message: 'File phải có định dạng .xlsx hoặc .xls' })
+    }
+
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' })
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+    const data = xlsx.utils.sheet_to_json(sheet)
+
+    if (data.length === 0) {
+      return res.status(400).json({ success: false, message: 'File Excel không có dữ liệu' })
+    }
+
+    const [landlords] = await db.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    )
+
+    if (landlords.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' })
+    }
+
+    const landlordId = landlords[0].LandlordID
+
+    const preview = await Promise.all(data.map(async (row, index) => {
+      const parsed = {
+        rowNumber: index + 2,
+        roomCode: row['Mã phòng'] || row['RoomCode'],
+        title: row['Tiêu đề'] || row['Title'],
+        description: row['Mô tả'] || row['Description'] || '',
+        price: parseFloat(row['Giá'] || row['Price']),
+        area: parseFloat(row['Diện tích'] || row['Area']),
+        district: row['Quận'] || row['District'],
+        imageUrl: row['URL ảnh'] || row['ImageURL'] || ''
+      }
+      
+      const errors = validateRow(parsed)
+      
+      if (parsed.roomCode && errors.length === 0) {
+        try {
+          const [rooms] = await db.query(
+            'SELECT RoomID FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
+            [parsed.roomCode, landlordId]
+          )
+          
+          if (rooms.length === 0) {
+            errors.push('Phòng không tồn tại hoặc không thuộc về bạn')
+          } else {
+            const [existingListings] = await db.query(
+              'SELECT ListingID FROM LISTING WHERE RoomID = ?',
+              [rooms[0].RoomID]
+            )
+            
+            if (existingListings.length > 0) {
+              errors.push('Phòng đã có tin đăng')
+            }
+          }
+        } catch (error) {
+          errors.push('Lỗi kiểm tra phòng')
+        }
+      }
+      
+      return { ...parsed, errors, isValid: errors.length === 0 }
+    }))
+
+    const validCount = preview.filter(r => r.isValid).length
+    const invalidCount = preview.filter(r => !r.isValid).length
+
+    res.json({
+      success: true,
+      data: preview,
+      summary: {
+        total: preview.length,
+        valid: validCount,
+        invalid: invalidCount
+      }
+    })
+  } catch (error) {
+    console.error('Preview Excel error:', error)
+    res.status(500).json({ success: false, message: 'Lỗi khi xử lý file Excel' })
+  }
+})
+
+router.post('/upload-excel', upload.single('file'), async (req, res) => {
+  const connection = await db.getConnection()
+  
+  try {
+    await connection.beginTransaction()
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Không có file được tải lên' })
+    }
+
+    const [landlords] = await connection.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    )
+
+    if (landlords.length === 0) {
+      await connection.rollback()
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' })
+    }
+
+    const landlordId = landlords[0].LandlordID
+
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' })
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+    const data = xlsx.utils.sheet_to_json(sheet)
+
+    const [lastJob] = await connection.query(
+      'SELECT UploadJobID FROM UPLOAD_JOB ORDER BY UploadJobID DESC LIMIT 1'
+    )
+    
+    let uploadJobId
+    if (lastJob.length > 0) {
+      const lastId = parseInt(lastJob[0].UploadJobID.substring(2))
+      uploadJobId = 'UJ' + String(lastId + 1).padStart(6, '0')
+    } else {
+      uploadJobId = 'UJ000001'
+    }
+
+    await connection.query(`
+      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, FileName, TotalRows, Status)
+      VALUES (?, ?, ?, ?, 'processing')
+    `, [uploadJobId, landlordId, req.file.originalname, data.length])
+
+    let successCount = 0
+    let failedCount = 0
+    const results = []
+
+    for (let index = 0; index < data.length; index++) {
+      const row = data[index]
+      const rowNumber = index + 2
+      
+      const parsed = {
+        roomCode: row['Mã phòng'] || row['RoomCode'],
+        title: row['Tiêu đề'] || row['Title'],
+        description: row['Mô tả'] || row['Description'] || '',
+        price: parseFloat(row['Giá'] || row['Price']),
+        area: parseFloat(row['Diện tích'] || row['Area']),
+        district: row['Quận'] || row['District'],
+        imageUrl: row['URL ảnh'] || row['ImageURL'] || ''
+      }
+
+      const validationErrors = validateRow(parsed)
+      
+      if (validationErrors.length > 0) {
+        await connection.query(`
+          INSERT INTO UPLOAD_DETAIL (UploadJobID, RowNumber, RoomCode, Title, Status, ErrorMessage)
+          VALUES (?, ?, ?, ?, 'failed', ?)
+        `, [uploadJobId, rowNumber, parsed.roomCode, parsed.title, validationErrors.join(', ')])
+        
+        failedCount++
+        results.push({ rowNumber, roomCode: parsed.roomCode, status: 'failed', errors: validationErrors })
+        continue
+      }
+
+      try {
+        const [rooms] = await connection.query(
+          'SELECT RoomID FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
+          [parsed.roomCode, landlordId]
+        )
+
+        if (rooms.length === 0) {
+          throw new Error('Không tìm thấy phòng')
+        }
+
+        const roomId = rooms[0].RoomID
+        
+        const [existingListings] = await connection.query(
+          'SELECT ListingID FROM LISTING WHERE RoomID = ?',
+          [roomId]
+        )
+
+        if (existingListings.length > 0) {
+          throw new Error('Phòng đã có tin đăng')
+        }
+
+        const [lastListing] = await connection.query(
+          'SELECT ListingID FROM LISTING ORDER BY ListingID DESC LIMIT 1'
+        )
+        
+        let listingId
+        if (lastListing.length > 0) {
+          const lastId = parseInt(lastListing[0].ListingID.substring(3))
+          listingId = 'LST' + String(lastId + 1 + successCount).padStart(5, '0')
+        } else {
+          listingId = 'LST' + String(1 + successCount).padStart(5, '0')
+        }
+
+        await connection.query(`
+          INSERT INTO LISTING (ListingID, RoomID, LandlordID, Title, Description, IsVisible, CreatedAt, UpdatedAt)
+          VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
+        `, [listingId, roomId, landlordId, parsed.title, parsed.description])
+
+        await connection.query(`
+          INSERT INTO UPLOAD_DETAIL (UploadJobID, RowNumber, RoomCode, Title, Status, ListingID)
+          VALUES (?, ?, ?, ?, 'success', ?)
+        `, [uploadJobId, rowNumber, parsed.roomCode, parsed.title, listingId])
+
+        successCount++
+        results.push({ rowNumber, roomCode: parsed.roomCode, status: 'success', listingId })
+      } catch (error) {
+        await connection.query(`
+          INSERT INTO UPLOAD_DETAIL (UploadJobID, RowNumber, RoomCode, Title, Status, ErrorMessage)
+          VALUES (?, ?, ?, ?, 'failed', ?)
+        `, [uploadJobId, rowNumber, parsed.roomCode, parsed.title, error.message])
+        
+        failedCount++
+        results.push({ rowNumber, roomCode: parsed.roomCode, status: 'failed', errors: [error.message] })
+      }
+    }
+
+    await connection.query(`
+      UPDATE UPLOAD_JOB 
+      SET SuccessRows = ?, FailedRows = ?, Status = 'completed', CompletedAt = NOW()
+      WHERE UploadJobID = ?
+    `, [successCount, failedCount, uploadJobId])
+
+    await connection.commit()
+
+    res.json({
+      success: true,
+      message: `Hoàn thành: ${successCount} thành công, ${failedCount} thất bại`,
+      data: {
+        uploadJobId,
+        successCount,
+        failedCount,
+        results
+      }
+    })
+  } catch (error) {
+    await connection.rollback()
+    console.error('Upload Excel error:', error)
+    res.status(500).json({ success: false, message: 'Lỗi khi xử lý file Excel' })
+  } finally {
+    connection.release()
+  }
+})
+
+router.get('/upload-history', async (req, res) => {
+  try {
+    const [landlords] = await db.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    )
+
+    if (landlords.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' })
+    }
+
+    const [jobs] = await db.query(`
+      SELECT 
+        UploadJobID,
+        FileName,
+        TotalRows,
+        SuccessRows,
+        FailedRows,
+        Status,
+        CreatedAt,
+        CompletedAt
+      FROM UPLOAD_JOB
+      WHERE LandlordID = ?
+      ORDER BY CreatedAt DESC
+      LIMIT 50
+    `, [landlords[0].LandlordID])
+
+    res.json({ success: true, data: jobs })
+  } catch (error) {
+    console.error('Get upload history error:', error)
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy lịch sử upload' })
+  }
+})
+
+router.get('/upload-details/:jobId', async (req, res) => {
+  try {
+    const [landlords] = await db.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    )
+
+    if (landlords.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' })
+    }
+
+    const [jobs] = await db.query(
+      'SELECT * FROM UPLOAD_JOB WHERE UploadJobID = ? AND LandlordID = ?',
+      [req.params.jobId, landlords[0].LandlordID]
+    )
+
+    if (jobs.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy upload job' })
+    }
+
+    const [details] = await db.query(`
+      SELECT 
+        RowNumber,
+        RoomCode,
+        Title,
+        Status,
+        ErrorMessage,
+        ListingID,
+        CreatedAt
+      FROM UPLOAD_DETAIL
+      WHERE UploadJobID = ?
+      ORDER BY RowNumber
+    `, [req.params.jobId])
+
+    res.json({
+      success: true,
+      data: {
+        job: jobs[0],
+        details
+      }
+    })
+  } catch (error) {
+    console.error('Get upload details error:', error)
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy chi tiết upload' })
+  }
+})
+
 router.get('/', async (req, res) => {
   try {
     const { status, visibility } = req.query
     
-    // Get LandlordID from AccountID
     const [landlords] = await db.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
@@ -74,12 +427,10 @@ router.get('/', async (req, res) => {
   }
 })
 
-// POST /api/listings - Tạo tin đăng mới
 router.post('/', async (req, res) => {
   try {
     const { roomId, title, description, isVisible = true } = req.body
     
-    // Get LandlordID from AccountID
     const [landlords] = await db.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
@@ -94,7 +445,6 @@ router.post('/', async (req, res) => {
 
     const landlordId = landlords[0].LandlordID
 
-    // Kiểm tra phòng có thuộc về landlord này không
     const [rooms] = await db.query(`
       SELECT r.RoomID FROM ROOM r
       WHERE r.RoomID = ? AND r.LandlordID = ?
@@ -107,7 +457,6 @@ router.post('/', async (req, res) => {
       })
     }
 
-    // Kiểm tra xem phòng đã có tin đăng chưa
     const [existingListings] = await db.query(
       'SELECT ListingID FROM LISTING WHERE RoomID = ?',
       [roomId]
@@ -120,7 +469,6 @@ router.post('/', async (req, res) => {
       })
     }
 
-    // Generate ListingID
     const [lastListing] = await db.query(
       'SELECT ListingID FROM LISTING ORDER BY ListingID DESC LIMIT 1'
     )
@@ -133,7 +481,6 @@ router.post('/', async (req, res) => {
       listingId = 'LST00001'
     }
 
-    // Tạo tin đăng mới
     await db.query(`
       INSERT INTO LISTING (ListingID, RoomID, LandlordID, Title, Description, IsVisible, CreatedAt, UpdatedAt)
       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
@@ -153,13 +500,11 @@ router.post('/', async (req, res) => {
   }
 })
 
-// PUT /api/listings/:id - Cập nhật tin đăng
 router.put('/:id', async (req, res) => {
   try {
     const listingId = req.params.id
     const { title, description, isVisible } = req.body
     
-    // Get LandlordID from AccountID
     const [landlords] = await db.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
@@ -174,7 +519,6 @@ router.put('/:id', async (req, res) => {
 
     const landlordId = landlords[0].LandlordID
 
-    // Kiểm tra tin đăng có thuộc về landlord này không
     const [listings] = await db.query(`
       SELECT l.ListingID FROM LISTING l
       WHERE l.ListingID = ? AND l.LandlordID = ?
@@ -187,7 +531,6 @@ router.put('/:id', async (req, res) => {
       })
     }
 
-    // Cập nhật tin đăng
     await db.query(`
       UPDATE LISTING 
       SET Title = ?, Description = ?, IsVisible = ?, UpdatedAt = NOW()
@@ -207,13 +550,11 @@ router.put('/:id', async (req, res) => {
   }
 })
 
-// PUT /api/listings/:id/visibility - Bật/tắt hiển thị tin đăng
 router.put('/:id/visibility', async (req, res) => {
   try {
     const listingId = req.params.id
     const { isVisible } = req.body
     
-    // Get LandlordID from AccountID
     const [landlords] = await db.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
@@ -228,7 +569,6 @@ router.put('/:id/visibility', async (req, res) => {
 
     const landlordId = landlords[0].LandlordID
 
-    // Kiểm tra tin đăng có thuộc về landlord này không
     const [listings] = await db.query(`
       SELECT l.ListingID, r.Status as RoomStatus FROM LISTING l
       JOIN ROOM r ON l.RoomID = r.RoomID
@@ -242,7 +582,6 @@ router.put('/:id/visibility', async (req, res) => {
       })
     }
 
-    // Kiểm tra ràng buộc: nếu phòng đã thuê thì không thể hiển thị tin đăng
     if (isVisible && listings[0].RoomStatus === 'rented') {
       return res.status(400).json({
         success: false,
@@ -250,7 +589,6 @@ router.put('/:id/visibility', async (req, res) => {
       })
     }
 
-    // Cập nhật trạng thái hiển thị
     await db.query(`
       UPDATE LISTING 
       SET IsVisible = ?, UpdatedAt = NOW()

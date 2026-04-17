@@ -55,7 +55,7 @@ const menuItems = [
 ]
 
 const bottomMenuItems = [
-  { label: 'Tự động đăng tin', icon: BoltIcon, path: '/automation' },
+
   { label: 'Báo cáo', icon: ReportIcon, path: '/reports' },
   { label: 'Hồ sơ của tôi', icon: PersonIcon, path: '/profile' },
   { label: 'Cài đặt', icon: SettingsIcon, path: '/settings' }

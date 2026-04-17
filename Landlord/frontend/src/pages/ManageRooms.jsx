@@ -30,7 +30,10 @@ import {
   Chip,
   Typography,
   Pagination,
-  Paper
+  Paper,
+  ImageList,
+  ImageListItem,
+  ImageListItemBar
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -39,7 +42,9 @@ import {
   Visibility as EyeIcon,
   Close as CloseIcon,
   Download as DownloadIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CloudUpload as UploadIcon,
+  Image as ImageIcon
 } from '@mui/icons-material'
 
 const StatusBadge = ({ status, displayStatus }) => {
@@ -68,6 +73,10 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     description: ''
   })
   const [loading, setLoading] = useState(false)
+  const [images, setImages] = useState([])
+  const [imageFiles, setImageFiles] = useState([])
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
+  const token = localStorage.getItem('token')
 
   const amenitiesList = [
     { value: 'wifi', label: 'Wifi' },
@@ -93,7 +102,6 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         amenities: (() => {
           if (!room.Amenities) return [];
           if (typeof room.Amenities === 'string') {
-            // Nếu là string, thử parse JSON trước, nếu không được thì split bằng comma
             try {
               return JSON.parse(room.Amenities);
             } catch {
@@ -104,6 +112,16 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         })(),
         description: room.Description || ''
       })
+      // Load existing images
+      if (room.Images) {
+        const imageUrls = room.Images.split(',').map(url => ({
+          url: `${API_URL.replace('/api', '')}${url}`,
+          id: url
+        }))
+        setImages(imageUrls)
+      } else {
+        setImages([])
+      }
     } else {
       setFormData({
         buildingId: '',
@@ -115,7 +133,9 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         amenities: [],
         description: ''
       })
+      setImages([])
     }
+    setImageFiles([])
   }, [room, open])
 
   const handleChange = (e) => {
@@ -132,6 +152,25 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     }))
   }
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files)
+    setImageFiles(prev => [...prev, ...files])
+    
+    // Preview images
+    files.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImages(prev => [...prev, { url: reader.result, file }])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleRemoveImage = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+    setImageFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async () => {
     if (!formData.buildingId || !formData.roomCode || !formData.roomType || !formData.area || !formData.price || !formData.maxPeople) {
       showError('Lỗi!', 'Vui lòng nhập đầy đủ thông tin bắt buộc')
@@ -139,7 +178,22 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     }
     setLoading(true)
     try {
-      await onSubmit(formData)
+      const roomId = await onSubmit(formData)
+      
+      // Upload images if any
+      if (imageFiles.length > 0 && roomId) {
+        const formDataImg = new FormData()
+        imageFiles.forEach(file => {
+          formDataImg.append('images', file)
+        })
+        
+        await fetch(`${API_URL}/rooms/${roomId}/images`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formDataImg
+        })
+      }
+      
       onClose()
     } catch (error) {
       console.error('Submit error:', error)
@@ -266,6 +320,41 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
             rows={3}
             fullWidth
           />
+
+          <Box>
+            <FormLabel sx={{ mb: 1, display: 'block' }}>Hình ảnh phòng</FormLabel>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<UploadIcon />}
+              fullWidth
+            >
+              Chọn ảnh
+              <input
+                type="file"
+                hidden
+                multiple
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+            </Button>
+            {images.length > 0 && (
+              <ImageList sx={{ mt: 2 }} cols={3} rowHeight={120}>
+                {images.map((img, index) => (
+                  <ImageListItem key={index}>
+                    <img src={img.url} alt={`Room ${index + 1}`} loading="lazy" style={{ height: 120, objectFit: 'cover' }} />
+                    <ImageListItemBar
+                      actionIcon={
+                        <IconButton sx={{ color: 'white' }} onClick={() => handleRemoveImage(index)}>
+                          <CloseIcon />
+                        </IconButton>
+                      }
+                    />
+                  </ImageListItem>
+                ))}
+              </ImageList>
+            )}
+          </Box>
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -360,6 +449,7 @@ export default function ManageRooms() {
       if (data.success) {
         showSuccess('Thành công!', data.message)
         fetchRooms()
+        return selectedRoom ? selectedRoom.RoomID : data.roomId
       } else {
         showError('Lỗi!', data.message)
       }
@@ -541,7 +631,22 @@ export default function ManageRooms() {
               ) : (
                 rooms.map((room) => (
                   <TableRow key={room.RoomID} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{room.RoomCode}</TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {room.Images ? (
+                          <Box
+                            component="img"
+                            src={`${API_URL.replace('/api', '')}${room.Images.split(',')[0]}`}
+                            sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ImageIcon sx={{ color: 'grey.400' }} />
+                          </Box>
+                        )}
+                        <Typography sx={{ fontWeight: 600 }}>{room.RoomCode}</Typography>
+                      </Stack>
+                    </TableCell>
                     <TableCell>{room.BuildingName}</TableCell>
                     <TableCell>{room.RoomType}</TableCell>
                     <TableCell>{room.Area}m²</TableCell>

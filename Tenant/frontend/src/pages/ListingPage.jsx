@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useScrollToTop } from '../hooks/useScrollToTop'
+import RoomCardSkeleton from '../components/RoomCardSkeleton'
 import {
   Box,
   Container,
@@ -11,7 +12,7 @@ import {
   Typography,
   Stack,
   IconButton,
-  CircularProgress,
+  Skeleton,
 } from '@mui/material'
 import SecondaryMenu from '../components/SecondaryMenu'
 import {
@@ -37,17 +38,19 @@ import { styled } from '@mui/material/styles'
 
 const ListingCard = styled(Card)(({ theme }) => ({
   cursor: 'pointer',
-  transition: 'all 200ms ease',
+  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    boxShadow: theme.shadows[4],
+    transform: 'translateY(-4px)',
+    boxShadow: theme.shadows[8],
   },
 }))
 
 const LatestListingItem = styled(Card)(({ theme }) => ({
   overflow: 'hidden',
   cursor: 'pointer',
-  transition: 'all 200ms ease',
+  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
+    transform: 'translateY(-2px)',
     boxShadow: theme.shadows[4],
   },
 }))
@@ -81,7 +84,7 @@ function ListingPage() {
           rating: 4.5, // Default rating
           reviews: Math.floor(Math.random() * 50) + 1, // Random reviews
           image: room.images?.length > 0 
-            ? `${API_URL.replace('/api', '')}/uploads/${room.images[0].ImageURL}`
+            ? `${API_URL.replace('/api', '')}${room.images[0].ImageURL}`
             : null,
           status: (room.DisplayStatus || room.Status) === 'available' ? 'available' : 
                   (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
@@ -159,19 +162,44 @@ function ListingPage() {
       <SecondaryMenu onCategoryChange={handleCategoryChange} onDistrictChange={handleDistrictChange} />
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
             Danh sách phòng cho thuê
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
             Tìm phòng phù hợp với nhu cầu của bạn • <strong>{listings.length} kết quả</strong>
           </Typography>
         </Box>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress />
-          </Box>
+          <Grid container spacing={3}>
+            <Grid item xs={12} lg={8}>
+              <Stack spacing={2}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <RoomCardSkeleton key={i} />
+                ))}
+              </Stack>
+            </Grid>
+            <Grid item xs={12} lg={4}>
+              <Card sx={{ p: 3 }}>
+                <Skeleton variant="text" width="60%" height={32} sx={{ mb: 2 }} />
+                <Stack spacing={2}>
+                  {[1, 2, 3].map((i) => (
+                    <Box key={i}>
+                      <Stack direction="row" spacing={1}>
+                        <Skeleton variant="rectangular" width={120} height={100} />
+                        <Box sx={{ flex: 1 }}>
+                          <Skeleton variant="text" width="80%" />
+                          <Skeleton variant="text" width="60%" />
+                          <Skeleton variant="text" width="40%" />
+                        </Box>
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
+              </Card>
+            </Grid>
+          </Grid>
         ) : error ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography variant="h6" color="error" sx={{ mb: 2 }}>
@@ -200,16 +228,26 @@ function ListingPage() {
                 <ListingCard key={listing.id}>
                   <Stack direction="row" spacing={2} sx={{ p: 2 }}>
                     {/* Image */}
-                    <Box sx={{ position: 'relative', width: 200, height: 150, flexShrink: 0, bgcolor: listing.image ? 'transparent' : 'grey.200', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box sx={{ position: 'relative', width: 300, height: 222, flexShrink: 0, borderRadius: 1, overflow: 'hidden' }}>
                       {listing.image ? (
                         <CardMedia
                           component="img"
                           image={listing.image}
                           alt={listing.title}
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }}
+                          sx={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover',
+                            transition: 'transform 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                            '&:hover': {
+                              transform: 'scale(1.08)'
+                            }
+                          }}
                         />
                       ) : (
-                        <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                        <Box sx={{ width: '100%', height: '100%', bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                        </Box>
                       )}
                       <IconButton
                         size="small"
@@ -314,7 +352,20 @@ function ListingPage() {
                         </Typography>
                       )}
                       <Stack direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>
-                        <Button variant="outlined" size="small">
+                        <Button 
+                          variant="outlined" 
+                          size="small"
+                          sx={{
+                            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+                            '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: 2
+                            },
+                            '&:active': {
+                              transform: 'translateY(0)'
+                            }
+                          }}
+                        >
                           Xem chi tiết
                         </Button>
                         <Button
@@ -324,10 +375,16 @@ function ListingPage() {
                           sx={{
                             borderColor: favorites[listing.id] ? '#F43F5E' : 'inherit',
                             color: favorites[listing.id] ? '#F43F5E' : 'inherit',
+                            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
                             '&:hover': {
                               borderColor: '#F43F5E',
                               backgroundColor: 'rgba(244, 63, 94, 0.04)',
+                              transform: 'translateY(-2px)',
+                              boxShadow: 2
                             },
+                            '&:active': {
+                              transform: 'scale(0.95)'
+                            }
                           }}
                         >
                           {favorites[listing.id] ? (
@@ -391,11 +448,11 @@ function ListingPage() {
                             component="img"
                             image={listing.image}
                             alt={listing.title}
-                            sx={{ width: 80, height: 80, objectFit: 'cover' }}
+                            sx={{ width: 130, height: 130, objectFit: 'cover', flexShrink: 0 }}
                           />
                         ) : (
-                          <Box sx={{ width: 80, height: 80, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <NoImageIcon sx={{ fontSize: 40, color: 'grey.400' }} />
+                          <Box sx={{ width: 130, height: 130, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <NoImageIcon sx={{ fontSize: 50, color: 'grey.400' }} />
                           </Box>
                         )}
                         <CardContent sx={{ p: 1, flex: 1 }}>

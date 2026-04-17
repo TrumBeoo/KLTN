@@ -1,0 +1,1 @@
+# Rule 1: Không tạo file .md nếu tôi không yêu cầu

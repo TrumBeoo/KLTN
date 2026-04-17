@@ -32,6 +32,11 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api', viewingScheduleRoutes);
 app.use('/api', roomRoutes);
 
+// Serve uploaded files from Landlord backend
+const path = require('path');
+const landlordUploadsPath = path.join(__dirname, '..', '..', 'Landlord', 'backend', 'uploads');
+app.use('/uploads', express.static(landlordUploadsPath));
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK' });
