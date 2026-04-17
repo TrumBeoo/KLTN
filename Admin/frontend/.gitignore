@@ -7,6 +7,4 @@ dist/
 .vscode/
 .idea/
 .env
-.NOTION_DESIGN
-.LINEAR_DESIGN
-.AIRBNB_DESIGN
+.STRIPE_DESIGN.md
