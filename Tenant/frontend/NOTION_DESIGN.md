@@ -307,3 +307,50 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 6. The warm white (#f6f5f4) section background is essential for visual rhythm
 7. Pill badges (9999px) for status/tags, 4px radius for buttons and inputs
 8. Notion Blue (#0075de) is the only saturated color in core UI -- use it sparingly for CTAs and links
+
+
+PROMPT:
+Read and strictly follow DESIGN.md (Notion style).
+
+Refactor my existing frontend UI to match Notion-style design.
+
+Requirements:
+- Keep ALL existing logic, API calls, and data flow unchanged
+- Only refactor UI (layout, styling, components)
+
+Design rules (VERY IMPORTANT):
+- Use minimal color palette (white, gray, black)
+- Use soft borders instead of shadows
+- Use clean typography (no bold colors)
+- Use spacing-based layout (8px grid system)
+- Avoid heavy UI elements (no gradients, no flashy buttons)
+- Focus on readability and simplicity
+
+Layout changes:
+- Convert current layout into Notion-style structure:
+  + Left sidebar (navigation)
+  + Top minimal header
+  + Main content as clean blocks/cards
+
+Components transformation:
+- Cards → flat blocks with light border
+- Tables → clean Notion-style table (thin borders, no heavy styling)
+- Buttons → simple, small, subtle
+- Forms → minimal inputs, clean spacing
+- Modals → centered, simple, no heavy shadow
+
+For tenant dashboard (CCMN):
+- Show current room info as a clean block
+- Payment info as simple list/table
+- Contract info as structured text block
+- Maintenance request as minimal form
+
+Technical constraints:
+- Use reusable React components
+- Keep responsive design (mobile-friendly)
+- Do NOT break existing functionality
+
+Output:
+- Refactored components
+- Clean, modular structure
+- Consistent Notion-style UI across all pages
