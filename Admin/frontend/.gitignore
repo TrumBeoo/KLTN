@@ -7,4 +7,4 @@ dist/
 .vscode/
 .idea/
 .env
-.STRIPE_DESIGN.md
+*.md
