@@ -1,0 +1,108 @@
+# HƯỚNG DẪN SỬ DỤNG FILE EXCEL UPLOAD PHÒNG TRỌ
+
+## Cột BẮT BUỘC trong file Excel:
+
+### 1. room_code (Mã phòng) - BẮT BUỘC DUY NHẤT
+- Mã định danh duy nhất cho phòng
+- Ví dụ: P101, P102, A201, B301
+
+## TẤT CẢ CÁC CỘT KHÁC ĐỀU LÀ TÙY CHỌN:
+
+### 2. title (Tiêu đề)
+- Tiêu đề tin đăng
+- Ví dụ: "Phòng trọ cao cấp gần trường ĐH"
+- Mặc định: Rỗng
+
+### 3. price (Giá thuê)
+- Giá thuê theo tháng (VNĐ)
+- Ví dụ: 3000000, 4500000
+- Mặc định: 0
+
+### 4. area (Diện tích)
+- Diện tích phòng (m²)
+- Ví dụ: 25, 30, 35.5
+- Mặc định: 20m²
+
+### 5. max_people (Số người tối đa)
+- Số người tối đa có thể ở
+- Ví dụ: 2, 3, 4
+- Mặc định: 1
+
+### 6. district (Quận)
+- Quận/Huyện tại TP.HCM
+- Ví dụ: Quận 1, Quận Bình Thạnh, Huyện Bình Chánh
+- Mặc định: Rỗng
+
+### 7. ward (Phường/Xã)
+- Ví dụ: Phường Bến Nghé, Phường 1
+
+### 8. address (Địa chỉ)
+- Địa chỉ chi tiết
+- Ví dụ: 123 Nguyễn Văn Linh
+
+### 9. room_type (Loại phòng)
+- Ví dụ: Phòng trọ, Chung cư mini, Căn hộ dịch vụ
+- Mặc định: Phòng trọ
+
+### 10. floor_type (Loại sàn)
+- Ví dụ: Gạch men, Gỗ, Ceramic
+
+### 11. service (Dịch vụ)
+- Các dịch vụ đi kèm
+- Ví dụ: Điện, nước, internet, giặt là
+
+### 12. rules (Nội quy)
+- Nội quy của phòng
+- Ví dụ: Không nuôi thú cưng, Không hút thuốc
+
+### 13. description (Mô tả)
+- Mô tả chi tiết về phòng
+
+### 14. furniture (Nội thất)
+- Danh sách nội thất
+- Ví dụ: Giường, tủ, bàn ghế, điều hòa
+
+### 15. amenities (Tiện nghi)
+- Các tiện nghi xung quanh
+- Ví dụ: Gần trường học, siêu thị, bệnh viện
+
+## Ví dụ dữ liệu:
+
+### Ví dụ 1: Chỉ có mã phòng (tối thiểu)
+| room_code |
+|-----------|
+| P101      |
+| P102      |
+| P103      |
+
+### Ví dụ 2: Có thêm thông tin cơ bản
+| room_code | title | price | area | district |
+|-----------|-------|-------|------|----------|
+| P101 | Phòng trọ cao cấp | 3000000 | 25 | Quận 1 |
+| P102 | Phòng studio hiện đại | 4500000 | 30 | Quận Bình Thạnh |
+
+### Ví dụ 3: Đầy đủ thông tin
+| room_code | title | price | area | max_people | district | ward | address | room_type | floor_type | service | rules | description | furniture | amenities |
+|-----------|-------|-------|------|------------|----------|------|---------|-----------|------------|---------|-------|-------------|-----------|-----------|
+| P101 | Phòng trọ cao cấp | 3000000 | 25 | 2 | Quận 1 | Phường Bến Nghé | 123 Nguyễn Huệ | Phòng trọ | Gạch men | Điện, nước, internet | Không nuôi thú cưng | Phòng đẹp, thoáng mát | Giường, tủ, điều hòa | Gần trường ĐH |
+| P102 | Phòng studio hiện đại | 4500000 | | | Quận Bình Thạnh | Phường 1 | 456 Xô Viết Nghệ Tĩnh | Chung cư mini | Gỗ | Điện, nước, internet, giặt là | Không hút thuốc | Phòng mới xây | Giường, tủ, bàn ghế, điều hòa, tủ lạnh | Gần siêu thị, bệnh viện |
+
+## Quy trình upload:
+
+1. **Upload Excel**: Chọn file Excel có ít nhất cột room_code
+2. **Preview & Tạo phòng**: Xem trước dữ liệu và tạo phòng trong hệ thống
+3. **Upload ảnh**: Upload ảnh cho từng phòng (tối đa 10 ảnh/phòng)
+4. **Publish**: Đăng tất cả tin đăng lên hệ thống
+
+## Lưu ý:
+
+- File Excel phải có định dạng .xlsx hoặc .xls
+- **CHỈ CÓ 1 CỘT BẮT BUỘC: room_code**
+- Tất cả các cột khác đều là tùy chọn
+- Mã phòng (room_code) phải là duy nhất
+- Nếu không nhập price, hệ thống sẽ mặc định 0đ
+- Nếu không nhập area, hệ thống sẽ mặc định 20m²
+- Nếu không nhập max_people, hệ thống sẽ mặc định 1 người
+- Nếu nhập district, phải thuộc danh sách quận/huyện TP.HCM
+- Nên upload ảnh cho mỗi phòng để tăng tỷ lệ thuê
+- Có thể bắt đầu với file chỉ có mã phòng, sau đó bổ sung thông tin sau

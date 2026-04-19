@@ -10,6 +10,7 @@ const roomRoutes = require('./routes/rooms');
 const buildingRoutes = require('./routes/buildings');
 const dashboardRoutes = require('./routes/dashboard');
 const listingRoutes = require('./routes/listings');
+const bulkUploadRoutes = require('./routes/bulkUpload');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/buildings', buildingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/bulk', bulkUploadRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));

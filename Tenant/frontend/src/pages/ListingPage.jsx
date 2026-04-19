@@ -311,7 +311,7 @@ function ListingPage() {
                     key={i}
                     variant={label === '1' ? 'contained' : 'text'}
                     sx={{
-                      minWidth: 40, height: 40, borderRadius: '50%', fontWeight: label === '1' ? 700 : 400,
+                      minWidth: 40, height: 40, fontWeight: label === '1' ? 700 : 400,
                       backgroundColor: label === '1' ? '#222222' : 'transparent',
                       color: label === '1' ? '#ffffff' : '#222222',
                       '&:hover': { backgroundColor: label === '1' ? '#3f3f3f' : '#f7f7f7' },

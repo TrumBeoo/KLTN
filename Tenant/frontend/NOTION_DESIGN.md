@@ -310,7 +310,7 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 
 
 PROMPT:
-Read and strictly follow AI_CHAT_NOTION_DESIGN.md (Notion style).
+Read and strictly follow NOTION_DESIGN.md (Notion style).
 
 Refactor my existing frontend UI to match Notion-style design.
 

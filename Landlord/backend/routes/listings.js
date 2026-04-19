@@ -18,24 +18,19 @@ const validDistricts = [
 const validateRow = (row) => {
   const errors = []
   if (!row.roomCode) errors.push('Thiếu mã phòng')
-  if (!row.title) errors.push('Thiếu tiêu đề')
-  if (!row.price || isNaN(row.price) || row.price <= 0) errors.push('Giá không hợp lệ')
-  if (!row.area || isNaN(row.area) || row.area <= 0) errors.push('Diện tích không hợp lệ')
-  if (!row.district) errors.push('Thiếu quận')
-  else if (!validDistricts.includes(row.district)) errors.push('Quận không hợp lệ')
   
-  if (row.imageUrl && row.imageUrl.trim()) {
-    try {
-      new URL(row.imageUrl)
-    } catch {
-      errors.push('URL ảnh không hợp lệ')
-    }
-  }
+  // Optional validations
+  if (row.price && (isNaN(row.price) || row.price <= 0)) errors.push('Giá không hợp lệ')
+  if (row.area && (isNaN(row.area) || row.area <= 0)) errors.push('Diện tích không hợp lệ')
+  if (row.maxPeople && (isNaN(row.maxPeople) || row.maxPeople <= 0)) errors.push('Số người tối đa không hợp lệ')
+  if (row.district && !validDistricts.includes(row.district)) errors.push('Quận không hợp lệ')
   
   return errors
 }
 
 router.post('/preview-excel', upload.single('file'), async (req, res) => {
+  const connection = await db.getConnection()
+  
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Không có file được tải lên' })
@@ -53,7 +48,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'File Excel không có dữ liệu' })
     }
 
-    const [landlords] = await db.query(
+    const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
     )
@@ -64,62 +59,66 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
 
     const landlordId = landlords[0].LandlordID
 
-    const preview = await Promise.all(data.map(async (row, index) => {
-      const parsed = {
-        rowNumber: index + 2,
-        roomCode: row['Mã phòng'] || row['RoomCode'],
-        title: row['Tiêu đề'] || row['Title'],
-        description: row['Mô tả'] || row['Description'] || '',
-        price: parseFloat(row['Giá'] || row['Price']),
-        area: parseFloat(row['Diện tích'] || row['Area']),
-        district: row['Quận'] || row['District'],
-        imageUrl: row['URL ảnh'] || row['ImageURL'] || ''
-      }
-      
-      const errors = validateRow(parsed)
-      
-      if (parsed.roomCode && errors.length === 0) {
-        try {
-          const [rooms] = await db.query(
-            'SELECT RoomID FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
-            [parsed.roomCode, landlordId]
-          )
-          
-          if (rooms.length === 0) {
-            errors.push('Phòng không tồn tại hoặc không thuộc về bạn')
-          } else {
-            const [existingListings] = await db.query(
-              'SELECT ListingID FROM LISTING WHERE RoomID = ?',
-              [rooms[0].RoomID]
-            )
-            
-            if (existingListings.length > 0) {
-              errors.push('Phòng đã có tin đăng')
-            }
-          }
-        } catch (error) {
-          errors.push('Lỗi kiểm tra phòng')
-        }
-      }
-      
-      return { ...parsed, errors, isValid: errors.length === 0 }
-    }))
+    // Generate UploadJobID
+    const [lastJob] = await connection.query(
+      'SELECT UploadJobID FROM UPLOAD_JOB ORDER BY UploadJobID DESC LIMIT 1'
+    )
+    
+    let uploadJobId
+    if (lastJob.length > 0) {
+      const lastId = parseInt(lastJob[0].UploadJobID.substring(2))
+      uploadJobId = 'UJ' + String(lastId + 1).padStart(8, '0')
+    } else {
+      uploadJobId = 'UJ00000001'
+    }
 
-    const validCount = preview.filter(r => r.isValid).length
-    const invalidCount = preview.filter(r => !r.isValid).length
+    // Create upload job
+    await connection.query(`
+      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, FileName, TotalRows, Status)
+      VALUES (?, ?, ?, ?, 'pending')
+    `, [uploadJobId, landlordId, req.file.originalname, data.length])
+
+    // Save details
+    const preview = []
+    for (let index = 0; index < data.length; index++) {
+      const row = data[index]
+      
+      const parsed = {
+        roomCode: row['room_code'] || row['Mã phòng'] || '',
+        title: row['title'] || row['Tiêu đề'] || '',
+        price: (row['price'] || row['Giá']) ? parseFloat(row['price'] || row['Giá']) : 0,
+        area: (row['area'] || row['Diện tích']) ? parseFloat(row['area'] || row['Diện tích']) : 20,
+        maxPeople: (row['max_people'] || row['Số người tối đa']) ? parseInt(row['max_people'] || row['Số người tối đa']) : 1,
+        district: row['district'] || row['Quận'] || '',
+        ward: row['ward'] || row['Phường'] || '',
+        address: row['address'] || row['Địa chỉ'] || '',
+        roomType: row['room_type'] || row['Loại phòng'] || 'Phòng trọ',
+        description: row['description'] || row['Mô tả'] || ''
+      }
+
+      const [result] = await connection.query(`
+        INSERT INTO UPLOAD_DETAIL (
+          UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
+          District, Ward, Address, RoomType, Description, Status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      `, [
+        uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
+        parsed.area, parsed.maxPeople, parsed.district, parsed.ward,
+        parsed.address, parsed.roomType, parsed.description
+      ])
+
+      preview.push({ ...parsed, detailId: result.insertId })
+    }
 
     res.json({
       success: true,
-      data: preview,
-      summary: {
-        total: preview.length,
-        valid: validCount,
-        invalid: invalidCount
-      }
+      data: { uploadJobId, preview }
     })
   } catch (error) {
     console.error('Preview Excel error:', error)
     res.status(500).json({ success: false, message: 'Lỗi khi xử lý file Excel' })
+  } finally {
+    connection.release()
   }
 })
 
@@ -175,13 +174,21 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
       const rowNumber = index + 2
       
       const parsed = {
-        roomCode: row['Mã phòng'] || row['RoomCode'],
-        title: row['Tiêu đề'] || row['Title'],
-        description: row['Mô tả'] || row['Description'] || '',
-        price: parseFloat(row['Giá'] || row['Price']),
-        area: parseFloat(row['Diện tích'] || row['Area']),
-        district: row['Quận'] || row['District'],
-        imageUrl: row['URL ảnh'] || row['ImageURL'] || ''
+        roomCode: row['room_code'] || row['Mã phòng'],
+        title: row['title'] || row['Tiêu đề'],
+        price: parseFloat(row['price'] || row['Giá']),
+        area: parseFloat(row['area'] || row['Diện tích']),
+        maxPeople: parseInt(row['max_people'] || row['Số người tối đa']) || 1,
+        district: row['district'] || row['Quận'],
+        ward: row['ward'] || row['Phường'] || '',
+        address: row['address'] || row['Địa chỉ'] || '',
+        roomType: row['room_type'] || row['Loại phòng'] || 'Phòng trọ',
+        floorType: row['floor_type'] || row['Loại sàn'] || '',
+        service: row['service'] || row['Dịch vụ'] || '',
+        rules: row['rules'] || row['Nội quy'] || '',
+        description: row['description'] || row['Mô tả'] || '',
+        furniture: row['furniture'] || row['Nội thất'] || '',
+        amenities: row['amenities'] || row['Tiện nghi'] || ''
       }
 
       const validationErrors = validateRow(parsed)

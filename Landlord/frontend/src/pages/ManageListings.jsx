@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNotification } from '../hooks/useNotification'
 import NotificationModal from '../components/NotificationModal'
-import ExcelUpload from '../components/ExcelUpload'
+import ExcelUploadWithImages from '../components/ExcelUploadWithImages'
 import {
   Box,
   Card,
@@ -480,7 +480,7 @@ export default function ManageListings() {
       </Paper>
 
       {activeTab === 1 ? (
-        <ExcelUpload />
+        <ExcelUploadWithImages />
       ) : (
         <>
       {/* Stats */}
