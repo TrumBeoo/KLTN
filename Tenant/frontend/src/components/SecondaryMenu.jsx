@@ -1,143 +1,156 @@
 import { useState } from 'react'
-import {
-  Box,
-  Button,
-  Menu,
-  MenuItem,
-  Stack,
-  Typography,
-} from '@mui/material'
-import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material'
+import { Box, Button, Menu, MenuItem, Stack, Typography, IconButton } from '@mui/material'
+import { ExpandMore as ExpandMoreIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
-const MenuContainer = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.background.paper,
-  borderBottom: `1px solid ${theme.palette.grey[200]}`,
-  padding: theme.spacing(1, 0),
+const MenuContainer = styled(Box)({
+  backgroundColor: '#ffffff',
+  borderBottom: '1px solid #e8e8e8',
   position: 'sticky',
-  top: 64,
+  height: 35,
+  top: 80,
   zIndex: 99,
-}))
+  overflowX: 'auto',
+  '&::-webkit-scrollbar': { display: 'none' },
+  scrollbarWidth: 'none',
+})
 
 const CategoryButton = styled(Button, {
-  shouldForwardProp: (prop) => prop !== 'isActive',
-})(({ theme, isActive }) => ({
+  shouldForwardProp: prop => prop !== 'isActive',
+})(({ isActive }) => ({
   textTransform: 'none',
-  fontSize: '0.8rem',
+  fontSize: '0.75rem',
   fontWeight: isActive ? 600 : 500,
-  color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-  padding: theme.spacing(0.5, 1.25),
-  borderRadius: theme.spacing(0.5),
-  backgroundColor: isActive ? theme.palette.primary.light + '20' : 'transparent',
+  color: isActive ? '#222222' : '#6a6a6a',
+  padding: '4px 12px',
+  borderRadius: '16px',
+  backgroundColor: isActive ? '#f7f7f7' : 'transparent',
+  border: isActive ? '1.5px solid #222222' : '1px solid transparent',
+  whiteSpace: 'nowrap',
+  minWidth: 'auto',
+  height: 28,
+  flexShrink: 0,
   '&:hover': {
-    backgroundColor: isActive ? theme.palette.primary.light + '30' : theme.palette.grey[50],
-    color: theme.palette.primary.main,
+    backgroundColor: '#f7f7f7',
+    color: '#222222',
+    border: '1px solid #c1c1c1',
   },
-  transition: 'all 200ms ease',
+  transition: 'all 150ms ease',
 }))
 
-const DistrictButton = styled(Button)(({ theme }) => ({
+const DistrictButton = styled(Button)({
   textTransform: 'none',
-  fontSize: '0.8rem',
+  fontSize: '0.75rem',
   fontWeight: 500,
-  color: theme.palette.text.secondary,
-  padding: theme.spacing(0.5, 1.25),
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(0.5),
+  color: '#222222',
+  padding: '4px 12px',
+  borderRadius: '16px',
+  border: '1px solid #c1c1c1',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+  height: 28,
+  minWidth: 'auto',
   '&:hover': {
-    backgroundColor: theme.palette.grey[50],
-    color: theme.palette.primary.main,
+    backgroundColor: '#f7f7f7',
+    border: '1px solid #222222',
   },
-  transition: 'all 200ms ease',
-}))
+  transition: 'all 150ms ease',
+})
 
 const districts = [
-  'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5',
-  'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
-  'Quận 11', 'Quận 12', 'Quận Tân Bình', 'Quận Tân Phú',
-  'Quận Bình Thạnh', 'Quận Gò Vấp', 'Quận Phú Nhuận',
+  'Ba Đình', 'Hoàn Kiếm', 'Hai Bà Trưng', 'Đống Đa', 'Cầu Giấy',
+  'Tây Hồ', 'Long Biên', 'Hà Đông', 'Thanh Xuân', 'Hoàng Mai',
+  'Nam Từ Liêm', 'Bắc Từ Liêm', 'Gia Lâm',
 ]
 
 const categories = [
-  { id: 'all', label: 'Tất cả' },
-  { id: 'premium', label: 'Cao cấp' },
-  { id: 'mini', label: 'Chung cư mini' },
-  { id: 'duplex', label: 'Duplex' },
-  { id: 'cheap', label: 'Giá rẻ' },
+  { id: 'all', label: '✦ Tất cả' },
+  { id: 'premium', label: '⭐ Cao cấp' },
+  { id: 'mini', label: '🏢 Chung cư mini' },
+  { id: 'duplex', label: '🏠 Duplex' },
+  { id: 'cheap', label: '💰 Giá rẻ' },
+  { id: 'studio', label: '🛏 Studio' },
+  { id: 'share', label: '👥 Ở ghép' },
 ]
 
 export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
   const [activeCategory, setActiveCategory] = useState('all')
   const [districtAnchor, setDistrictAnchor] = useState(null)
-  const [selectedDistrict, setSelectedDistrict] = useState('Quận')
+  const [selectedDistrict, setSelectedDistrict] = useState(null)
 
-  const handleCategoryClick = (categoryId) => {
-    setActiveCategory(categoryId)
-    onCategoryChange?.(categoryId)
+  const handleCategoryClick = (id) => {
+    setActiveCategory(id)
+    onCategoryChange?.(id)
   }
 
-  const handleDistrictOpen = (e) => {
-    setDistrictAnchor(e.currentTarget)
-  }
-
-  const handleDistrictClose = () => {
+  const handleDistrictSelect = (d) => {
+    setSelectedDistrict(d === selectedDistrict ? null : d)
+    onDistrictChange?.(d)
     setDistrictAnchor(null)
-  }
-
-  const handleDistrictSelect = (district) => {
-    setSelectedDistrict(district)
-    onDistrictChange?.(district)
-    handleDistrictClose()
   }
 
   return (
     <MenuContainer>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 0.5, px: { xs: 2, md: 3 } }}>
-        {/* Category Buttons */}
-        {categories.map((category) => (
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ px: { xs: 2, md: 4 }, py: 0.5, alignItems: 'center', justifyContent: 'center', minWidth: 'max-content' }}
+      >
+        {categories.map(cat => (
           <CategoryButton
-            key={category.id}
-            isActive={activeCategory === category.id}
-            onClick={() => handleCategoryClick(category.id)}
+            key={cat.id}
+            isActive={activeCategory === cat.id}
+            onClick={() => handleCategoryClick(cat.id)}
+            disableRipple
           >
-            {category.label}
+            {cat.label}
           </CategoryButton>
         ))}
 
+        {/* Separator */}
+        {/* <Box sx={{ width: 1, height: 28, backgroundColor: '#e8e8e8', flexShrink: 0 }} /> */}
+
         {/* District Dropdown */}
-        <Box sx={{ display: 'flex' }}>
-          <DistrictButton
-            onClick={handleDistrictOpen}
-            endIcon={<ExpandMoreIcon sx={{ fontSize: '1.25rem' }} />}
+        <DistrictButton
+          endIcon={<ExpandMoreIcon sx={{ fontSize: '1rem', transition: 'transform 200ms', transform: districtAnchor ? 'rotate(180deg)' : 'none' }} />}
+          onClick={e => setDistrictAnchor(e.currentTarget)}
+          sx={{ borderColor: selectedDistrict ? '#222222' : '#c1c1c1', fontWeight: selectedDistrict ? 600 : 500 }}
+        >
+          {selectedDistrict || 'Khu vực'}
+        </DistrictButton>
+
+        <Menu
+          anchorEl={districtAnchor}
+          open={!!districtAnchor}
+          onClose={() => setDistrictAnchor(null)}
+          PaperProps={{
+            sx: {
+              maxHeight: 280, width: 200, borderRadius: '12px', mt: 0.5,
+              boxShadow: 'rgba(0,0,0,0.20) 0px 12px 40px',
+              border: '1px solid #e8e8e8',
+              py: 0.5,
+            }
+          }}
+          transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+        >
+          <MenuItem
+            onClick={() => handleDistrictSelect(null)}
+            sx={{ fontSize: '0.875rem', fontWeight: selectedDistrict === null ? 600 : 400, color: '#222222', py: 1.25 }}
           >
-            {selectedDistrict}
-          </DistrictButton>
-            <Menu
-              anchorEl={districtAnchor}
-              open={!!districtAnchor}
-              onClose={handleDistrictClose}
-              PaperProps={{
-                sx: {
-                  maxHeight: 300,
-                  width: 200,
-                },
-              }}
+            Tất cả khu vực
+          </MenuItem>
+          {districts.map(d => (
+            <MenuItem
+              key={d}
+              onClick={() => handleDistrictSelect(d)}
+              selected={selectedDistrict === d}
+              sx={{ fontSize: '0.875rem', color: '#222222', py: 1.25, '&.Mui-selected': { backgroundColor: '#f7f7f7', fontWeight: 600 } }}
             >
-              <MenuItem onClick={() => handleDistrictSelect('Quận')}>
-                <Typography sx={{ fontWeight: 500 }}>Tất cả quận</Typography>
-              </MenuItem>
-              {districts.map((district) => (
-                <MenuItem
-                  key={district}
-                  onClick={() => handleDistrictSelect(district)}
-                  selected={selectedDistrict === district}
-                >
-                  {district}
-                </MenuItem>
-              ))}
-            </Menu>
-        </Box>
+              {d}
+            </MenuItem>
+          ))}
+        </Menu>
       </Stack>
     </MenuContainer>
   )

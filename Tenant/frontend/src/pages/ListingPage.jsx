@@ -1,79 +1,112 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import RoomCardSkeleton from '../components/RoomCardSkeleton'
-import {
-  Box,
-  Container,
-  Grid,
-  Card,
-  CardMedia,
-  CardContent,
-  Button,
-  Typography,
-  Stack,
-  IconButton,
-  Skeleton,
-} from '@mui/material'
 import SecondaryMenu from '../components/SecondaryMenu'
 import {
-  Star as StarIcon,
-  LocationOn as LocationIcon,
-  Straighten as RulerIcon,
-  Wifi as WifiIcon,
-  AcUnit as AcIcon,
-  Opacity as DropletIcon,
-  Security as ShieldIcon,
-  DirectionsCar as CarIcon,
-  Favorite as FavoriteIcon,
-  FavoriteBorder as FavoriteBorderIcon,
-  Visibility as EyeIcon,
-  AccessTime as ClockIcon,
-  Tv as TvIcon,
-  LocalLaundryService as WasherIcon,
-  Kitchen as FridgeIcon,
-  Balcony as BalconyIcon,
-  ImageNotSupported as NoImageIcon,
+  Box, Container, Grid, Button, Typography, Stack, IconButton, Skeleton,
+} from '@mui/material'
+import {
+  Star as StarIcon, LocationOn as LocationIcon, Straighten as RulerIcon,
+  Wifi as WifiIcon, AcUnit as AcIcon, Opacity as DropletIcon,
+  Security as ShieldIcon, DirectionsCar as CarIcon,
+  Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon,
+  Visibility as EyeIcon, AccessTime as ClockIcon,
+  Tv as TvIcon, LocalLaundryService as WasherIcon,
+  Kitchen as FridgeIcon, Balcony as BalconyIcon,
+  ImageNotSupported as NoImageIcon, Group as GroupIcon,
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
-const ListingCard = styled(Card)(({ theme }) => ({
-  cursor: 'pointer',
-  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[8],
+const ImageWrapper = styled(Box)({
+  borderRadius: '10px',
+  overflow: 'hidden',
+  position: 'relative',
+  backgroundColor: '#f2f2f2',
+  width: 280,
+  height: 210,
+  flexShrink: 0,
+  '& img': {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transition: 'transform 400ms ease',
+    display: 'block',
   },
+})
+
+const ListingRow = styled(Box)({
+  display: 'flex',
+  gap: 20,
+  padding: '20px 0',
+  borderBottom: '1px solid #e8e8e8',
+  cursor: 'pointer',
+  '&:hover .listing-image': { transform: 'scale(1.04)' },
+  '&:last-child': { borderBottom: 'none' },
+})
+
+const AmenityIcon = ({ amenity }) => {
+  const icons = {
+    wifi: <WifiIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    ac: <AcIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    heater: <DropletIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    security: <ShieldIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    parking: <CarIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    washer: <WasherIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    fridge: <FridgeIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    tv: <TvIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+    balcony: <BalconyIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
+  }
+  return icons[amenity] || null
+}
+
+const StatusBadge = styled(Box)(({ status }) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '4px 10px',
+  borderRadius: '12px',
+  fontSize: '0.8125rem',
+  fontWeight: 500,
+  backgroundColor:
+    status === 'available' ? '#e8f5e9' :
+    status === 'pending' ? '#fff3e0' :
+    status === 'booked' ? '#e8f0fe' : '#fce8e6',
+  color:
+    status === 'available' ? '#5CB85C' :
+    status === 'pending' ? '#F0AD4E' :
+    status === 'booked' ? '#5BC0DE' : '#c13515',
 }))
 
-const LatestListingItem = styled(Card)(({ theme }) => ({
-  overflow: 'hidden',
+const statusLabel = { available: 'Còn trống', pending: 'Chờ duyệt', booked: 'Đã đặt lịch', rented: 'Đã thuê' }
+
+const SideCard = styled(Box)({
   cursor: 'pointer',
-  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.shadows[4],
-  },
-}))
+  display: 'flex',
+  gap: 12,
+  padding: '12px 0',
+  borderBottom: '1px solid #f2f2f2',
+  '&:last-child': { borderBottom: 'none' },
+  '&:hover .side-title': { color: '#4A90E2' },
+})
 
 function ListingPage() {
   useScrollToTop()
+  const navigate = useNavigate()
   const [favorites, setFavorites] = useState({})
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-  useEffect(() => {
-    fetchRooms()
-  }, [])
+  useEffect(() => { fetchRooms() }, [])
 
   const fetchRooms = async () => {
     try {
       setLoading(true)
       const response = await fetch(`${API_URL}/rooms`)
       const data = await response.json()
-      
       if (data.success) {
         const formattedRooms = data.data.map(room => ({
           id: room.RoomID,
@@ -81,12 +114,10 @@ function ListingPage() {
           location: room.BuildingAddress || 'Địa chỉ chưa cập nhật',
           price: room.Price?.toString() || '0',
           area: room.Area || 0,
-          rating: 4.5, // Default rating
-          reviews: Math.floor(Math.random() * 50) + 1, // Random reviews
-          image: room.images?.length > 0 
-            ? `${API_URL.replace('/api', '')}${room.images[0].ImageURL}`
-            : null,
-          status: (room.DisplayStatus || room.Status) === 'available' ? 'available' : 
+          rating: 4.5,
+          reviews: Math.floor(Math.random() * 50) + 1,
+          image: room.images?.length > 0 ? `${API_URL.replace('/api', '')}${room.images[0].ImageURL}` : null,
+          status: (room.DisplayStatus || room.Status) === 'available' ? 'available' :
                   (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
                   (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
           amenities: parseAmenities(room.Amenities),
@@ -94,395 +125,253 @@ function ListingPage() {
           buildingName: room.BuildingName,
           maxPeople: room.MaxPeople,
           description: room.Description,
-          views: Math.floor(Math.random() * 100) + 10 // Random views
+          views: Math.floor(Math.random() * 100) + 10,
         }))
         setListings(formattedRooms)
       } else {
         setError('Không thể tải danh sách phòng')
       }
-    } catch (error) {
-      console.error('Fetch rooms error:', error)
+    } catch {
       setError('Lỗi kết nối server')
     } finally {
       setLoading(false)
     }
   }
 
-  const parseAmenities = (amenitiesData) => {
-    if (!amenitiesData) return []
-    try {
-      if (typeof amenitiesData === 'string') {
-        return JSON.parse(amenitiesData)
-      }
-      return Array.isArray(amenitiesData) ? amenitiesData : []
-    } catch {
-      return []
-    }
+  const parseAmenities = (d) => {
+    if (!d) return []
+    try { return typeof d === 'string' ? JSON.parse(d) : Array.isArray(d) ? d : [] }
+    catch { return [] }
   }
 
-  const toggleFavorite = (id) => {
-    setFavorites((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }))
+  const toggleFavorite = (id, e) => {
+    e?.stopPropagation()
+    setFavorites(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const getAmenityIcon = (amenity) => {
-    const icons = {
-      wifi: <WifiIcon sx={{ fontSize: '1rem' }} />,
-      ac: <AcIcon sx={{ fontSize: '1rem' }} />,
-      heater: <DropletIcon sx={{ fontSize: '1rem' }} />,
-      security: <ShieldIcon sx={{ fontSize: '1rem' }} />,
-      parking: <CarIcon sx={{ fontSize: '1rem' }} />,
-      washer: <WasherIcon sx={{ fontSize: '1rem' }} />,
-      fridge: <FridgeIcon sx={{ fontSize: '1rem' }} />,
-      tv: <TvIcon sx={{ fontSize: '1rem' }} />,
-      balcony: <BalconyIcon sx={{ fontSize: '1rem' }} />,
-    }
-    return icons[amenity] || null
-  }
-
-  const formatPrice = (price) => {
-    const numPrice = Math.floor(parseFloat(price))
-    return numPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  }
-
-  const handleCategoryChange = (categoryId) => {
-    console.log('Category changed:', categoryId)
-    // Handle category filter logic
-  }
-
-  const handleDistrictChange = (district) => {
-    console.log('District changed:', district)
-    // Handle district filter logic
-  }
+  const formatPrice = (price) => Math.floor(parseFloat(price)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-      <SecondaryMenu onCategoryChange={handleCategoryChange} onDistrictChange={handleDistrictChange} />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+      <SecondaryMenu onCategoryChange={() => {}} onDistrictChange={() => {}} />
+      <Container maxWidth="lg" sx={{ py: 5 }}>
         {/* Header */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.375rem', color: '#222222', mb: 0.5 }}>
             Danh sách phòng cho thuê
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-            Tìm phòng phù hợp với nhu cầu của bạn • <strong>{listings.length} kết quả</strong>
+          <Typography variant="body2" sx={{ color: '#6a6a6a' }}>
+            <Box component="span" sx={{ fontWeight: 600, color: '#222222' }}>{listings.length}</Box> phòng đang cho thuê tại Hà Nội
           </Typography>
         </Box>
 
         {loading ? (
-          <Grid container spacing={3}>
+          <Grid container spacing={4}>
             <Grid item xs={12} lg={8}>
-              <Stack spacing={2}>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <RoomCardSkeleton key={i} />
-                ))}
+              <Stack spacing={0}>
+                {[1, 2, 3, 4].map(i => <RoomCardSkeleton key={i} />)}
               </Stack>
             </Grid>
             <Grid item xs={12} lg={4}>
-              <Card sx={{ p: 3 }}>
-                <Skeleton variant="text" width="60%" height={32} sx={{ mb: 2 }} />
-                <Stack spacing={2}>
-                  {[1, 2, 3].map((i) => (
-                    <Box key={i}>
-                      <Stack direction="row" spacing={1}>
-                        <Skeleton variant="rectangular" width={120} height={100} />
-                        <Box sx={{ flex: 1 }}>
-                          <Skeleton variant="text" width="80%" />
-                          <Skeleton variant="text" width="60%" />
-                          <Skeleton variant="text" width="40%" />
-                        </Box>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </Card>
+              <Skeleton variant="rectangular" height={400} sx={{ borderRadius: '12px' }} />
             </Grid>
           </Grid>
         ) : error ? (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" color="error" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-            <Button variant="contained" onClick={fetchRooms}>
-              Thử lại
-            </Button>
+          <Box sx={{ textAlign: 'center', py: 10 }}>
+            <Typography sx={{ color: '#c13515', mb: 2, fontWeight: 500 }}>{error}</Typography>
+            <Button onClick={fetchRooms} variant="contained" sx={{ backgroundColor: '#4A90E2' }}>Thử lại</Button>
           </Box>
         ) : listings.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Chưa có phòng nào được đăng
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Vui lòng quay lại sau
-            </Typography>
+          <Box sx={{ textAlign: 'center', py: 10 }}>
+            <Typography sx={{ color: '#6a6a6a', mb: 1, fontSize: '1.125rem' }}>Chưa có phòng nào được đăng</Typography>
+            <Typography variant="body2" sx={{ color: '#929292' }}>Vui lòng quay lại sau</Typography>
           </Box>
         ) : (
-        <Grid container spacing={3}>
-          {/* Left: Listings */}
-          <Grid item xs={12} lg={8}>
-            {/* Listings Grid */}
-            <Stack spacing={2}>
-              {listings.map((listing) => (
-                <ListingCard key={listing.id}>
-                  <Stack direction="row" spacing={2} sx={{ p: 2 }}>
-                    {/* Image */}
-                    <Box sx={{ position: 'relative', width: 300, height: 222, flexShrink: 0, borderRadius: 1, overflow: 'hidden' }}>
+          <Grid container spacing={5}>
+            {/* Left: Listings */}
+            <Grid item xs={12} lg={8}>
+              <Box>
+                {listings.map(listing => (
+                  <ListingRow key={listing.id} onClick={() => navigate(`/room/${listing.id}`)}>
+                    <ImageWrapper>
                       {listing.image ? (
-                        <CardMedia
-                          component="img"
-                          image={listing.image}
-                          alt={listing.title}
-                          sx={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover',
-                            transition: 'transform 400ms cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              transform: 'scale(1.08)'
-                            }
-                          }}
-                        />
+                        <img className="listing-image" src={listing.image} alt={listing.title} />
                       ) : (
-                        <Box sx={{ width: '100%', height: '100%', bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <NoImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+                        <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <NoImageIcon sx={{ fontSize: 48, color: '#c1c1c1' }} />
                         </Box>
                       )}
                       <IconButton
                         size="small"
-                        onClick={() => toggleFavorite(listing.id)}
-                        sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(255,255,255,0.9)' }}
+                        onClick={e => toggleFavorite(listing.id, e)}
+                        sx={{ position: 'absolute', top: 6, right: 6, color: favorites[listing.id] ? '#4A90E2' : 'rgba(255,255,255,0.85)', p: 0.5 }}
                       >
-                        {favorites[listing.id] ? (
-                          <FavoriteIcon sx={{ color: '#F43F5E', fontSize: '1.25rem' }} />
-                        ) : (
-                          <FavoriteBorderIcon sx={{ fontSize: '1.25rem' }} />
-                        )}
+                        {favorites[listing.id]
+                          ? <FavoriteIcon sx={{ fontSize: '1.125rem' }} />
+                          : <FavoriteBorderIcon sx={{ fontSize: '1.125rem', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+                        }
                       </IconButton>
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 4,
-                          left: 4,
-                          bgcolor: listing.status === 'available' ? '#22C55E' : 
-                                   listing.status === 'pending' ? '#F59E0B' :
-                                   listing.status === 'booked' ? '#2563EB' : '#EF4444',
-                          color: 'white',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 0.5,
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {listing.status === 'available' ? 'Trống' : 
-                         listing.status === 'pending' ? 'Chờ duyệt' :
-                         listing.status === 'booked' ? 'Đã đặt lịch' : 'Đã thuê'}
+                      {/* Views Badge */}
+                      <Box sx={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', alignItems: 'center', gap: 0.5, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '8px', px: 0.75, py: 0.25 }}>
+                        <EyeIcon sx={{ fontSize: '0.75rem', color: '#6a6a6a' }} />
+                        <Typography sx={{ fontSize: '0.6875rem', fontWeight: 600, color: '#6a6a6a' }}>{listing.views}</Typography>
                       </Box>
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          bottom: 4,
-                          right: 4,
-                          bgcolor: 'rgba(255,255,255,0.95)',
-                          px: 1,
-                          py: 0.25,
-                          borderRadius: 0.5,
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.25,
-                        }}
-                      >
-                        <EyeIcon sx={{ fontSize: '0.875rem' }} />
-                        {listing.views}
-                      </Box>
-                    </Box>
+                    </ImageWrapper>
 
                     {/* Content */}
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {listing.title}
-                      </Typography>
-                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 1 }}>
-                        <LocationIcon sx={{ fontSize: '0.875rem', color: 'primary.main' }} />
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', py: 0.5 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.75 }}>
+                        <Typography sx={{ fontWeight: 600, fontSize: '1.0625rem', color: '#222222', flex: 1, mr: 2 }}>
+                          {listing.buildingName || listing.title}
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
+                          <StarIcon sx={{ fontSize: '0.875rem', color: '#222222' }} />
+                          <Typography sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#222222' }}>{listing.rating}</Typography>
+                          <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>({listing.reviews})</Typography>
+                        </Stack>
+                      </Stack>
+
+                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+                        <LocationIcon sx={{ fontSize: '0.875rem', color: '#6a6a6a' }} />
+                        <Typography variant="body2" sx={{ color: '#6a6a6a', fontSize: '0.8125rem' }}>
                           {listing.buildingName || listing.location}
                         </Typography>
                       </Stack>
-                      <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                        {formatPrice(listing.price)}đ/tháng
-                      </Typography>
-                      <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
-                        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                          <RulerIcon sx={{ fontSize: '0.875rem' }} />
-                          <Typography variant="body2">{listing.area}m²</Typography>
-                        </Stack>
-                        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                          <StarIcon sx={{ fontSize: '0.875rem', color: '#F59E0B' }} />
-                          <Typography variant="body2">
-                            {listing.rating} ({listing.reviews})
-                          </Typography>
+
+                      {/* Status */}
+                      <StatusBadge status={listing.status} sx={{ mb: 1.5, alignSelf: 'flex-start' }}>
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'currentColor', flexShrink: 0 }} />
+                        {statusLabel[listing.status]}
+                      </StatusBadge>
+
+                      {/* Specs */}
+                      <Stack direction="row" spacing={2.5} sx={{ mb: 1.5 }}>
+                        <Stack direction="row" alignItems="center" spacing={0.75}>
+                          <RulerIcon sx={{ fontSize: '0.875rem', color: '#6a6a6a' }} />
+                          <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>{listing.area}m²</Typography>
                         </Stack>
                         {listing.maxPeople && (
-                          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                              👥 {listing.maxPeople} người
-                            </Typography>
+                          <Stack direction="row" alignItems="center" spacing={0.75}>
+                            <GroupIcon sx={{ fontSize: '0.875rem', color: '#6a6a6a' }} />
+                            <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>{listing.maxPeople} người</Typography>
                           </Stack>
                         )}
-                      </Stack>
-                      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                        {listing.amenities.slice(0, 5).map((amenity) => (
-                          <Box key={amenity} sx={{ color: 'text.secondary' }}>
-                            {getAmenityIcon(amenity)}
-                          </Box>
-                        ))}
-                        {listing.amenities.length > 5 && (
-                          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                            +{listing.amenities.length - 5}
+                        {listing.landlordName && (
+                          <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>
+                            Chủ: {listing.landlordName}
                           </Typography>
                         )}
                       </Stack>
-                      {listing.landlordName && (
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1, fontSize: '0.875rem' }}>
-                          Chủ nhà: {listing.landlordName}
-                        </Typography>
-                      )}
-                      <Stack direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>
-                        <Button 
-                          variant="outlined" 
-                          size="small"
-                          sx={{
-                            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: 2
-                            },
-                            '&:active': {
-                              transform: 'translateY(0)'
-                            }
-                          }}
-                        >
-                          Xem chi tiết
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => toggleFavorite(listing.id)}
-                          sx={{
-                            borderColor: favorites[listing.id] ? '#F43F5E' : 'inherit',
-                            color: favorites[listing.id] ? '#F43F5E' : 'inherit',
-                            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              borderColor: '#F43F5E',
-                              backgroundColor: 'rgba(244, 63, 94, 0.04)',
-                              transform: 'translateY(-2px)',
-                              boxShadow: 2
-                            },
-                            '&:active': {
-                              transform: 'scale(0.95)'
-                            }
-                          }}
-                        >
-                          {favorites[listing.id] ? (
-                            <>
-                              <FavoriteIcon sx={{ fontSize: '0.875rem', mr: 0.5 }} />
-                              Đã lưu
-                            </>
-                          ) : (
-                            <>
-                              <FavoriteBorderIcon sx={{ fontSize: '0.875rem', mr: 0.5 }} />
-                              Lưu phòng
-                            </>
+
+                      {/* Amenities */}
+                      {listing.amenities.length > 0 && (
+                        <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+                          {listing.amenities.slice(0, 6).map(a => (
+                            <Box key={a} title={a}><AmenityIcon amenity={a} /></Box>
+                          ))}
+                          {listing.amenities.length > 6 && (
+                            <Typography sx={{ fontSize: '0.75rem', color: '#6a6a6a', alignSelf: 'center' }}>+{listing.amenities.length - 6}</Typography>
                           )}
-                        </Button>
+                        </Stack>
+                      )}
+
+                      {/* Price & CTA */}
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 'auto' }}>
+                        <Typography sx={{ fontSize: '1.0625rem' }}>
+                          <Box component="span" sx={{ fontWeight: 700, color: '#222222' }}>{formatPrice(listing.price)}đ</Box>
+                          <Box component="span" sx={{ color: '#6a6a6a', fontWeight: 400 }}>/tháng</Box>
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            size="small"
+                            onClick={e => { e.stopPropagation(); toggleFavorite(listing.id, e) }}
+                            sx={{ color: favorites[listing.id] ? '#4A90E2' : '#6a6a6a', borderColor: favorites[listing.id] ? '#4A90E2' : '#c1c1c1', border: '1px solid', borderRadius: '20px', px: 1.5, py: 0.75, minWidth: 'auto', fontSize: '0.8125rem' }}
+                          >
+                            {favorites[listing.id] ? 'Đã lưu' : 'Lưu'}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            endIcon={<ArrowForwardIcon sx={{ fontSize: '0.875rem' }} />}
+                            sx={{ backgroundColor: '#4A90E2', '&:hover': { backgroundColor: '#2E5C8A' }, borderRadius: '20px', px: 2, py: 0.75, fontSize: '0.8125rem', fontWeight: 600 }}
+                          >
+                            Xem chi tiết
+                          </Button>
+                        </Stack>
                       </Stack>
                     </Box>
-                  </Stack>
-                </ListingCard>
-              ))}
-            </Stack>
+                  </ListingRow>
+                ))}
+              </Box>
 
-            {/* Pagination */}
-            <Stack direction="row" spacing={1} sx={{ mt: 4, justifyContent: 'center' }}>
-              <Button variant="outlined" disabled>← Trước</Button>
-              <Button variant="contained">1</Button>
-              <Button variant="outlined">2</Button>
-              <Button variant="outlined">3</Button>
-              <Typography sx={{ px: 1, display: 'flex', alignItems: 'center' }}>...</Typography>
-              <Button variant="outlined">10</Button>
-              <Button variant="outlined">Tiếp →</Button>
-            </Stack>
-          </Grid>
+              {/* Pagination */}
+              <Stack direction="row" spacing={1} sx={{ mt: 5, justifyContent: 'center' }}>
+                {['← Trước', '1', '2', '3', '...', '10', 'Tiếp →'].map((label, i) => (
+                  <Button
+                    key={i}
+                    variant={label === '1' ? 'contained' : 'text'}
+                    sx={{
+                      minWidth: 40, height: 40, borderRadius: '50%', fontWeight: label === '1' ? 700 : 400,
+                      backgroundColor: label === '1' ? '#222222' : 'transparent',
+                      color: label === '1' ? '#ffffff' : '#222222',
+                      '&:hover': { backgroundColor: label === '1' ? '#3f3f3f' : '#f7f7f7' },
+                      fontSize: '0.875rem',
+                      padding: label.includes('←') || label.includes('→') ? '0 16px' : undefined,
+                      borderRadius: label.includes('←') || label.includes('→') ? '8px' : '50%',
+                    }}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </Stack>
+            </Grid>
 
-          {/* Right: Map & Sidebar */}
-          <Grid item xs={12} lg={4}>
-            <Stack spacing={3}>
-              {/* Map */}
-              <Card sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100' }}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" sx={{ mb: 1 }}>🗺️ Bản đồ</Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Tích hợp bản đồ sẽ được thêm sau
-                  </Typography>
+            {/* Right Sidebar */}
+            <Grid item xs={12} lg={4}>
+              <Box sx={{ position: 'sticky', top: 96 }}>
+                {/* Map placeholder */}
+                <Box sx={{ borderRadius: '12px', overflow: 'hidden', height: 320, backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '2rem', mb: 1 }}>🗺️</Typography>
+                    <Typography variant="body2" sx={{ color: '#6a6a6a', fontWeight: 500 }}>Bản đồ phòng trọ</Typography>
+                    <Typography variant="caption" sx={{ color: '#929292', display: 'block', mt: 0.5 }}>Sẽ được tích hợp sớm</Typography>
+                  </Box>
                 </Box>
-              </Card>
 
-              {/* Latest Listings */}
-              <Card sx={{ p: 3 }}>
-                <Stack spacing={2} sx={{ mb: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ClockIcon />Tin mới nhất
-                  </Typography>
-                </Stack>
-
-                <Stack spacing={2}>
-                  {listings.slice(0, 5).map((listing) => (
-                    <LatestListingItem key={listing.id}>
-                      <Stack direction="row" spacing={1}>
+                {/* Latest Listings */}
+                <Box sx={{ border: '1px solid #e8e8e8', borderRadius: '12px', overflow: 'hidden', p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2.5 }}>
+                    <ClockIcon sx={{ fontSize: '1.125rem', color: '#4A90E2' }} />
+                    <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: '#222222' }}>Tin đăng mới nhất</Typography>
+                  </Stack>
+                  {listings.slice(0, 10).map(listing => (
+                    <SideCard key={listing.id} onClick={() => navigate(`/room/${listing.id}`)}>
+                      <Box sx={{ width: 72, height: 72, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: '#f2f2f2' }}>
                         {listing.image ? (
-                          <CardMedia
-                            component="img"
-                            image={listing.image}
-                            alt={listing.title}
-                            sx={{ width: 130, height: 130, objectFit: 'cover', flexShrink: 0 }}
-                          />
+                          <Box component="img" src={listing.image} alt={listing.title} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <Box sx={{ width: 130, height: 130, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <NoImageIcon sx={{ fontSize: 50, color: 'grey.400' }} />
+                          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <NoImageIcon sx={{ fontSize: 24, color: '#c1c1c1' }} />
                           </Box>
                         )}
-                        <CardContent sx={{ p: 1, flex: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, lineHeight: 1.2 }}>
-                            {listing.title}
-                          </Typography>
-                          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 0.5 }}>
-                            <LocationIcon sx={{ fontSize: '0.75rem', color: 'primary.main' }} />
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {listing.buildingName || 'Chưa cập nhật'}
-                            </Typography>
-                          </Stack>
-                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600, mb: 0.5 }}>
-                            {formatPrice(listing.price)}đ
-                          </Typography>
-                          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                            <RulerIcon sx={{ fontSize: '0.7rem' }} />
-                            <Typography variant="caption">{listing.area}m²</Typography>
-                            <ClockIcon sx={{ fontSize: '0.7rem', ml: 0.5 }} />
-                            <Typography variant="caption">Mới đăng</Typography>
-                          </Stack>
-                        </CardContent>
-                      </Stack>
-                    </LatestListingItem>
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography className="side-title" sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#222222', mb: 0.375, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 150ms' }}>
+                          {listing.buildingName || listing.title}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.8125rem', color: '#4A90E2', fontWeight: 600, mb: 0.25 }}>
+                          {formatPrice(listing.price)}đ/tháng
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#6a6a6a' }}>
+                          {listing.area}m² · Mới đăng
+                        </Typography>
+                      </Box>
+                    </SideCard>
                   ))}
-                </Stack>
-              </Card>
-            </Stack>
+                </Box>
+              </Box>
+            </Grid>
           </Grid>
-        </Grid>
         )}
       </Container>
     </Box>

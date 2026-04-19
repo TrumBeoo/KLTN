@@ -25,62 +25,88 @@ import {
   Notifications as NotificationsIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
-  GpsFixed as GpsFixedIcon,
   Tune as TuneIcon,
+  Language as LanguageIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 import { useAuth } from '../hooks/useAuth'
 import FilterModal from './FilterModal'
 import notificationService from '../services/notificationService'
 
-const StyledAppBar = styled(AppBar)(({ theme }) => ((
-  {
-    backgroundColor: theme.palette.background.paper,
-    color: theme.palette.text.primary,
-    borderBottom: `1px solid ${theme.palette.grey[200]}`,
-    boxShadow: theme.shadows[1],
-  }
-)))
+const StyledAppBar = styled(AppBar)({
+  backgroundColor: '#ffffff',
+  color: '#222222',
+  borderBottom: '1px solid #e8e8e8',
+  boxShadow: 'none',
+  position: 'sticky',
+  top: 0,
+  zIndex: 1100,
+})
 
-const SearchContainer = styled(Box)(({ theme }) => ((
-  {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    backgroundColor: theme.palette.grey[50],
-    border: `2px solid ${theme.palette.grey[200]}`,
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(0.4, 0.8),
-    flex: 1,
-    maxWidth: 400,
-    height: 36,
-    '&:focus-within': {
-      backgroundColor: theme.palette.background.paper,
-      borderColor: theme.palette.primary.main,
-      boxShadow: `0 0 0 3px ${theme.palette.primary.subtle}`,
-    },
-  }
-)))
+const SearchPill = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  border: '1px solid #e8e8e8',
+  borderRadius: '40px',
+  boxShadow: 'rgba(0,0,0,0.02) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 6px, rgba(0,0,0,0.08) 0px 4px 8px',
+  overflow: 'hidden',
+  cursor: 'pointer',
+  transition: 'box-shadow 200ms ease',
+  '&:hover': {
+    boxShadow: 'rgba(0,0,0,0.08) 0px 4px 12px',
+  },
+  height: 48,
+}))
 
-const NavLink = styled(Button)(({ theme }) => ((
-  {
-    color: theme.palette.text.secondary,
-    textTransform: 'none',
-    fontSize: '0.9rem',
-    fontWeight: 500,
-    transition: 'all 200ms ease',
-    '&:hover': {
-      color: theme.palette.primary.main,
-      backgroundColor: 'transparent',
-    },
-    '&.active': {
-      color: theme.palette.primary.main,
-      fontWeight: 600,
-      borderBottom: `2px solid ${theme.palette.primary.main}`,
-      paddingBottom: '2px',
-    },
-  }
-)))
+const SearchSegment = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: '0 16px',
+  height: '100%',
+  '&:not(:last-child)': {
+    borderRight: '1px solid #e8e8e8',
+  },
+}))
+
+const SearchButton = styled(IconButton)({
+  backgroundColor: '#4A90E2',
+  color: '#ffffff',
+  width: 32,
+  height: 32,
+  margin: '0 6px',
+  '&:hover': {
+    backgroundColor: '#2E5C8A',
+  },
+})
+
+const UserMenuButton = styled(Box)({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: '1px solid #c1c1c1',
+  borderRadius: '21px',
+  padding: '5px 5px 5px 12px',
+  cursor: 'pointer',
+  transition: 'box-shadow 200ms ease',
+  '&:hover': {
+    boxShadow: 'rgba(0,0,0,0.08) 0px 4px 12px',
+  },
+})
+
+const NavLink = styled(Button)({
+  color: '#222222',
+  fontWeight: 500,
+  fontSize: '0.875rem',
+  padding: '6px 12px',
+  borderRadius: '20px',
+  minWidth: 'auto',
+  '&:hover': {
+    backgroundColor: '#f7f7f7',
+  },
+  '&.active': {
+    fontWeight: 600,
+  },
+})
 
 export default function Navbar() {
   const navigate = useNavigate()
@@ -95,32 +121,23 @@ export default function Navbar() {
   const [loadingNotifications, setLoadingNotifications] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      fetchUnreadCount()
-    }
+    if (user) fetchUnreadCount()
   }, [user])
 
   const fetchUnreadCount = async () => {
     try {
       const data = await notificationService.getUnreadCount()
-      console.log('Unread count response:', data)
       setUnreadCount(data.unreadCount || 0)
-    } catch (error) {
-      console.error('Failed to fetch unread count:', error)
-    }
+    } catch (error) {}
   }
 
   const fetchNotifications = async () => {
     setLoadingNotifications(true)
     try {
       const data = await notificationService.getNotifications(50, 0)
-      console.log('Notifications response:', data)
       setNotifications(data.data || [])
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error)
-    } finally {
-      setLoadingNotifications(false)
-    }
+    } catch (error) {}
+    finally { setLoadingNotifications(false) }
   }
 
   const handleNotificationOpen = (e) => {
@@ -130,7 +147,6 @@ export default function Navbar() {
   }
 
   const isActive = (path) => location.pathname === path
-
   const handleUserMenuOpen = (e) => setUserMenuAnchor(e.currentTarget)
   const handleUserMenuClose = () => setUserMenuAnchor(null)
   const handleNotificationClose = () => setNotificationAnchor(null)
@@ -143,278 +159,129 @@ export default function Navbar() {
 
   return (
     <>
-      <StyledAppBar position="sticky">
-        <Toolbar sx={{ gap: 2 }}>
+      <StyledAppBar>
+        <Toolbar sx={{ px: { xs: 2, md: 4 }, minHeight: '80px !important', gap: 2, justifyContent: 'space-between' }}>
           {/* Logo */}
           <Box
             onClick={() => navigate('/')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', flexShrink: 0 }}
           >
             <Box
               sx={{
-                width: 40,
-                height: 40,
+                width: 32,
+                height: 32,
                 backgroundImage: "url('/logo/5.png')",
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                borderRadius: 1.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-              }}
-            >
-            
-            </Box>
-            <Box sx={{ fontFamily: 'Outfit', fontSize: '1.5rem', fontWeight: 800, color: '#0F172A' }}>
-              Rentify
-            </Box>
-          </Box>
-
-          {/* Search Bar - Desktop */}
-          <SearchContainer sx={{ display: { xs: 'none', md: 'flex' } }}>
-            <GpsFixedIcon sx={{ color: '#2563EB', fontSize: '1.125rem' }} />
-            <TextField
-              placeholder="Tìm phòng theo khu vực, giá, tiện nghi..."
-              variant="standard"
-              fullWidth
-              InputProps={{
-                disableUnderline: true,
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <SearchIcon sx={{ color: '#94A3B8' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiInput-input': {
-                  fontSize: '0.875rem',
-                  color: '#0F172A',
-                  '&::placeholder': {
-                    color: '#94A3B8',
-                    opacity: 1,
-                  },
-                },
+                borderRadius: '8px',
               }}
             />
-          </SearchContainer>
+            <Typography sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#4A90E2',
+              letterSpacing: '-0.5px',
+              display: { xs: 'none', sm: 'block' },
+            }}>
+              Rentify
+            </Typography>
+          </Box>
 
-          {/* Filter Button */}
-          <Button
-            startIcon={<TuneIcon />}
-            onClick={() => setFilterOpen(true)}
-            sx={{
-              display: { xs: 'none', md: 'flex' },
-              color: 'text.secondary',
-              textTransform: 'none',
-            }}
-          >
-            Bộ lọc
-          </Button>
+          {/* Search Pill - Desktop */}
+          <SearchPill sx={{ display: { xs: 'none', md: 'flex' }, flex: 1, maxWidth: 500 }}>
+            <SearchSegment sx={{ flex: 1, minWidth: 0 }}>
+              <TextField
+                placeholder="Tìm khu vực, phòng..."
+                variant="standard"
+                fullWidth
+                InputProps={{
+                  disableUnderline: true,
+                  sx: { fontSize: '0.875rem', color: '#222222', fontWeight: 500 },
+                }}
+                sx={{ '& .MuiInput-input::placeholder': { color: '#222222', opacity: 1 } }}
+              />
+            </SearchSegment>
+            <SearchSegment sx={{ px: 1 }}>
+              <SearchButton size="small" onClick={() => navigate('/listings')}>
+                <SearchIcon sx={{ fontSize: '1rem' }} />
+              </SearchButton>
+            </SearchSegment>
+          </SearchPill>
 
-          {/* Nav Links - Desktop */}
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, flex: 1 }}>
-            <NavLink onClick={() => navigate('/')} className={isActive('/') ? 'active' : ''}>
-              Trang chủ
-            </NavLink>
-            <NavLink onClick={() => navigate('/listings')} className={isActive('/listings') ? 'active' : ''}>
-              Tin đăng
-            </NavLink>
-            <NavLink onClick={() => navigate('/roommate')} className={isActive('/roommate') ? 'active' : ''}>
-              Tìm bạn ở ghép
-            </NavLink>
-            <NavLink onClick={() => navigate('/blog')} className={isActive('/blog') ? 'active' : ''}>
-              Blog
-            </NavLink>
+          {/* Right Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+            {/* Nav Links - Desktop */}
+            <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', gap: 0.5 }}>
+              <NavLink onClick={() => navigate('/')} className={isActive('/') ? 'active' : ''}>
+                Trang chủ
+              </NavLink>
+              <NavLink onClick={() => navigate('/listings')} className={isActive('/listings') ? 'active' : ''}>
+                Tin đăng
+              </NavLink>
+              <NavLink onClick={() => navigate('/roommate')} className={isActive('/roommate') ? 'active' : ''}>
+                Ở ghép
+              </NavLink>
+              <NavLink onClick={() => navigate('/blog')} className={isActive('/blog') ? 'active' : ''}>
+                Blog
+              </NavLink>
+            </Box>
+
+            {/* Post Ad Button */}
             <Button
-              variant="outlined"
               onClick={() => window.location.href = 'http://localhost:3333/login'}
               sx={{
-                textTransform: 'none',
-                fontWeight: 300,
-                borderWidth: 2,
-                borderColor: 'warning.main',
-                color: 'warning.main',
-                bgcolor: 'warning',
-                px: 1.5,
-                '&:hover': {
-                  borderWidth: 2,
-                  borderColor: 'warning.dark',
-                  bgcolor: 'warning.main',
-                  color: 'white',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(237, 137, 54, 0.3)',
-                },
-                transition: 'all 200ms ease',
+                display: { xs: 'none', md: 'flex' },
+                backgroundColor: '#FF385C',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                borderRadius: '20px',
+                padding: '8px 16px',
+                '&:hover': { backgroundColor: '#E31C5F' },
               }}
             >
               Đăng tin
             </Button>
-          </Box>
 
-          {/* User Section */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Filter Button */}
+            <IconButton
+              onClick={() => setFilterOpen(true)}
+              sx={{ display: { xs: 'none', md: 'flex' }, color: '#222222', p: 1 }}
+            >
+              <TuneIcon />
+            </IconButton>
+
+            {/* Notification */}
+            {user && (
+              <IconButton onClick={handleNotificationOpen} sx={{ color: '#222222' }}>
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            )}
+
+            {/* User Menu */}
             {!user ? (
               <Button
                 variant="outlined"
                 onClick={() => navigate('/login')}
-                sx={{ display: { xs: 'none', sm: 'block' } }}
+                sx={{ display: { xs: 'none', sm: 'flex' }, borderColor: '#222222', color: '#222222', borderRadius: '20px', px: 2, py: 1 }}
               >
                 Đăng nhập
               </Button>
             ) : (
-              <>
-                <IconButton onClick={handleNotificationOpen}>
-                  <Badge badgeContent={unreadCount} color="error">
-                    <NotificationsIcon />
-                  </Badge>
-                </IconButton>
-                <Menu
-                  anchorEl={notificationAnchor}
-                  open={!!notificationAnchor}
-                  onClose={handleNotificationClose}
-                  PaperProps={{
-                    sx: { width: 400, maxHeight: 500 }
-                  }}
-                >
-                  {loadingNotifications ? (
-                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : notifications.length > 0 ? (
-                    <>
-                      <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary', py: 1 }}>
-                        {unreadCount} thông báo chưa đọc
-                      </MenuItem>
-                      <Divider />
-                      <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                        {notifications.map((notif) => (
-                          <Box
-                            key={notif.NotificationID}
-                            sx={{
-                              py: 1.5,
-                              px: 2,
-                              borderBottom: '1px solid',
-                              borderColor: 'divider',
-                              backgroundColor: notif.Status === 'Chưa đọc' ? 'action.hover' : 'transparent',
-                              '&:hover': { backgroundColor: 'action.selected' },
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'flex-start',
-                              gap: 1,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Box
-                              sx={{ flex: 1, minWidth: 0 }}
-                              onClick={() => {
-                                if (notif.Link) {
-                                  navigate(notif.Link)
-                                }
-                                handleNotificationClose()
-                              }}
-                            >
-                              <Typography variant="body2" sx={{ fontWeight: notif.Status === 'Chưa đọc' ? 600 : 400 }}>
-                                {notif.Content}
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-                                {notif.Type} • {new Date(notif.CreatedAt).toLocaleString('vi-VN')}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                              {notif.Status === 'Chưa đọc' && (
-                                <Button
-                                  size="small"
-                                  variant="text"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    notificationService.markAsRead(notif.NotificationID)
-                                      .then(() => fetchNotifications())
-                                      .catch(err => console.error('Failed to mark as read:', err))
-                                  }}
-                                  sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.75rem' }}
-                                >
-                                  Đọc
-                                </Button>
-                              )}
-                              <Button
-                                size="small"
-                                variant="text"
-                                color="error"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  notificationService.deleteNotification(notif.NotificationID)
-                                    .then(() => fetchNotifications())
-                                    .catch(err => console.error('Failed to delete:', err))
-                                }}
-                                sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.75rem' }}
-                              >
-                                Xóa
-                              </Button>
-                            </Box>
-                          </Box>
-                        ))}
-                      </Box>
-                      <Divider />
-                      <MenuItem onClick={handleNotificationClose} sx={{ justifyContent: 'center', py: 1 }}>
-                        <Typography variant="body2" sx={{ color: 'primary.main' }}>Xem tất cả thông báo</Typography>
-                      </MenuItem>
-                    </>
-                  ) : (
-                    <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'black' }}>
-                      Không có thông báo
-                    </MenuItem>
-                  )}
-                </Menu>
-                <IconButton onClick={handleUserMenuOpen}>
-                  <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
-                    {user.name?.charAt(0).toUpperCase()}
-                  </Avatar>
-                </IconButton>
-                <Menu
-                  anchorEl={userMenuAnchor}
-                  open={!!userMenuAnchor}
-                  onClose={handleUserMenuClose}
-                >
-                  <MenuItem disabled>
-                    <Box>
-                      <Box sx={{ fontWeight: 600 }}>{user.name}</Box>
-                      <Box sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>{user.email}</Box>
-                    </Box>
-                  </MenuItem>
-                  <Divider />
-                  <MenuItem onClick={() => { navigate('/profile'); handleUserMenuClose(); }}>
-                    Hồ sơ của tôi
-                  </MenuItem>
-                  <MenuItem>Sở thích & Tiêu chí</MenuItem>
-                  <MenuItem>Lịch sử thuê phòng</MenuItem>
-                  <MenuItem onClick={() => { navigate('/change-password'); handleUserMenuClose(); }}>
-                    Đổi mật khẩu
-                  </MenuItem>
-                  <MenuItem>Lịch xem phòng</MenuItem>
-                  <MenuItem>Phòng yêu thích</MenuItem>
-                  <MenuItem>Cài đặt</MenuItem>
-                  <Divider />
-                  <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-                    Đăng xuất
-                  </MenuItem>
-                </Menu>
-              </>
+              <UserMenuButton onClick={handleUserMenuOpen}>
+                <MenuIcon sx={{ fontSize: '1.125rem', color: '#222222' }} />
+                <Avatar sx={{ width: 30, height: 30, backgroundColor: '#4A90E2', fontSize: '0.75rem' }}>
+                  {user.name?.charAt(0).toUpperCase()}
+                </Avatar>
+              </UserMenuButton>
             )}
 
             {/* Mobile Menu Toggle */}
             <IconButton
               onClick={() => setMobileOpen(true)}
-              sx={{ display: { xs: 'flex', md: 'none' } }}
+              sx={{ display: { xs: 'flex', md: 'none' }, color: '#222222' }}
             >
               <MenuIcon />
             </IconButton>
@@ -422,91 +289,130 @@ export default function Navbar() {
         </Toolbar>
       </StyledAppBar>
 
-      {/* Mobile Drawer */}
-      <Drawer
-        anchor="left"
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
+      {/* Notification Menu */}
+      <Menu
+        anchorEl={notificationAnchor}
+        open={!!notificationAnchor}
+        onClose={handleNotificationClose}
+        PaperProps={{
+          sx: { width: 400, maxHeight: 500, borderRadius: '12px', mt: 1, boxShadow: 'rgba(0,0,0,0.20) 0px 12px 40px', border: '1px solid #e8e8e8' }
+        }}
       >
-        <Box sx={{ width: 280, p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ fontFamily: 'Outfit', fontSize: '1.25rem', fontWeight: 800 }}>Rentify</Box>
-            <IconButton onClick={() => setMobileOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          <List>
-            <ListItem
-              button
-              onClick={() => {
-                navigate('/')
-                setMobileOpen(false)
-              }}
-              sx={{ bgcolor: isActive('/') ? 'primary.light' : 'transparent', color: isActive('/') ? 'primary.main' : 'inherit' }}
-            >
-              <ListItemText primary="Trang chủ" />
-            </ListItem>
-            <ListItem
-              button
-              onClick={() => {
-                navigate('/listings')
-                setMobileOpen(false)
-              }}
-              sx={{ bgcolor: isActive('/listings') ? 'primary.light' : 'transparent', color: isActive('/listings') ? 'primary.main' : 'inherit' }}
-            >
-              <ListItemText primary="Tin đăng" />
-            </ListItem>
-            <ListItem
-              button
-              onClick={() => {
-                navigate('/roommate')
-                setMobileOpen(false)
-              }}
-              sx={{ bgcolor: isActive('/roommate') ? 'primary.light' : 'transparent', color: isActive('/roommate') ? 'primary.main' : 'inherit' }}
-            >
-              <ListItemText primary="Tìm bạn ở ghép" />
-            </ListItem>
-            <ListItem
-              button
-              onClick={() => {
-                navigate('/blog')
-                setMobileOpen(false)
-              }}
-              sx={{ bgcolor: isActive('/blog') ? 'primary.light' : 'transparent', color: isActive('/blog') ? 'primary.main' : 'inherit' }}
-            >
-              <ListItemText primary="Blog" />
-            </ListItem>
-            <ListItem button>
-              <ListItemText primary="Phòng yêu thích" />
-            </ListItem>
-            <ListItem button>
-              <ListItemText primary="Lịch xem phòng" />
-            </ListItem>
-          </List>
-          <Divider sx={{ my: 2 }} />
-          {!user && (
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => {
-                navigate('/login')
-                setMobileOpen(false)
-              }}
-            >
-              Đăng nhập
-            </Button>
+        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #e8e8e8' }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: '#222222' }}>Thông báo</Typography>
+          {unreadCount > 0 && (
+            <Typography variant="caption" sx={{ color: '#6a6a6a' }}>{unreadCount} chưa đọc</Typography>
           )}
+        </Box>
+        {loadingNotifications ? (
+          <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+            <CircularProgress size={24} sx={{ color: '#4A90E2' }} />
+          </Box>
+        ) : notifications.length > 0 ? (
+          <Box sx={{ maxHeight: 380, overflowY: 'auto' }}>
+            {notifications.map((notif) => (
+              <Box
+                key={notif.NotificationID}
+                sx={{
+                  py: 1.5, px: 2,
+                  borderBottom: '1px solid #f2f2f2',
+                  backgroundColor: notif.Status === 'Chưa đọc' ? '#E8F4FD' : 'transparent',
+                  '&:hover': { backgroundColor: '#f7f7f7' },
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, cursor: 'pointer'
+                }}
+              >
+                <Box sx={{ flex: 1 }} onClick={() => { if (notif.Link) navigate(notif.Link); handleNotificationClose() }}>
+                  <Typography variant="body2" sx={{ fontWeight: notif.Status === 'Chưa đọc' ? 600 : 400, color: '#222222', mb: 0.25 }}>
+                    {notif.Content}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#6a6a6a' }}>
+                    {notif.Type} • {new Date(notif.CreatedAt).toLocaleString('vi-VN')}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                  {notif.Status === 'Chưa đọc' && (
+                    <Button size="small" onClick={(e) => { e.stopPropagation(); notificationService.markAsRead(notif.NotificationID).then(() => fetchNotifications()) }}
+                      sx={{ minWidth: 'auto', px: 1, fontSize: '0.75rem', color: '#4A90E2' }}>Đọc</Button>
+                  )}
+                  <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); notificationService.deleteNotification(notif.NotificationID).then(() => fetchNotifications()) }}
+                    sx={{ minWidth: 'auto', px: 1, fontSize: '0.75rem' }}>Xóa</Button>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        ) : (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: '#6a6a6a' }}>Không có thông báo nào</Typography>
+          </Box>
+        )}
+      </Menu>
+
+      {/* User Menu */}
+      <Menu
+        anchorEl={userMenuAnchor}
+        open={!!userMenuAnchor}
+        onClose={handleUserMenuClose}
+        PaperProps={{
+          sx: { width: 220, borderRadius: '12px', mt: 1, boxShadow: 'rgba(0,0,0,0.20) 0px 12px 40px', border: '1px solid #e8e8e8', py: 0.5 }
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #e8e8e8' }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#222222' }}>{user?.name}</Typography>
+          <Typography variant="caption" sx={{ color: '#6a6a6a' }}>{user?.email}</Typography>
+        </Box>
+        <MenuItem onClick={() => { navigate('/profile'); handleUserMenuClose() }} sx={{ py: 1.25 }}>Hồ sơ của tôi</MenuItem>
+        <MenuItem sx={{ py: 1.25 }}>Sở thích & Tiêu chí</MenuItem>
+        <MenuItem sx={{ py: 1.25 }}>Lịch sử thuê phòng</MenuItem>
+        <MenuItem onClick={() => { navigate('/change-password'); handleUserMenuClose() }} sx={{ py: 1.25 }}>Đổi mật khẩu</MenuItem>
+        <MenuItem sx={{ py: 1.25 }}>Lịch xem phòng</MenuItem>
+        <MenuItem sx={{ py: 1.25 }}>Phòng yêu thích</MenuItem>
+        <Divider sx={{ my: 0.5 }} />
+        <MenuItem onClick={handleLogout} sx={{ py: 1.25, color: '#4A90E2', fontWeight: 500 }}>Đăng xuất</MenuItem>
+      </Menu>
+
+      {/* Mobile Drawer */}
+      <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}>
+        <Box sx={{ width: 300, pt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, mb: 2 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#4A90E2' }}>Rentify</Typography>
+            <IconButton onClick={() => setMobileOpen(false)} sx={{ color: '#222222' }}><CloseIcon /></IconButton>
+          </Box>
+          <Divider />
+          <List>
+            {[
+              { label: 'Trang chủ', path: '/' },
+              { label: 'Tin đăng', path: '/listings' },
+              { label: 'Tìm bạn ở ghép', path: '/roommate' },
+              { label: 'Blog', path: '/blog' },
+              { label: 'Phòng yêu thích', path: null },
+              { label: 'Lịch xem phòng', path: null },
+            ].map((item) => (
+              <ListItem
+                button key={item.label}
+                onClick={() => { if (item.path) navigate(item.path); setMobileOpen(false) }}
+                sx={{ py: 1.5, px: 3, '&:hover': { backgroundColor: '#f7f7f7' }, color: isActive(item.path) ? '#4A90E2' : '#222222' }}
+              >
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive(item.path) ? 600 : 400, fontSize: '0.9375rem' }} />
+              </ListItem>
+            ))}
+          </List>
+          <Divider />
+          <Box sx={{ p: 2 }}>
+            {!user ? (
+              <Button fullWidth variant="contained" onClick={() => { navigate('/login'); setMobileOpen(false) }}
+                sx={{ backgroundColor: '#4A90E2', '&:hover': { backgroundColor: '#2E5C8A' } }}>
+                Đăng nhập
+              </Button>
+            ) : (
+              <Button fullWidth variant="outlined" onClick={handleLogout} sx={{ borderColor: '#222222', color: '#222222' }}>
+                Đăng xuất
+              </Button>
+            )}
+          </Box>
         </Box>
       </Drawer>
 
-      {/* Filter Modal */}
-      <FilterModal
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        onApply={() => {
-          // Handle filter apply
-        }}
-      />
+      <FilterModal open={filterOpen} onClose={() => setFilterOpen(false)} onApply={() => {}} />
     </>
   )
 }
