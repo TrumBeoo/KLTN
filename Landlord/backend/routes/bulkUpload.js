@@ -385,6 +385,9 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     for (let index = 0; index < data.length; index++) {
       const row = data[index];
       
+      // Generate UploadDetailID (CHAR(10) max)
+      const uploadDetailId = 'UD' + String(index + 1).padStart(8, '0');
+      
       const parsed = {
         roomCode: row['room_code'] || row['Mã phòng'] || '',
         title: row['title'] || row['Tiêu đề'] || '',
@@ -400,11 +403,11 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
 
       await connection.query(`
         INSERT INTO UPLOAD_DETAIL (
-          UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
+          UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
           District, Ward, Address, RoomType, Description, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
       `, [
-        uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
+        uploadDetailId, uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
         parsed.area, parsed.maxPeople, parsed.district, parsed.ward,
         parsed.address, parsed.roomType, parsed.description
       ]);

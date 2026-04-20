@@ -37,7 +37,8 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
     address: '',
     district: '',
     ward: '',
-    floors: ''
+    floors: '',
+    numberRooms: ''
   })
   const [loading, setLoading] = useState(false)
 
@@ -48,7 +49,8 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
         address: building.Address || '',
         district: building.District || '',
         ward: building.Ward || '',
-        floors: building.Floors || ''
+        floors: building.Floors || '',
+        numberRooms: building.NumberRooms || ''
       })
     } else {
       setFormData({
@@ -56,7 +58,8 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
         address: '',
         district: '',
         ward: '',
-        floors: ''
+        floors: '',
+        numberRooms: ''
       })
     }
   }, [building, open])
@@ -135,15 +138,30 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
             </Grid>
           </Grid>
 
-          <TextField
-            label="Số tầng"
-            name="floors"
-            value={formData.floors}
-            onChange={handleChange}
-            type="number"
-            size="small"
-            fullWidth
-          />
+          <Grid container spacing={1}>
+            <Grid item xs={6}>
+              <TextField
+                label="Số tầng"
+                name="floors"
+                value={formData.floors}
+                onChange={handleChange}
+                type="number"
+                size="small"
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Số phòng"
+                name="numberRooms"
+                value={formData.numberRooms}
+                onChange={handleChange}
+                type="number"
+                size="small"
+                fullWidth
+              />
+            </Grid>
+          </Grid>
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -292,19 +310,20 @@ export default function ManageBuildings() {
                 <TableCell>Quận/Huyện</TableCell>
                 <TableCell>Phường/Xã</TableCell>
                 <TableCell>Số tầng</TableCell>
+                <TableCell>Số phòng</TableCell>
                 <TableCell>Hành động</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 3 }}>
+                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 3 }}>
                     <Typography>Đang tải...</Typography>
                   </TableCell>
                 </TableRow>
               ) : buildings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 3 }}>
+                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 3 }}>
                     <Typography>Không có tòa nhà nào</Typography>
                   </TableCell>
                 </TableRow>
@@ -316,6 +335,7 @@ export default function ManageBuildings() {
                     <TableCell>{building.District}</TableCell>
                     <TableCell>{building.Ward}</TableCell>
                     <TableCell>{building.Floors}</TableCell>
+                    <TableCell>{building.NumberRooms}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5}>
                         <IconButton size="small" title="Sửa" onClick={() => handleOpenDialog(building)}>

@@ -96,18 +96,21 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
         description: row['description'] || row['Mô tả'] || ''
       }
 
+      // Generate UploadDetailID (CHAR(10) max)
+      const uploadDetailId = 'UD' + String(index + 1).padStart(8, '0')
+
       const [result] = await connection.query(`
         INSERT INTO UPLOAD_DETAIL (
-          UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
+          UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
           District, Ward, Address, RoomType, Description, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
       `, [
-        uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
+        uploadDetailId, uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
         parsed.area, parsed.maxPeople, parsed.district, parsed.ward,
         parsed.address, parsed.roomType, parsed.description
       ])
 
-      preview.push({ ...parsed, detailId: result.insertId })
+      preview.push({ ...parsed, detailId: uploadDetailId })
     }
 
     res.json({
@@ -167,11 +170,16 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
 
     let successCount = 0
     let failedCount = 0
+    let detailCount = 0
     const results = []
 
     for (let index = 0; index < data.length; index++) {
       const row = data[index]
       const rowNumber = index + 2
+      detailCount++
+      
+      // Generate UploadDetailID (CHAR(10) max)
+      const uploadDetailId = 'UD' + String(detailCount).padStart(8, '0')
       
       const parsed = {
         roomCode: row['room_code'] || row['Mã phòng'],
@@ -195,9 +203,9 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
       
       if (validationErrors.length > 0) {
         await connection.query(`
-          INSERT INTO UPLOAD_DETAIL (UploadJobID, RowNumber, RoomCode, Title, Status, ErrorMessage)
-          VALUES (?, ?, ?, ?, 'failed', ?)
-        `, [uploadJobId, rowNumber, parsed.roomCode, parsed.title, validationErrors.join(', ')])
+          INSERT INTO UPLOAD_DETAIL (UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Status, ErrorMessage)
+          VALUES (?, ?, ?, ?, ?, 'failed', ?)
+        `, [uploadDetailId, uploadJobId, rowNumber, parsed.roomCode, parsed.title, validationErrors.join(', ')])
         
         failedCount++
         results.push({ rowNumber, roomCode: parsed.roomCode, status: 'failed', errors: validationErrors })
@@ -243,17 +251,17 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
         `, [listingId, roomId, landlordId, parsed.title, parsed.description])
 
         await connection.query(`
-          INSERT INTO UPLOAD_DETAIL (UploadJobID, RowNumber, RoomCode, Title, Status, ListingID)
-          VALUES (?, ?, ?, ?, 'success', ?)
-        `, [uploadJobId, rowNumber, parsed.roomCode, parsed.title, listingId])
+          INSERT INTO UPLOAD_DETAIL (UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Status, ListingID)
+          VALUES (?, ?, ?, ?, ?, 'success', ?)
+        `, [uploadDetailId, uploadJobId, rowNumber, parsed.roomCode, parsed.title, listingId])
 
         successCount++
         results.push({ rowNumber, roomCode: parsed.roomCode, status: 'success', listingId })
       } catch (error) {
         await connection.query(`
-          INSERT INTO UPLOAD_DETAIL (UploadJobID, RowNumber, RoomCode, Title, Status, ErrorMessage)
-          VALUES (?, ?, ?, ?, 'failed', ?)
-        `, [uploadJobId, rowNumber, parsed.roomCode, parsed.title, error.message])
+          INSERT INTO UPLOAD_DETAIL (UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Status, ErrorMessage)
+          VALUES (?, ?, ?, ?, ?, 'failed', ?)
+        `, [uploadDetailId, uploadJobId, rowNumber, parsed.roomCode, parsed.title, error.message])
         
         failedCount++
         results.push({ rowNumber, roomCode: parsed.roomCode, status: 'failed', errors: [error.message] })

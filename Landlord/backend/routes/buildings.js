@@ -86,7 +86,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // Create building
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { buildingName, address, district, ward, floors } = req.body;
+    const { buildingName, address, district, ward, floors, numberRooms } = req.body;
 
     if (!buildingName || !address) {
       return res.status(400).json({
@@ -124,9 +124,9 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     const [result] = await db.query(
-      `INSERT INTO BUILDING (BuildingID, LandlordID, BuildingName, Address, District, Ward, Floors, CreatedAt, UpdatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [buildingId, landlordId, buildingName, address, district || null, ward || null, floors || null]
+      `INSERT INTO BUILDING (BuildingID, LandlordID, BuildingName, Address, District, Ward, Floors, NumberRooms, CreatedAt, UpdatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [buildingId, landlordId, buildingName, address, district || null, ward || null, floors || null, numberRooms || 0]
     );
 
     res.status(201).json({
@@ -146,7 +146,7 @@ router.post('/', authMiddleware, async (req, res) => {
 // Update building
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const { buildingName, address, district, ward, floors } = req.body;
+    const { buildingName, address, district, ward, floors, numberRooms } = req.body;
 
     // Get LandlordID from AccountID
     const [landlords] = await db.query(
@@ -183,9 +183,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
         District = ?,
         Ward = ?,
         Floors = ?,
+        NumberRooms = ?,
         UpdatedAt = NOW()
       WHERE BuildingID = ?`,
-      [buildingName, address, district || null, ward || null, floors || null, req.params.id]
+      [buildingName, address, district || null, ward || null, floors || null, numberRooms || 0, req.params.id]
     );
 
     res.json({

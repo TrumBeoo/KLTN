@@ -13,6 +13,7 @@ import {
   Security as ShieldIcon, SmartToy as BotIcon, Home as HomeIcon, Chat as ChatIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
+import AIChatWidget from '../components/AIChatWidget'
 
 const HeroSection = styled(Box)({
   backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('img/5.jpg')`,
@@ -84,6 +85,7 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState({})
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [chatOpen, setChatOpen] = useState(false)
 
   const districts = [
     { name: 'Cầu Giấy', rooms: 245, image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800' },
@@ -716,7 +718,7 @@ export default function HomePage() {
       {/* AI Chat Button */}
       <Tooltip title="Hỏi AI về phòng trọ" placement="left">
         <Fab
-          onClick={() => alert('Chức năng AI tư vấn đang được phát triển!')}
+          onClick={() => setChatOpen(!chatOpen)}
           size="medium"
           sx={{
             position: 'fixed', bottom: 120, right: 32, zIndex: 1000,
@@ -729,6 +731,13 @@ export default function HomePage() {
           <ChatIcon sx={{ fontSize: 22 }} />
         </Fab>
       </Tooltip>
+
+      {/* AI Chat Widget */}
+      {chatOpen && (
+        <Box sx={{ position: 'fixed', bottom: 180, right: 32, zIndex: 1300 }}>
+          <AIChatWidget apiUrl={import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'} onClose={() => setChatOpen(false)} />
+        </Box>
+      )}
     </Box>
   )
 }
