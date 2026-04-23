@@ -125,6 +125,10 @@ class NotificationService {
 
   // Tạo thông báo cho landlord
   async createNotification(landlordId, content, type, link = null) {
+    if (!landlordId || !landlordId.startsWith('LAN')) {
+      console.error(`[Notification] Invalid targetId format: ${landlordId}. Expected LAN...`);
+      throw new Error(`Invalid targetId: ${landlordId}`);
+    }
     try {
       const notificationId = generateID('NTF');
       const query = `

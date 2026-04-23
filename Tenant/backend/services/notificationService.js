@@ -125,6 +125,10 @@ class NotificationService {
 
   // Tạo thông báo cho tenant (được gọi từ landlord backend)
   async createNotification(tenantId, content, type, link = null) {
+    if (!tenantId || !tenantId.startsWith('TEN')) {
+      console.error(`[Notification] Invalid targetId format: ${tenantId}. Expected TEN...`);
+      throw new Error(`Invalid targetId: ${tenantId}`);
+    }
     try {
       const notificationId = generateID('NTF');
       const query = `

@@ -20,8 +20,9 @@ const validateName = (name) => {
 };
 
 const generateID = (prefix) => {
-  const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
-  return `${prefix}${random}`;
+  const ts = Date.now().toString(36).slice(-3).toUpperCase();
+  const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `${prefix}${ts}${rand}`;
 };
 
 module.exports = {
