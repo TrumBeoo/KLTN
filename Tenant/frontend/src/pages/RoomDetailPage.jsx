@@ -58,6 +58,8 @@ export default function RoomDetailPage() {
   const [userSchedule, setUserSchedule] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [scheduleData, setScheduleData] = useState({ date: '', time: '', name: '', phone: '' })
+  const [availableSlots, setAvailableSlots] = useState([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const { notification, showSuccess, showError, hideNotification } = useNotification()
 
   useEffect(() => { if (roomId) { fetchRoomData(); fetchUserSchedule() } }, [roomId])
@@ -66,7 +68,9 @@ export default function RoomDetailPage() {
   const fetchRoomData = async () => {
     try {
       setLoading(true)
-      const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/rooms/${roomId}`)
+      const token = localStorage.getItem('token')
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/rooms/${roomId}`, { headers })
       const data = await r.json()
       if (data.success) setRoom(data.data)
     } catch {}
@@ -81,6 +85,22 @@ export default function RoomDetailPage() {
       const data = await r.json()
       setUserSchedule(data.success && data.data ? data.data : null)
     } catch { setUserSchedule(null) }
+  }
+
+  const fetchAvailableSlots = async (date) => {
+    if (!date) return
+    setLoadingSlots(true)
+    try {
+      const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/available-slots/${roomId}?date=${date}`)
+      const data = await r.json()
+      if (data.success) {
+        setAvailableSlots(data.data)
+      }
+    } catch {
+      setAvailableSlots([])
+    } finally {
+      setLoadingSlots(false)
+    }
   }
 
   const images = room?.images?.length > 0
@@ -111,6 +131,7 @@ export default function RoomDetailPage() {
         setScheduleData({ date: '', time: '', name: '', phone: '' })
         showSuccess('Thành công!', 'Đặt lịch xem phòng thành công! Chủ nhà sẽ xác nhận trong vòng 24 giờ.')
         fetchUserSchedule()
+        fetchRoomData() // Refresh room data để cập nhật DisplayStatus
       } else {
         showError('Lỗi!', data.message || 'Đặt lịch thất bại')
       }
@@ -127,7 +148,12 @@ export default function RoomDetailPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await r.json()
-      if (data.success) { setUserSchedule(null); setOpenCancelModal(false); showSuccess('Thành công!', 'Hủy lịch xem thành công!') }
+      if (data.success) { 
+        setUserSchedule(null); 
+        setOpenCancelModal(false); 
+        showSuccess('Thành công!', 'Hủy lịch xem thành công!')
+        fetchRoomData() // Refresh room data để cập nhật DisplayStatus
+      }
       else showError('Lỗi!', data.message || 'Hủy lịch thất bại')
     } catch { showError('Lỗi!', 'Lỗi khi hủy lịch') }
     finally { setCancelLoading(false) }
@@ -135,8 +161,22 @@ export default function RoomDetailPage() {
 
   const displayStatus = room?.DisplayStatus || room?.Status
   const isAvailable = displayStatus === 'available'
-  const statusColor = isAvailable ? '#5CB85C' : displayStatus === 'pending_viewing' ? '#F0AD4E' : displayStatus === 'viewing' ? '#5BC0DE' : '#c13515'
-  const statusText = isAvailable ? 'Còn trống' : displayStatus === 'pending_viewing' ? 'Có người đặt chờ duyệt' : displayStatus === 'viewing' ? 'Đã đặt lịch' : displayStatus === 'rented' ? 'Đã thuê' : 'Không khả dụng'
+  const canSchedule = displayStatus !== 'rented'
+  
+  // Xác định màu sắc và text dựa trên DisplayStatus
+  let statusColor = '#5CB85C' // Mặc định xanh lá (Còn trống)
+  let statusText = 'Còn trống'
+  
+  if (displayStatus === 'rented') {
+    statusColor = '#c13515' // Đỏ (Đã thuê)
+    statusText = 'Đã thuê'
+  } else if (displayStatus === 'pending_viewing') {
+    statusColor = '#F0AD4E' // Vàng (Chờ duyệt)
+    statusText = 'Chờ duyệt'
+  } else if (displayStatus === 'viewing') {
+    statusColor = '#5BC0DE' // Xanh dương (Đã đặt lịch)
+    statusText = 'Đã đặt lịch'
+  }
 
   if (loading) return (
     <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -338,7 +378,7 @@ export default function RoomDetailPage() {
                       </Button>
                     )}
                   </>
-                ) : isAvailable ? (
+                ) : canSchedule ? (
                   <Button
                     fullWidth variant="contained"
                     onClick={() => auth.user ? setOpenSchedule(true) : setOpenLoginModal(true)}
@@ -349,7 +389,7 @@ export default function RoomDetailPage() {
                 ) : (
                   <Box sx={{ backgroundColor: '#fce8e6', borderRadius: '12px', p: 2, mb: 2 }}>
                     <Typography sx={{ color: '#c13515', fontWeight: 600, fontSize: '0.9375rem', mb: 0.5 }}>Không thể đặt lịch</Typography>
-                    <Typography variant="body2" sx={{ color: '#6a6a6a' }}>Phòng này hiện không khả dụng: {statusText}</Typography>
+                    <Typography variant="body2" sx={{ color: '#6a6a6a' }}>Phòng này đã được thuê</Typography>
                   </Box>
                 )}
 
@@ -421,10 +461,61 @@ export default function RoomDetailPage() {
         </Box>
         <Box component="form" onSubmit={handleScheduleSubmit} sx={{ p: 3 }}>
           <Stack spacing={2.5}>
-            <TextField label="Ngày xem" type="date" InputLabelProps={{ shrink: true }} fullWidth required
-              value={scheduleData.date} onChange={e => setScheduleData({ ...scheduleData, date: e.target.value })} />
-            <TextField label="Giờ xem" type="time" InputLabelProps={{ shrink: true }} fullWidth required
-              value={scheduleData.time} onChange={e => setScheduleData({ ...scheduleData, time: e.target.value })} />
+            <TextField 
+              label="Ngày xem" 
+              type="date" 
+              InputLabelProps={{ shrink: true }} 
+              fullWidth 
+              required
+              inputProps={{ min: new Date().toISOString().split('T')[0] }}
+              value={scheduleData.date} 
+              onChange={e => {
+                setScheduleData({ ...scheduleData, date: e.target.value, time: '' })
+                fetchAvailableSlots(e.target.value)
+              }} 
+            />
+            
+            {scheduleData.date && (
+              <Box>
+                <Typography sx={{ fontSize: '0.875rem', color: '#222222', mb: 1, fontWeight: 500 }}>
+                  Chọn khung giờ *
+                </Typography>
+                {loadingSlots ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : availableSlots.length > 0 ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                    {availableSlots.map(slot => (
+                      <Button
+                        key={slot}
+                        variant={scheduleData.time === slot ? 'contained' : 'outlined'}
+                        onClick={() => setScheduleData({ ...scheduleData, time: slot })}
+                        sx={{
+                          borderColor: scheduleData.time === slot ? '#4A90E2' : '#e8e8e8',
+                          backgroundColor: scheduleData.time === slot ? '#4A90E2' : 'transparent',
+                          color: scheduleData.time === slot ? '#ffffff' : '#222222',
+                          '&:hover': {
+                            borderColor: '#4A90E2',
+                            backgroundColor: scheduleData.time === slot ? '#2E5C8A' : '#f0f7ff'
+                          },
+                          py: 1.5,
+                          fontSize: '0.875rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {slot}
+                      </Button>
+                    ))}
+                  </Box>
+                ) : (
+                  <Alert severity="warning" sx={{ borderRadius: '8px' }}>
+                    Không có khung giờ trống trong ngày này
+                  </Alert>
+                )}
+              </Box>
+            )}
+            
             <TextField label="Họ và tên" fullWidth required
               value={scheduleData.name} onChange={e => setScheduleData({ ...scheduleData, name: e.target.value })} />
             <TextField label="Số điện thoại" type="tel" fullWidth required
@@ -435,7 +526,11 @@ export default function RoomDetailPage() {
               sx={{ borderColor: '#c1c1c1', color: '#222222', borderRadius: '8px', py: 1.25, '&:hover': { backgroundColor: '#f7f7f7' } }}>
               Hủy
             </Button>
-            <Button fullWidth variant="contained" type="submit"
+            <Button 
+              fullWidth 
+              variant="contained" 
+              type="submit"
+              disabled={!scheduleData.date || !scheduleData.time || availableSlots.length === 0}
               sx={{ backgroundColor: '#4A90E2', '&:hover': { backgroundColor: '#2E5C8A' }, borderRadius: '8px', py: 1.25, fontWeight: 600 }}>
               Xác nhận đặt lịch
             </Button>

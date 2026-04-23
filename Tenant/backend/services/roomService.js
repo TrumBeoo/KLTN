@@ -14,43 +14,35 @@ class RoomService {
     
     const room = rooms[0];
     
-    // Check if current user has a schedule for this room
-    let userHasSchedule = false;
+    // Kiểm tra xem user hiện tại có lịch xem cho phòng này không
+    let userScheduleStatus = null;
     if (currentUserId) {
       const [userSchedules] = await db.query(
-        `SELECT COUNT(*) as count FROM VIEWING_SCHEDULE vs
+        `SELECT vs.Status FROM VIEWING_SCHEDULE vs
          JOIN TENANT t ON vs.TenantID = t.TenantID
-         WHERE vs.RoomID = ? AND t.AccountID = ? AND vs.Status IN ('Chờ duyệt', 'Đã duyệt')`,
+         WHERE vs.RoomID = ? AND t.AccountID = ? AND vs.Status IN ('Chờ duyệt', 'Đã duyệt')
+         ORDER BY vs.CreatedAt DESC LIMIT 1`,
         [roomId, currentUserId]
       );
-      userHasSchedule = userSchedules[0].count > 0;
+      if (userSchedules.length > 0) {
+        userScheduleStatus = userSchedules[0].Status;
+      }
     }
     
-    // Check for approved schedules first (highest priority)
-    const [approvedSchedules] = await db.query(
-      `SELECT COUNT(*) as count FROM VIEWING_SCHEDULE 
-       WHERE RoomID = ? AND Status = 'Đã duyệt'`,
-      [roomId]
-    );
-    
-    // Check for pending schedules
-    const [pendingSchedules] = await db.query(
-      `SELECT COUNT(*) as count FROM VIEWING_SCHEDULE 
-       WHERE RoomID = ? AND Status = 'Chờ duyệt'`,
-      [roomId]
-    );
-    
-    // Set DisplayStatus based on priority: approved > pending > available
-    if (room.Status === 'available') {
-      if (approvedSchedules[0].count > 0) {
+    // Nếu user có lịch xem, hiển thị trạng thái của lịch đó
+    if (userScheduleStatus) {
+      if (userScheduleStatus === 'Đã duyệt') {
         room.DisplayStatus = 'viewing'; // Đã đặt lịch
-      } else if (pendingSchedules[0].count > 0 && !userHasSchedule) {
+      } else if (userScheduleStatus === 'Chờ duyệt') {
         room.DisplayStatus = 'pending_viewing'; // Chờ duyệt
+      }
+    } else {
+      // Nếu user chưa đặt lịch, chỉ hiển thị trạng thái thực của phòng
+      if (room.Status === 'rented') {
+        room.DisplayStatus = 'rented'; // Đã thuê
       } else {
         room.DisplayStatus = 'available'; // Còn trống
       }
-    } else {
-      room.DisplayStatus = room.Status;
     }
     
     return room;
@@ -83,35 +75,24 @@ class RoomService {
   async getAllRooms(limit = 20, offset = 0) {
     const [rooms] = await db.query(
       `SELECT r.*, l.Name as LandlordName, b.BuildingName, b.Address as BuildingAddress,
-              (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Chờ duyệt') as PendingViewings,
-              (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Đã duyệt') as ApprovedViewings,
               (SELECT GROUP_CONCAT(ImageURL ORDER BY DisplayOrder ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
-       WHERE r.Status IN ('available', 'viewing')
+       WHERE r.Status IN ('available', 'viewing') OR r.Status = 'rented'
        ORDER BY r.UpdatedAt DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
     );
     
-    // Add DisplayStatus and images for each room
+    // Trả về danh sách phòng với DisplayStatus = Status thực
     return rooms.map(room => {
-      let displayStatus = room.Status;
-      if (room.Status === 'available') {
-        if (room.ApprovedViewings > 0) {
-          displayStatus = 'viewing'; // Đã đặt lịch
-        } else if (room.PendingViewings > 0) {
-          displayStatus = 'pending_viewing'; // Chờ duyệt
-        }
-      }
-      
       // Parse images from ImageURLs
       const images = room.ImageURLs ? room.ImageURLs.split(',').map(url => ({ ImageURL: url })) : [];
       
       return {
         ...room,
-        DisplayStatus: displayStatus,
+        DisplayStatus: room.Status, // Hiển thị trạng thái thực của phòng
         images
       };
     });

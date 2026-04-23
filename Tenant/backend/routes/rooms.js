@@ -6,8 +6,22 @@ const roomService = require('../services/roomService');
 router.get('/rooms/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
+    
+    // Lấy accountId từ token nếu có
+    const token = req.headers.authorization?.split(' ')[1];
+    let currentUserId = null;
+    
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        currentUserId = decoded.accountId;
+      } catch (err) {
+        // Token không hợp lệ, bỏ qua
+      }
+    }
 
-    const room = await roomService.getRoomById(roomId);
+    const room = await roomService.getRoomById(roomId, currentUserId);
     if (!room) {
       return res.status(404).json({
         success: false,

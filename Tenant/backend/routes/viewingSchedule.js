@@ -3,6 +3,34 @@ const router = express.Router();
 const viewingScheduleService = require('../services/viewingScheduleService');
 const authMiddleware = require('../middleware/auth');
 
+// Get available time slots for a room on a specific date
+router.get('/available-slots/:roomId', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp ngày'
+      });
+    }
+
+    const slots = await viewingScheduleService.getAvailableTimeSlots(roomId, date);
+    
+    res.json({
+      success: true,
+      data: slots
+    });
+  } catch (error) {
+    console.error('Get available slots error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy khung giờ khả dụng'
+    });
+  }
+});
+
 // Get user's schedule for a room
 router.get('/schedule/:roomId', authMiddleware, async (req, res) => {
   try {
@@ -96,11 +124,11 @@ router.post('/schedule', authMiddleware, async (req, res) => {
       });
     }
 
-    // Check if room is available for viewing
-    if (roomInfo.Status !== 'available') {
+    // Chỉ cho phép đặt lịch nếu phòng chưa được thuê
+    if (roomInfo.Status === 'rented') {
       return res.status(400).json({
         success: false,
-        message: 'Phòng này hiện không khả dụng để đặt lịch xem'
+        message: 'Phòng này đã được thuê, không thể đằt lịch xem'
       });
     }
 
@@ -115,6 +143,17 @@ router.post('/schedule', authMiddleware, async (req, res) => {
 
     // Combine date and time
     const dateTime = new Date(`${date}T${time}`);
+
+    // Kiểm tra khung giờ còn trống
+    const availableSlots = await viewingScheduleService.getAvailableTimeSlots(roomId, date);
+    const requestedTime = time.substring(0, 5); // Lấy HH:mm
+    
+    if (!availableSlots.includes(requestedTime)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Khung giờ này đã có người đặt, vui lòng chọn giờ khác'
+      });
+    }
 
     // Create schedule
     const scheduleId = await viewingScheduleService.createSchedule(

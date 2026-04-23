@@ -174,6 +174,45 @@ class ViewingScheduleService {
     
     return rows.length > 0 ? rows[0] : null;
   }
+
+  async getAvailableTimeSlots(roomId, date) {
+    // Kiểm tra phòng có đang được thuê không
+    const [roomRows] = await db.query(
+      `SELECT Status FROM ROOM WHERE RoomID = ?`,
+      [roomId]
+    );
+    
+    if (roomRows.length === 0 || roomRows[0].Status === 'rented') {
+      return [];
+    }
+
+    // Lấy các lịch đã đặt trong ngày
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [bookedSlots] = await db.query(
+      `SELECT DateTime FROM VIEWING_SCHEDULE
+       WHERE RoomID = ? AND DateTime BETWEEN ? AND ? 
+       AND Status IN ('Chờ duyệt', 'Đã duyệt')`,
+      [roomId, startOfDay, endOfDay]
+    );
+
+    // Tạo danh sách khung giờ từ 8h-20h
+    const allSlots = [];
+    for (let hour = 8; hour <= 20; hour++) {
+      allSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+    }
+
+    // Lọc bỏ các khung giờ đã đặt
+    const bookedHours = bookedSlots.map(slot => {
+      const dt = new Date(slot.DateTime);
+      return `${dt.getHours().toString().padStart(2, '0')}:00`;
+    });
+
+    return allSlots.filter(slot => !bookedHours.includes(slot));
+  }
 }
 
 module.exports = new ViewingScheduleService();

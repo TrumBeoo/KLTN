@@ -735,13 +735,13 @@ export default function HomePage() {
             width: 48, height: 48,
           }}
         >
-          <ChatIcon sx={{ fontSize: 22 }} />
+          <ChatIcon sx={{ fontSize: 28 }} />
         </Fab>
       </Tooltip>
 
       {/* AI Chat Widget */}
       {chatOpen && (
-        <Box sx={{ position: 'fixed', bottom: 180, right: 32, zIndex: 1300 }}>
+        <Box sx={{ position: 'fixed', bottom: 50, right: 89, zIndex: 1300 }}>
           <AIChatWidget apiUrl={import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'} onClose={() => setChatOpen(false)} />
         </Box>
       )}
