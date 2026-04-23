@@ -108,7 +108,19 @@ function ListingPage() {
       const response = await fetch(`${API_URL}/rooms`)
       const data = await response.json()
       if (data.success) {
-        const formattedRooms = data.data.map(room => ({
+        const formattedRooms = data.data.map(room => {
+          let imageUrl = null
+          if (room.images?.length > 0) {
+            const imgUrl = room.images[0].ImageURL
+            // If URL is already a full URL (http/https), use it directly
+            if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+              imageUrl = imgUrl
+            } else {
+              // Otherwise, treat as local path
+              imageUrl = `${API_URL.replace('/api', '')}${imgUrl}`
+            }
+          }
+          return {
           id: room.RoomID,
           title: `${room.RoomType} - ${room.RoomCode}`,
           location: room.BuildingAddress || 'Địa chỉ chưa cập nhật',
@@ -116,7 +128,7 @@ function ListingPage() {
           area: room.Area || 0,
           rating: 4.5,
           reviews: Math.floor(Math.random() * 50) + 1,
-          image: room.images?.length > 0 ? `${API_URL.replace('/api', '')}${room.images[0].ImageURL}` : null,
+          image: imageUrl,
           status: (room.DisplayStatus || room.Status) === 'available' ? 'available' :
                   (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
                   (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
@@ -126,7 +138,8 @@ function ListingPage() {
           maxPeople: room.MaxPeople,
           description: room.Description,
           views: Math.floor(Math.random() * 100) + 10,
-        }))
+        }
+        })
         setListings(formattedRooms)
       } else {
         setError('Không thể tải danh sách phòng')

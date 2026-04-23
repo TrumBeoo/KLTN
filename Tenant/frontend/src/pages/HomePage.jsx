@@ -107,7 +107,14 @@ export default function HomePage() {
         const formattedRooms = data.data.map(room => {
           let imageUrl = null
           if (room.images && room.images.length > 0) {
-            imageUrl = `${API_URL.replace('/api', '')}${room.images[0].ImageURL}`
+            const imgUrl = room.images[0].ImageURL
+            // If URL is already a full URL (http/https), use it directly
+            if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+              imageUrl = imgUrl
+            } else {
+              // Otherwise, treat as local path
+              imageUrl = `${API_URL.replace('/api', '')}${imgUrl}`
+            }
           }
           return {
             id: room.RoomID,

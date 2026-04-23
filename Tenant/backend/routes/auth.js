@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const userService = require('../services/userService');
 const authMiddleware = require('../middleware/auth');
 const {
@@ -9,6 +10,8 @@ const {
   validatePhone,
   validateName
 } = require('../utils/validation');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Login
 router.post('/login', async (req, res) => {
@@ -193,6 +196,50 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     }
   } catch (error) {
     console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server'
+    });
+  }
+});
+
+// Upload avatar
+router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng chọn ảnh'
+      });
+    }
+
+    const result = await userService.uploadAvatar(req.user.accountId, req.file.buffer);
+
+    res.json({
+      success: true,
+      message: 'Cập nhật ảnh đại diện thành công',
+      avatarURL: result.avatarURL
+    });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server'
+    });
+  }
+});
+
+// Delete avatar
+router.delete('/avatar', authMiddleware, async (req, res) => {
+  try {
+    await userService.deleteAvatar(req.user.accountId);
+
+    res.json({
+      success: true,
+      message: 'Xóa ảnh đại diện thành công'
+    });
+  } catch (error) {
+    console.error('Delete avatar error:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi server'

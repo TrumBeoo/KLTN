@@ -3,30 +3,15 @@ const router = express.Router();
 const db = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinaryService = require('../services/cloudinaryService');
 
-// Configure multer for image upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/rooms';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'room-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Configure multer for memory storage (files will be uploaded to Cloudinary)
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(file.originalname.split('.').pop().toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) {
       cb(null, true);
@@ -58,7 +43,7 @@ router.get('/', authMiddleware, async (req, res) => {
       SELECT r.*, b.BuildingName,
              (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Chờ duyệt') as PendingViewings,
              (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Đã duyệt') as ApprovedViewings,
-             (SELECT GROUP_CONCAT(ImageURL) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as Images
+             (SELECT GROUP_CONCAT(ImageURL ORDER BY DisplayOrder) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as Images
       FROM ROOM r
       LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
       WHERE r.LandlordID = ?
@@ -433,34 +418,49 @@ router.post('/:id/images', authMiddleware, upload.array('images', 10), async (re
       });
     }
 
-    // Insert images into database
+    // Upload images to Cloudinary
+    const uploadedImages = [];
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
-      const imageUrl = `/uploads/rooms/${file.filename}`;
       
-      // Generate ImageID
-      const [lastImage] = await db.query(
-        'SELECT ImageID FROM ROOM_IMAGE ORDER BY ImageID DESC LIMIT 1'
-      );
-      
-      let imageId;
-      if (lastImage.length > 0) {
-        const lastId = parseInt(lastImage[0].ImageID.substring(3));
-        imageId = 'IMG' + String(lastId + 1).padStart(7, '0');
-      } else {
-        imageId = 'IMG0000001';
+      try {
+        const result = await cloudinaryService.uploadImage(
+          file.buffer,
+          `rooms/${roomId}`,
+          { folder: `rooms/${roomId}` }
+        );
+
+        // Get current max DisplayOrder
+        const [maxOrder] = await db.query(
+          'SELECT MAX(DisplayOrder) as maxOrder FROM ROOM_IMAGE WHERE RoomID = ?',
+          [roomId]
+        );
+        const nextOrder = (maxOrder[0].maxOrder || 0) + 1;
+
+        // Insert into database
+        await db.query(
+          'INSERT INTO ROOM_IMAGE (RoomID, ImageURL, PublicID, DisplayOrder, IsPrimary) VALUES (?, ?, ?, ?, ?)',
+          [roomId, result.secure_url, result.public_id, nextOrder, i === 0]
+        );
+
+        uploadedImages.push({
+          imageUrl: result.secure_url,
+          publicId: result.public_id,
+          displayOrder: nextOrder
+        });
+      } catch (uploadError) {
+        console.error(`Failed to upload image ${i + 1}:`, uploadError.message);
+        return res.status(500).json({
+          success: false,
+          message: `Lỗi tải lên ảnh ${i + 1}: ${uploadError.message}`
+        });
       }
-      
-      await db.query(
-        'INSERT INTO ROOM_IMAGE (ImageID, RoomID, ImageURL, `Order`) VALUES (?, ?, ?, ?)',
-        [imageId, roomId, imageUrl, i + 1]
-      );
     }
 
     res.json({
       success: true,
-      message: `Đã tải lên ${req.files.length} ảnh`,
-      images: req.files.map(f => `/uploads/rooms/${f.filename}`)
+      message: `Đã tải lên ${uploadedImages.length} ảnh lên Cloudinary`,
+      images: uploadedImages
     });
   } catch (error) {
     console.error('Upload images error:', error.message);
@@ -517,10 +517,16 @@ router.delete('/:id/images/:imageId', authMiddleware, async (req, res) => {
       });
     }
 
-    // Delete file from disk
-    const imagePath = path.join(__dirname, '..', images[0].ImageURL);
-    if (fs.existsSync(imagePath)) {
-      fs.unlinkSync(imagePath);
+    const image = images[0];
+
+    // Delete from Cloudinary if PublicID exists
+    if (image.PublicID) {
+      try {
+        await cloudinaryService.deleteFile(image.PublicID, 'image');
+      } catch (cloudinaryError) {
+        console.error('Failed to delete from Cloudinary:', cloudinaryError.message);
+        // Continue with DB deletion even if Cloudinary deletion fails
+      }
     }
 
     // Delete from database

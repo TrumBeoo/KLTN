@@ -60,6 +60,99 @@ const StatusBadge = ({ status, displayStatus }) => {
   return <Chip label={config.label} color={config.color} variant="outlined" size="small" />
 }
 
+const RoomImage = ({ imageUrl, roomCode }) => {
+  const [hasError, setHasError] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  
+  // Clean URL - remove any leading slashes or whitespace
+  const cleanUrl = imageUrl ? imageUrl.trim().replace(/^\/+/, '') : null
+  
+  useEffect(() => {
+    console.log(`RoomImage for ${roomCode}:`)
+    console.log('  Original URL:', imageUrl)
+    console.log('  Cleaned URL:', cleanUrl)
+    setHasError(false)
+    setIsLoaded(false)
+  }, [imageUrl, roomCode, cleanUrl])
+  
+  if (!cleanUrl) {
+    console.log(`No image URL for room ${roomCode}`)
+    return (
+      <Box sx={{ 
+        width: 40, 
+        height: 40, 
+        borderRadius: 1, 
+        bgcolor: 'grey.200', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <ImageIcon sx={{ color: 'grey.400', fontSize: '1.2rem' }} />
+      </Box>
+    )
+  }
+  
+  if (hasError) {
+    console.log(`Image error for room ${roomCode}`)
+    return (
+      <Box sx={{ 
+        width: 40, 
+        height: 40, 
+        borderRadius: 1, 
+        bgcolor: 'error.light', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <ImageIcon sx={{ color: 'error.main', fontSize: '1.2rem' }} />
+      </Box>
+    )
+  }
+  
+  return (
+    <Box sx={{ position: 'relative', width: 40, height: 40 }}>
+      {!isLoaded && (
+        <Box sx={{ 
+          position: 'absolute',
+          width: 40, 
+          height: 40, 
+          borderRadius: 1, 
+          bgcolor: 'grey.300', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>...</Typography>
+        </Box>
+      )}
+      <img
+        src={cleanUrl}
+        alt={roomCode}
+        crossOrigin="anonymous"
+        style={{ 
+          width: '40px', 
+          height: '40px', 
+          borderRadius: '4px', 
+          objectFit: 'cover',
+          border: '1px solid #e0e0e0',
+          display: 'block',
+          backgroundColor: '#f5f5f5'
+        }}
+        onLoad={() => {
+          console.log(`✅ Image loaded successfully for ${roomCode}`)
+          setIsLoaded(true)
+        }}
+        onError={(e) => {
+          console.error(`❌ Image load error for room ${roomCode}`)
+          console.error('Cleaned URL:', cleanUrl)
+          console.error('Error event:', e)
+          setHasError(true)
+        }}
+      />
+    </Box>
+  )
+}
+
 const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
   const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [formData, setFormData] = useState({
@@ -112,10 +205,10 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         })(),
         description: room.Description || ''
       })
-      // Load existing images
+      // Load existing images from Cloudinary URLs
       if (room.Images) {
         const imageUrls = room.Images.split(',').map(url => ({
-          url: `${API_URL.replace('/api', '')}${url}`,
+          url: url, // URL from Cloudinary is already complete
           id: url
         }))
         setImages(imageUrls)
@@ -187,16 +280,27 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
           formDataImg.append('images', file)
         })
         
-        await fetch(`${API_URL}/rooms/${roomId}/images`, {
+        const uploadResponse = await fetch(`${API_URL}/rooms/${roomId}/images`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formDataImg
         })
+        
+        const uploadData = await uploadResponse.json()
+        if (!uploadData.success) {
+          showError('Lỗi!', 'Lưu phòng thành công nhưng upload ảnh thất bại: ' + uploadData.message)
+        } else {
+          showSuccess('Thành công!', `Đã lưu phòng và upload ${imageFiles.length} ảnh`)
+        }
+      } else {
+        showSuccess('Thành công!', 'Đã lưu phòng')
       }
       
-      onClose()
+      // Close dialog and refresh list
+      onClose(true) // Pass true to indicate success
     } catch (error) {
       console.error('Submit error:', error)
+      showError('Lỗi!', error.message)
     } finally {
       setLoading(false)
     }
@@ -409,6 +513,19 @@ export default function ManageRooms() {
       })
       const data = await response.json()
       if (data.success) {
+        console.log('=== ROOMS DATA DEBUG ===')
+        console.log('Total rooms:', data.data.length)
+        if (data.data.length > 0) {
+          console.log('First room:', data.data[0])
+          console.log('First room Images field:', data.data[0].Images)
+          console.log('First room Images type:', typeof data.data[0].Images)
+          if (data.data[0].Images) {
+            const firstImage = data.data[0].Images.split(',')[0].trim()
+            console.log('First image URL:', firstImage)
+            console.log('First image URL length:', firstImage.length)
+          }
+        }
+        console.log('=======================')
         setRooms(data.data || [])
       }
     } catch (error) {
@@ -485,9 +602,13 @@ export default function ManageRooms() {
     setOpenDialog(true)
   }
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = (shouldRefresh) => {
     setOpenDialog(false)
     setSelectedRoom(null)
+    // Refresh list if needed
+    if (shouldRefresh) {
+      fetchRooms()
+    }
   }
 
   const formatPrice = (price) => {
@@ -629,21 +750,13 @@ export default function ManageRooms() {
                   </TableCell>
                 </TableRow>
               ) : (
-                rooms.map((room) => (
+                rooms.map((room) => {
+                  const firstImageUrl = room.Images ? room.Images.split(',')[0].trim() : null
+                  return (
                   <TableRow key={room.RoomID} hover>
                     <TableCell>
                       <Stack direction="row" spacing={1} alignItems="center">
-                        {room.Images ? (
-                          <Box
-                            component="img"
-                            src={`${API_URL.replace('/api', '')}${room.Images.split(',')[0]}`}
-                            sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: 'grey.200', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ImageIcon sx={{ color: 'grey.400' }} />
-                          </Box>
-                        )}
+                        <RoomImage imageUrl={firstImageUrl} roomCode={room.RoomCode} />
                         <Typography sx={{ fontWeight: 600 }}>{room.RoomCode}</Typography>
                       </Stack>
                     </TableCell>
@@ -667,7 +780,8 @@ export default function ManageRooms() {
                       </Stack>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>

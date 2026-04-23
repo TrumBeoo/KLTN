@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cloudinaryService = require('./cloudinaryService');
 
 class UserService {
   async generateAccountId() {
@@ -127,8 +128,10 @@ class UserService {
 
   async getUserProfile(accountId) {
     const [rows] = await pool.query(
-      `SELECT l.LandlordID, l.Name, l.Email, l.Phone, l.Address, l.City, l.District, l.Ward, l.CreatedAt, l.UpdatedAt
+      `SELECT l.LandlordID, l.Name, l.Email, l.Phone, l.Address, l.City, l.District, l.Ward, l.CreatedAt, l.UpdatedAt,
+              a.AvatarURL, a.AvatarPublicID
        FROM LANDLORD l
+       JOIN ACCOUNT a ON l.AccountID = a.AccountID
        WHERE l.AccountID = ?`,
       [accountId]
     );
@@ -154,6 +157,67 @@ class UserService {
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
+  }
+
+  async uploadAvatar(accountId, fileBuffer) {
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      const [account] = await connection.query(
+        'SELECT AvatarPublicID FROM ACCOUNT WHERE AccountID = ?',
+        [accountId]
+      );
+
+      if (account[0]?.AvatarPublicID) {
+        await cloudinaryService.deleteFile(account[0].AvatarPublicID);
+      }
+
+      const uploadResult = await cloudinaryService.uploadImage(fileBuffer, 'avatars');
+
+      await connection.query(
+        'UPDATE ACCOUNT SET AvatarURL = ?, AvatarPublicID = ? WHERE AccountID = ?',
+        [uploadResult.secure_url, uploadResult.public_id, accountId]
+      );
+
+      await connection.commit();
+      return { avatarURL: uploadResult.secure_url };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async deleteAvatar(accountId) {
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      const [account] = await connection.query(
+        'SELECT AvatarPublicID FROM ACCOUNT WHERE AccountID = ?',
+        [accountId]
+      );
+
+      if (account[0]?.AvatarPublicID) {
+        await cloudinaryService.deleteFile(account[0].AvatarPublicID);
+      }
+
+      await connection.query(
+        'UPDATE ACCOUNT SET AvatarURL = NULL, AvatarPublicID = NULL WHERE AccountID = ?',
+        [accountId]
+      );
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 }
 

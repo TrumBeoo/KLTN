@@ -85,6 +85,11 @@ export default function RoomDetailPage() {
 
   const images = room?.images?.length > 0
     ? room.images.map(img => {
+        // If URL is already a full URL (http/https), use it directly
+        if (img.ImageURL.startsWith('http://') || img.ImageURL.startsWith('https://')) {
+          return img.ImageURL
+        }
+        // Otherwise, treat as local path
         const url = img.ImageURL.startsWith('/') ? img.ImageURL : `/${img.ImageURL}`
         return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${url}`
       })

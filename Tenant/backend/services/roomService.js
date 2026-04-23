@@ -70,10 +70,10 @@ class RoomService {
 
   async getRoomImages(roomId) {
     const [images] = await db.query(
-      `SELECT ImageID, ImageURL, \`Order\`
+      `SELECT ImageID, ImageURL, DisplayOrder
        FROM ROOM_IMAGE
        WHERE RoomID = ?
-       ORDER BY \`Order\` ASC`,
+       ORDER BY DisplayOrder ASC`,
       [roomId]
     );
     
@@ -85,7 +85,7 @@ class RoomService {
       `SELECT r.*, l.Name as LandlordName, b.BuildingName, b.Address as BuildingAddress,
               (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Chờ duyệt') as PendingViewings,
               (SELECT COUNT(*) FROM VIEWING_SCHEDULE vs WHERE vs.RoomID = r.RoomID AND vs.Status = 'Đã duyệt') as ApprovedViewings,
-              (SELECT GROUP_CONCAT(ImageURL ORDER BY \`Order\` ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs
+              (SELECT GROUP_CONCAT(ImageURL ORDER BY DisplayOrder ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
