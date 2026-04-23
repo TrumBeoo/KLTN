@@ -1,0 +1,108 @@
+# Google Maps Setup Guide
+
+## 1. Get Google Maps API Key
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable these APIs:
+   - Maps JavaScript API
+   - Places API (optional, for future features)
+
+4. Create credentials:
+   - Go to "Credentials" → "Create Credentials" → "API Key"
+   - Copy your API key
+
+5. Restrict your API key (recommended):
+   - Application restrictions: HTTP referrers
+   - Add your domain: `localhost:5173/*` (for development)
+   - API restrictions: Select "Maps JavaScript API"
+
+## 2. Add API Key to Your Project
+
+Open `src/components/RoomMap.jsx` and replace:
+
+```javascript
+script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=marker`;
+```
+
+With:
+
+```javascript
+script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_ACTUAL_API_KEY&libraries=marker`;
+```
+
+## 3. Environment Variable (Recommended)
+
+Create `.env` file in your project root:
+
+```
+VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+```
+
+Then update RoomMap.jsx:
+
+```javascript
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`;
+```
+
+## 4. Get Map ID (Required for AdvancedMarkerElement)
+
+1. In Google Cloud Console, go to "Map Management" → "Map IDs"
+2. Click "Create Map ID"
+3. Name: "Rentify Map"
+4. Map type: JavaScript
+5. Copy the Map ID
+
+6. Update RoomMap.jsx:
+
+```javascript
+mapId: 'YOUR_MAP_ID_HERE',
+```
+
+## 5. Add Real Coordinates to Your Rooms
+
+When fetching rooms from API, ensure each room has:
+- `latitude` (number)
+- `longitude` (number)
+
+Example:
+```javascript
+{
+  id: 1,
+  title: 'Phòng trọ Cầu Giấy',
+  price: 3500000,
+  latitude: 21.0333,
+  longitude: 105.7944,
+}
+```
+
+## 6. Update ListingPage to Use Real Data
+
+Replace `sampleRoomsWithCoordinates` with your actual room data:
+
+```javascript
+<RoomMap 
+  rooms={listings.map(l => ({
+    id: l.id,
+    title: l.title,
+    price: parseFloat(l.price),
+    latitude: l.latitude,
+    longitude: l.longitude,
+  }))}
+  onMarkerClick={(room) => navigate(`/room/${room.id}`)}
+/>
+```
+
+## Troubleshooting
+
+- **Markers not showing**: Check browser console for API errors
+- **"Map ID required"**: Create and add Map ID in Google Cloud Console
+- **CORS errors**: Check API key restrictions
+- **Billing error**: Enable billing in Google Cloud (free tier available)
+
+## Cost Estimate
+
+Google Maps offers $200 free credit monthly:
+- Map loads: ~28,000 free per month
+- Advanced Markers: Included in map loads

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import RoomCardSkeleton from '../components/RoomCardSkeleton'
 import SecondaryMenu from '../components/SecondaryMenu'
+import RoomMap from '../components/RoomMap'
+import { sampleRoomsWithCoordinates } from '../utils/sampleRoomData'
 import {
   Box, Container, Grid, Button, Typography, Stack, IconButton, Skeleton,
 } from '@mui/material'
@@ -342,13 +344,12 @@ function ListingPage() {
             {/* Right Sidebar */}
             <Grid item xs={12} lg={4}>
               <Box sx={{ position: 'sticky', top: 96 }}>
-                {/* Map placeholder */}
-                <Box sx={{ borderRadius: '12px', overflow: 'hidden', height: 320, backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography sx={{ fontSize: '2rem', mb: 1 }}>🗺️</Typography>
-                    <Typography variant="body2" sx={{ color: '#6a6a6a', fontWeight: 500 }}>Bản đồ phòng trọ</Typography>
-                    <Typography variant="caption" sx={{ color: '#929292', display: 'block', mt: 0.5 }}>Sẽ được tích hợp sớm</Typography>
-                  </Box>
+                {/* Map */}
+                <Box sx={{ borderRadius: '12px', overflow: 'hidden', height: 350, backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', mb: 3 }}>
+                  <RoomMap 
+                    rooms={sampleRoomsWithCoordinates}
+                    onMarkerClick={(room) => navigate(`/room/${room.id}`)}
+                  />
                 </Box>
 
                 {/* Latest Listings */}
