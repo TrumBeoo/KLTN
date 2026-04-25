@@ -145,6 +145,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 // Create room
 router.post('/', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
   try {
     const {
       buildingId,
@@ -154,7 +155,8 @@ router.post('/', authMiddleware, async (req, res) => {
       price,
       maxPeople,
       amenities,
-      description
+      description,
+      locationId
     } = req.body;
 
     if (!buildingId || !roomCode || !roomType || !area || !price || !maxPeople) {
@@ -164,13 +166,16 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
+    await connection.beginTransaction();
+
     // Get LandlordID from AccountID
-    const [landlords] = await db.query(
+    const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
     );
 
     if (landlords.length === 0) {
+      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy thông tin chủ nhà'
@@ -179,8 +184,20 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
+    // Get LocationID from Building if not provided
+    let finalLocationId = locationId;
+    if (!finalLocationId) {
+      const [buildings] = await connection.query(
+        'SELECT LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+        [buildingId, landlordId]
+      );
+      if (buildings.length > 0) {
+        finalLocationId = buildings[0].LocationID;
+      }
+    }
+
     // Generate RoomID
-    const [lastRoom] = await db.query(
+    const [lastRoom] = await connection.query(
       'SELECT RoomID FROM ROOM ORDER BY RoomID DESC LIMIT 1'
     );
     
@@ -194,15 +211,16 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const amenitiesJson = JSON.stringify(amenities || []);
 
-    const [result] = await db.query(
+    await connection.query(
       `INSERT INTO ROOM (
-        RoomID, LandlordID, BuildingID, RoomCode, RoomType, Area, Price, 
+        RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
         MaxPeople, Amenities, Description, Status, CreatedAt, UpdatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', NOW(), NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', NOW(), NOW())`,
       [
         roomId,
         landlordId,
         buildingId,
+        finalLocationId,
         roomCode,
         roomType,
         area,
@@ -213,22 +231,28 @@ router.post('/', authMiddleware, async (req, res) => {
       ]
     );
 
+    await connection.commit();
+
     res.status(201).json({
       success: true,
       message: 'Thêm phòng thành công',
       roomId: roomId
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Create room error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Lỗi server: ' + error.message
     });
+  } finally {
+    connection.release();
   }
 });
 
 // Update room
 router.put('/:id', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
   try {
     const {
       buildingId,
@@ -239,16 +263,20 @@ router.put('/:id', authMiddleware, async (req, res) => {
       maxPeople,
       amenities,
       description,
-      status
+      status,
+      locationId
     } = req.body;
 
+    await connection.beginTransaction();
+
     // Get LandlordID from AccountID
-    const [landlords] = await db.query(
+    const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
     );
 
     if (landlords.length === 0) {
+      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy thông tin chủ nhà'
@@ -258,23 +286,37 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const landlordId = landlords[0].LandlordID;
 
     // Check if room belongs to landlord
-    const [rooms] = await db.query(
+    const [rooms] = await connection.query(
       'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ?',
       [req.params.id, landlordId]
     );
 
     if (rooms.length === 0) {
+      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy phòng'
       });
     }
 
+    // Get LocationID from Building if not provided
+    let finalLocationId = locationId;
+    if (!finalLocationId && buildingId) {
+      const [buildings] = await connection.query(
+        'SELECT LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+        [buildingId, landlordId]
+      );
+      if (buildings.length > 0) {
+        finalLocationId = buildings[0].LocationID;
+      }
+    }
+
     const amenitiesJson = JSON.stringify(amenities || []);
 
-    await db.query(
+    await connection.query(
       `UPDATE ROOM SET
         BuildingID = ?,
+        LocationID = ?,
         RoomCode = ?,
         RoomType = ?,
         Area = ?,
@@ -287,6 +329,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       WHERE RoomID = ?`,
       [
         buildingId,
+        finalLocationId,
         roomCode,
         roomType,
         area,
@@ -299,16 +342,21 @@ router.put('/:id', authMiddleware, async (req, res) => {
       ]
     );
 
+    await connection.commit();
+
     res.json({
       success: true,
       message: 'Cập nhật phòng thành công'
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Update room error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Lỗi server: ' + error.message
     });
+  } finally {
+    connection.release();
   }
 });
 

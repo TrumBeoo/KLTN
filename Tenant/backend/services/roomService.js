@@ -3,9 +3,13 @@ const db = require('../config/database');
 class RoomService {
   async getRoomById(roomId, currentUserId = null) {
     const [rooms] = await db.query(
-      `SELECT r.*, l.Name as LandlordName, l.Phone as LandlordPhone, l.Email as LandlordEmail
+      `SELECT r.*, 
+              l.Name as LandlordName, l.Phone as LandlordPhone, l.Email as LandlordEmail,
+              loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
+              loc.Latitude, loc.Longitude
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
+       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
        WHERE r.RoomID = ?`,
       [roomId]
     );
@@ -74,11 +78,16 @@ class RoomService {
 
   async getAllRooms(limit = 20, offset = 0) {
     const [rooms] = await db.query(
-      `SELECT r.*, l.Name as LandlordName, b.BuildingName, b.Address as BuildingAddress,
+      `SELECT r.*, 
+              l.Name as LandlordName, 
+              b.BuildingName, b.Address as BuildingAddress,
+              loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
+              loc.Latitude, loc.Longitude,
               (SELECT GROUP_CONCAT(ImageURL ORDER BY DisplayOrder ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
        WHERE r.Status IN ('available', 'viewing') OR r.Status = 'rented'
        ORDER BY r.UpdatedAt DESC
        LIMIT ? OFFSET ?`,

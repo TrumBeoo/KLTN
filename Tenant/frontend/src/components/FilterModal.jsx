@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Box, TextField, Button, Stack, FormGroup, FormControlLabel,
@@ -13,6 +14,27 @@ const Section = ({ title, children }) => (
 )
 
 export default function FilterModal({ open, onClose, onApply }) {
+  const [districts, setDistricts] = useState([])
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+  useEffect(() => {
+    if (open) {
+      fetchDistricts()
+    }
+  }, [open])
+
+  const fetchDistricts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/locations/districts`)
+      const data = await response.json()
+      if (data.success) {
+        setDistricts(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch districts error:', error)
+    }
+  }
+
   const handleApply = () => { onApply(); onClose() }
 
   return (
@@ -48,13 +70,9 @@ export default function FilterModal({ open, onClose, onApply }) {
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
           >
             <option value="">Tất cả khu vực</option>
-            <option value="badinh">Ba Đình</option>
-            <option value="caugiay">Cầu Giấy</option>
-            <option value="tayho">Tây Hồ</option>
-            <option value="dongda">Đống Đa</option>
-            <option value="haibatrung">Hai Bà Trưng</option>
-            <option value="hadong">Hà Đông</option>
-            <option value="thanxuan">Thanh Xuân</option>
+            {districts.map(district => (
+              <option key={district} value={district}>{district}</option>
+            ))}
           </TextField>
         </Section>
 

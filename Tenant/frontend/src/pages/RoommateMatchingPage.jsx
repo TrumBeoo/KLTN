@@ -1,550 +1,688 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box,
   Container,
-  Card,
-  CardMedia,
-  CardContent,
-  Typography,
-  Button,
-  Stack,
-  Chip,
-  Avatar,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
-  LinearProgress,
+  Button,
+  Typography,
+  Stack,
+  Card,
+  CardContent,
+  Avatar,
+  Chip,
   Grid,
-  TextField,
-  Slider,
-  FormControlLabel,
-  Checkbox,
+  LinearProgress,
 } from '@mui/material'
 import {
+  Close as CloseIcon,
   Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
-  Close as CloseIcon,
-  Star as StarIcon,
-  TrendingUp as TrendingUpIcon,
-  AutoAwesome as AutoAwesomeIcon,
-  Person as PersonIcon,
-  LocationOn as LocationIcon,
   Work as WorkIcon,
-  Home as HomeIcon,
+  LocationOn as LocationOnIcon,
+  Star as StarIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
+import PreferenceForm from '../components/PreferenceForm'
+import SwipeCard from '../components/SwipeCard'
+import { EmptyState, MatchSuccessScreen, MatchCardSkeleton } from '../components/MatchingStateComponents'
+import { calculateMatchScore, filterMatchesByPreferences, rankMatches } from '../utils/matchingEngine'
 
-const MatchCard = styled(Card)(({ theme }) => ({
-  cursor: 'pointer',
-  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+// Styled Components
+const SwipeContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
-  overflow: 'hidden',
-  height: 500,
-  '&:hover': {
-    transform: 'translateY(-8px)',
-    boxShadow: theme.shadows[8],
+  width: '100%',
+  aspectRatio: '9/14',
+  minHeight: '500px',
+  maxHeight: '720px',
+  margin: '0 auto',
+
+  [theme.breakpoints.down('md')]: {
+    minHeight: '600px',
+    aspectRatio: 'auto',
   },
 }))
 
-const MatchScore = styled(Box)(({ theme, score }) => ({
+const ActionButtonsContainer = styled(Stack)(({ theme }) => ({
   position: 'absolute',
-  top: 12,
-  right: 12,
-  backgroundColor: score >= 80 ? '#10B981' : score >= 60 ? '#3B82F6' : '#F59E0B',
-  color: 'white',
-  borderRadius: '50%',
-  width: 56,
-  height: 56,
-  display: 'flex',
-  alignItems: 'center',
+  bottom: 0,
+  left: 0,
+  right: 0,
   justifyContent: 'center',
-  flexDirection: 'column',
-  fontWeight: 700,
-  fontSize: '1.25rem',
-  boxShadow: theme.shadows[4],
-  zIndex: 10,
-}))
-
-const PreferenceCard = styled(Card)(({ theme }) => ({
+  gap: theme.spacing(2),
   padding: theme.spacing(2),
-  border: `1px solid ${theme.palette.grey[200]}`,
-  borderRadius: theme.spacing(1.5),
+  background: 'linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0))',
+  zIndex: 20,
+
+  [theme.breakpoints.down('sm')]: {
+    gap: theme.spacing(1),
+    padding: theme.spacing(1.5),
+  },
 }))
 
-const mockMatches = [
+const DetailCard = styled(Card)(({ theme }) => ({
+  border: `1px solid ${theme.palette.grey[200]}`,
+  borderRadius: theme.spacing(2),
+  background: theme.palette.background.paper,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+}))
+
+const InfoBadgeStyle = styled(Box)(({ theme }) => ({
+  display: 'inline-block',
+  background: 'linear-gradient(135deg, #10B98120 0%, #3B82F520 100%)',
+  border: '1px solid #10B98140',
+  borderRadius: theme.spacing(1.5),
+  padding: theme.spacing(1.5, 2),
+  marginBottom: theme.spacing(2),
+}))
+
+const PreferenceChip = styled(Chip)(({ theme }) => ({
+  height: '32px',
+  borderRadius: '20px',
+  fontWeight: '500',
+}))
+
+// Mock Candidates Data for Testing
+const MOCK_CANDIDATES = [
   {
     id: 1,
     name: 'Linh Đặng',
     age: 24,
+    gender: 'Nữ',
     avatar: 'https://i.pravatar.cc/150?img=1',
     image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop',
-    score: 92,
-    budget: [3, 6],
-    districts: ['Q1', 'Q3'],
     occupation: 'Designer',
-    gender: 'Nữ',
-    bio: 'Yêu thích thiết kế, yoga và cà phê',
-    habits: {
-      sleepSchedule: 'early',
-      cleanliness: 5,
-      smoking: false,
-      pets: false,
-      cooking: true,
-      quiet: true,
-    },
-    matchReasons: ['Cùng yêu thích thiết kế', 'Sạch sẽ', 'Không hút thuốc'],
+    budget: [3, 6],
+    locations: ['Q1', 'Q3'],
+    bio: 'Yêu thích thiết kế, yoga và cà phê ☕',
+    lifestyle: ['clean', 'quiet', 'early_bird', 'fitness'],
+    interests: ['Yoga', 'Thiết kế', 'Cà phê'],
+    duration: 'long-term',
   },
   {
     id: 2,
     name: 'Minh Anh',
     age: 23,
+    gender: 'Nữ',
     avatar: 'https://i.pravatar.cc/150?img=2',
     image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&h=600&fit=crop',
-    score: 85,
-    budget: [2.5, 5],
-    districts: ['Q1', 'Q2'],
     occupation: 'Developer',
-    gender: 'Nữ',
-    bio: 'Lập trình viên, thích chơi game',
-    habits: {
-      sleepSchedule: 'late',
-      cleanliness: 4,
-      smoking: false,
-      pets: true,
-      cooking: false,
-      quiet: false,
-    },
-    matchReasons: ['Cùng khu vực', 'Ngân sách tương đồng'],
+    budget: [2.5, 5],
+    locations: ['Q1', 'Q2'],
+    bio: 'Lập trình viên, yêu chơi game 🎮',
+    lifestyle: ['social', 'night_owl', 'gaming'],
+    interests: ['Lập trình', 'Công nghệ', 'Âm nhạc'],
+    duration: 'long-term',
   },
   {
     id: 3,
     name: 'Hương Giang',
     age: 25,
+    gender: 'Nữ',
     avatar: 'https://i.pravatar.cc/150?img=3',
     image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&h=600&fit=crop',
-    score: 78,
-    budget: [4, 7],
-    districts: ['Q3', 'Q5'],
     occupation: 'Marketing',
+    budget: [4, 7],
+    locations: ['Q3', 'Q5'],
+    bio: 'Yêu du lịch và ẩm thực ✈️',
+    lifestyle: ['social', 'cooking', 'early_bird'],
+    interests: ['Du lịch', 'Nấu ăn', 'Phim ảnh'],
+    duration: 'long-term',
+  },
+  {
+    id: 4,
+    name: 'Thu Trang',
+    age: 22,
     gender: 'Nữ',
-    bio: 'Yêu thích du lịch và ẩm thực',
-    habits: {
-      sleepSchedule: 'early',
-      cleanliness: 4,
-      smoking: false,
-      pets: false,
-      cooking: true,
-      quiet: false,
-    },
-    matchReasons: ['Cùng sở thích du lịch', 'Thích nấu ăn'],
+    avatar: 'https://i.pravatar.cc/150?img=4',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&h=600&fit=crop',
+    occupation: 'Student',
+    budget: [2, 4],
+    locations: ['Q7', 'Bình Thạnh'],
+    bio: 'Sinh viên, yêu nhiếp ảnh 📷',
+    lifestyle: ['clean', 'quiet', 'social'],
+    interests: ['Nhiếp ảnh', 'Du lịch', 'Vẽ tranh'],
+    duration: 'long-term',
+  },
+  {
+    id: 5,
+    name: 'Vân Anh',
+    age: 26,
+    gender: 'Nữ',
+    avatar: 'https://i.pravatar.cc/150?img=5',
+    image: 'https://images.unsplash.com/photo-1502684457400-22d1a2b8b1fe?w=500&h=600&fit=crop',
+    occupation: 'Accountant',
+    budget: [5, 8],
+    locations: ['Q1', 'Q4'],
+    bio: 'Kế toán viên, yêu thể dục 💪',
+    lifestyle: ['clean', 'early_bird', 'fitness', 'quiet'],
+    interests: ['Chạy bộ', 'Yoga', 'Sách'],
+    duration: 'long-term',
+  },
+  {
+    id: 6,
+    name: 'Hà Nhi',
+    age: 24,
+    gender: 'Nữ',
+    avatar: 'https://i.pravatar.cc/150?img=6',
+    image: 'https://images.unsplash.com/photo-1517841905240-5af0b2e5d6a0?w=500&h=600&fit=crop',
+    occupation: 'Teacher',
+    budget: [3, 5],
+    locations: ['Q2', 'Q3'],
+    bio: 'Giáo viên tiếng Anh, thích đọc sách 📚',
+    lifestyle: ['clean', 'quiet', 'early_bird'],
+    interests: ['Sách', 'Ngoại ngữ', 'Thiết kế'],
+    duration: 'long-term',
   },
 ]
 
+/**
+ * RoommateMatchingPage Component
+ * Complete matching UX with form -> swipe flow
+ */
 export default function RoommateMatchingPage() {
   useScrollToTop()
+
+  // State Management
+  const [flowStep, setFlowStep] = useState('form') // 'form' | 'matching' | 'profile'
+  const [preferences, setPreferences] = useState(null)
+  const [filteredMatches, setFilteredMatches] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [favorites, setFavorites] = useState([])
-  const [openProfile, setOpenProfile] = useState(false)
-  const [openPreferences, setOpenPreferences] = useState(false)
-  const [preferences, setPreferences] = useState({
-    budget: [2, 8],
-    districts: [],
-    sleepSchedule: 'any',
-    cleanliness: 3,
-    smoking: false,
-    pets: false,
-  })
+  const [lastLikedMatch, setLastLikedMatch] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [openProfileDialog, setOpenProfileDialog] = useState(false)
 
-  const currentMatch = mockMatches[currentIndex]
+  // Get current match with calculated score
+  const currentMatch = useMemo(() => {
+    if (filteredMatches.length === 0) return null
+    const match = filteredMatches[currentIndex]
+    if (!match.matchData) {
+      match.matchData = calculateMatchScore(preferences, match)
+    }
+    return match
+  }, [currentIndex, filteredMatches, preferences])
 
-  const handleNext = () => {
-    if (currentIndex < mockMatches.length - 1) {
-      setCurrentIndex(currentIndex + 1)
+  // Handle Form Submission
+  const handleFormSubmit = async (userPreferences) => {
+    setIsLoading(true)
+    setPreferences(userPreferences)
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // Filter and rank candidates
+    const filtered = filterMatchesByPreferences(MOCK_CANDIDATES, userPreferences)
+    const ranked = rankMatches(filtered, userPreferences)
+
+    setFilteredMatches(ranked)
+    setCurrentIndex(0)
+    setIsLoading(false)
+
+    if (ranked.length > 0) {
+      setFlowStep('matching')
+    } else {
+      setFlowStep('empty-state')
     }
   }
 
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-    }
-  }
+  // Swipe Handlers
+  const handleSwipeRight = () => {
+    if (!currentMatch) return
 
-  const handleLike = () => {
     setFavorites([...favorites, currentMatch.id])
-    handleNext()
+    setLastLikedMatch(currentMatch)
+    setFlowStep('match-success')
   }
 
-  const handlePass = () => {
-    handleNext()
+  const handleSwipeLeft = () => {
+    if (currentIndex < filteredMatches.length - 1) {
+      setCurrentIndex(currentIndex + 1)
+    } else {
+      setFlowStep('empty-state')
+    }
   }
 
-  return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="lg">
-        {/* Header */}
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', alignItems: 'center', mb: 2 }}>
-            <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: '2rem' }} />
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              Tìm bạn ở ghép hoàn hảo
-            </Typography>
+  const handleContinueMatching = () => {
+    if (currentIndex < filteredMatches.length - 1) {
+      setCurrentIndex(currentIndex + 1)
+      setFlowStep('matching')
+    } else {
+      setFlowStep('empty-state')
+    }
+  }
+
+  const handleBackToForm = () => {
+    setFlowStep('form')
+    setPreferences(null)
+    setFilteredMatches([])
+    setCurrentIndex(0)
+    setFavorites([])
+  }
+
+  // Render States
+  if (flowStep === 'form') {
+    return <PreferenceForm onSubmit={handleFormSubmit} isLoading={isLoading} />
+  }
+
+  if (flowStep === 'empty-state') {
+    return (
+      <EmptyState onAdjustFilters={() => setFlowStep('form')} onBack={handleBackToForm} />
+    )
+  }
+
+  if (flowStep === 'match-success') {
+    return (
+      <MatchSuccessScreen
+        matchName={lastLikedMatch?.name}
+        score={lastLikedMatch?.matchData?.score}
+        onContinue={handleContinueMatching}
+        onViewProfile={() => {
+          setOpenProfileDialog(true)
+          setFlowStep('matching')
+        }}
+      />
+    )
+  }
+
+  if (flowStep === 'matching') {
+    return (
+      <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 2, md: 4 } }}>
+        <Container maxWidth="md">
+          {/* Header with Back Button */}
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: 'center',
+              mb: 3,
+              justifyContent: 'space-between',
+            }}
+          >
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={handleBackToForm}
+              sx={{ textTransform: 'none' }}
+            >
+              Quay lại
+            </Button>
+            <Box sx={{ textAlign: 'center', flex: 1 }}>
+              <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                {currentIndex + 1} / {filteredMatches.length} người
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={(currentIndex / filteredMatches.length) * 100}
+                sx={{ height: 4, borderRadius: 2 }}
+              />
+            </Box>
+            <Box sx={{ width: '80px' }} />
           </Stack>
-          <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
-            AI sẽ giúp bạn tìm bạn ở ghép phù hợp nhất dựa trên sở thích và thói quen
-          </Typography>
-        </Box>
 
-        <Grid container spacing={4}>
-          {/* Main Card */}
-          <Grid item xs={12} md={8}>
-            {currentMatch && (
-              <Box sx={{ position: 'relative' }}>
-                <MatchCard>
-                  <CardMedia
-                    component="img"
-                    image={currentMatch.image}
-                    alt={currentMatch.name}
-                    sx={{ height: 300, objectFit: 'cover' }}
-                  />
-                  <MatchScore score={currentMatch.score}>
-                    <Box>{currentMatch.score}%</Box>
-                    <TrendingUpIcon sx={{ fontSize: '1rem' }} />
-                  </MatchScore>
+          <Grid container spacing={3}>
+            {/* Swipe Card Container */}
+            <Grid item xs={12} md={8}>
+              {isLoading ? (
+                <SwipeContainer>
+                  <MatchCardSkeleton />
+                </SwipeContainer>
+              ) : currentMatch ? (
+                <Box sx={{ position: 'relative' }}>
+                  <SwipeContainer>
+                    <SwipeCard
+                      match={currentMatch}
+                      index={0}
+                      isActive={true}
+                      onSwipeRight={handleSwipeRight}
+                      onSwipeLeft={handleSwipeLeft}
+                      onTap={() => setOpenProfileDialog(true)}
+                      zIndex={10}
+                    />
+                    {filteredMatches[currentIndex + 1] && (
+                      <SwipeCard
+                        match={filteredMatches[currentIndex + 1]}
+                        index={1}
+                        isActive={false}
+                        zIndex={9}
+                      />
+                    )}
+                    {filteredMatches[currentIndex + 2] && (
+                      <SwipeCard
+                        match={filteredMatches[currentIndex + 2]}
+                        index={2}
+                        isActive={false}
+                        zIndex={8}
+                      />
+                    )}
+                  </SwipeContainer>
 
-                  <CardContent sx={{ pb: 2 }}>
-                    <Stack spacing={2}>
-                      {/* Name & Basic Info */}
-                      <Box>
-                        <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-                          {currentMatch.name}, {currentMatch.age}
-                        </Typography>
-                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                          <Chip
-                            icon={<WorkIcon />}
-                            label={currentMatch.occupation}
+                  {/* Action Buttons */}
+                  <ActionButtonsContainer direction="row">
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      onClick={handleSwipeLeft}
+                      startIcon={<CloseIcon />}
+                      sx={{
+                        flex: 1,
+                        maxWidth: '100px',
+                        borderRadius: 2,
+                        textTransform: 'none',
+                      }}
+                    >
+                      Bỏ qua
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="large"
+                      onClick={handleSwipeRight}
+                      startIcon={<FavoriteIcon />}
+                      sx={{
+                        flex: 1,
+                        maxWidth: '100px',
+                        borderRadius: 2,
+                        textTransform: 'none',
+                      }}
+                    >
+                      Thích
+                    </Button>
+                  </ActionButtonsContainer>
+                </Box>
+              ) : (
+                <SwipeContainer />
+              )}
+            </Grid>
+
+            {/* Sidebar - Desktop Only */}
+            <Grid item xs={12} md={4} sx={{ display: { xs: 'none', md: 'block' } }}>
+              {currentMatch && (
+                <Stack spacing={2}>
+                  {/* Match Details Card */}
+                  <DetailCard>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                            {currentMatch.name}, {currentMatch.age}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            {currentMatch.occupation}
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                              color: 'text.secondary',
+                            }}
+                          >
+                            {currentMatch.bio}
+                          </Typography>
+                        </Box>
+
+                        {/* Match Score & Reasons */}
+                        <InfoBadgeStyle>
+                          <Stack spacing={1}>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 600, color: 'success.main' }}
+                            >
+                              ✨ Độ phù hợp: {currentMatch.matchData.score}%
+                            </Typography>
+                            {currentMatch.matchData.reasons.map((reason, idx) => (
+                              <Typography key={idx} variant="caption" sx={{ color: 'text.secondary' }}>
+                                • {reason}
+                              </Typography>
+                            ))}
+                          </Stack>
+                        </InfoBadgeStyle>
+
+                        {/* Info Chips */}
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                          <PreferenceChip
+                            label={`${currentMatch.budget[0]}-${currentMatch.budget[1]}M`}
                             size="small"
                             variant="outlined"
                           />
-                          <Chip
-                            icon={<LocationIcon />}
-                            label={currentMatch.districts.join(', ')}
+                          <PreferenceChip
+                            label={currentMatch.locations[0]}
+                            size="small"
+                            variant="outlined"
+                          />
+                          <PreferenceChip
+                            label={currentMatch.duration === 'long-term' ? 'Dài hạn' : 'Ngắn hạn'}
                             size="small"
                             variant="outlined"
                           />
                         </Stack>
-                      </Box>
 
-                      {/* Bio */}
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {currentMatch.bio}
-                      </Typography>
+                        {/* Lifestyle Tags */}
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 600,
+                              color: 'primary.main',
+                              display: 'block',
+                              mb: 1,
+                            }}
+                          >
+                            Lối sống
+                          </Typography>
+                          <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+                            {currentMatch.lifestyle.map((item) => (
+                              <Chip
+                                key={item}
+                                label={item}
+                                size="small"
+                                sx={{ fontSize: '0.7rem' }}
+                              />
+                            ))}
+                          </Stack>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </DetailCard>
 
-                      {/* Match Reasons */}
-                      <Box>
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main', mb: 1, display: 'block' }}>
-                          ✨ Lý do phù hợp
+                  {/* Favorites Summary */}
+                  <DetailCard>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          ❤️ Yêu thích ({favorites.length})
                         </Typography>
-                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                          {currentMatch.matchReasons.map((reason, idx) => (
-                            <Chip
-                              key={idx}
-                              label={reason}
-                              size="small"
-                              color="success"
-                              variant="outlined"
-                            />
-                          ))}
-                        </Stack>
-                      </Box>
-
-                      {/* Habits Preview */}
-                      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                        {!currentMatch.habits.smoking && (
-                          <Chip label="🚭 Không hút thuốc" size="small" />
-                        )}
-                        {!currentMatch.habits.pets && (
-                          <Chip label="🐾 Không nuôi thú cưng" size="small" />
-                        )}
-                        {currentMatch.habits.cooking && (
-                          <Chip label="👨‍🍳 Thích nấu ăn" size="small" />
+                        {favorites.length === 0 ? (
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            Chưa yêu thích ai
+                          </Typography>
+                        ) : (
+                          <Stack spacing={1} sx={{ maxHeight: '300px', overflow: 'auto' }}>
+                            {filteredMatches
+                              .filter((m) => favorites.includes(m.id))
+                              .map((match) => (
+                                <Box
+                                  key={match.id}
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    p: 1,
+                                    bgcolor: 'grey.50',
+                                    borderRadius: 1,
+                                  }}
+                                >
+                                  <Avatar
+                                    src={match.avatar}
+                                    sx={{ width: 32, height: 32 }}
+                                  />
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {match.name}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      sx={{ color: 'text.secondary' }}
+                                    >
+                                      {match.matchData.score}% phù hợp
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              ))}
+                          </Stack>
                         )}
                       </Stack>
-                    </Stack>
-                  </CardContent>
-                </MatchCard>
-
-                {/* Action Buttons */}
-                <Stack direction="row" spacing={2} sx={{ mt: 3, justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    onClick={handlePass}
-                    sx={{ borderRadius: 2, px: 4 }}
-                  >
-                    <CloseIcon sx={{ mr: 1 }} />
-                    Bỏ qua
-                  </Button>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    onClick={() => setOpenProfile(true)}
-                    sx={{ borderRadius: 2, px: 4 }}
-                  >
-                    <PersonIcon sx={{ mr: 1 }} />
-                    Xem chi tiết
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    size="large"
-                    onClick={handleLike}
-                    sx={{ borderRadius: 2, px: 4 }}
-                  >
-                    <FavoriteIcon sx={{ mr: 1 }} />
-                    Thích
-                  </Button>
+                    </CardContent>
+                  </DetailCard>
                 </Stack>
+              )}
+            </Grid>
+          </Grid>
+        </Container>
 
-                {/* Progress */}
-                <Box sx={{ mt: 3 }}>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(currentIndex / mockMatches.length) * 100}
-                    sx={{ height: 4, borderRadius: 2 }}
+        {/* Profile Detail Dialog */}
+        <Dialog
+          open={openProfileDialog}
+          onClose={() => setOpenProfileDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Hồ sơ chi tiết</Typography>
+            <IconButton onClick={() => setOpenProfileDialog(false)}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            {currentMatch && (
+              <Stack spacing={3} sx={{ py: 2 }}>
+                {/* Avatar & Basic */}
+                <Box sx={{ textAlign: 'center' }}>
+                  <Avatar
+                    src={currentMatch.avatar}
+                    sx={{ width: 100, height: 100, mx: 'auto', mb: 2 }}
                   />
-                  <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
-                    {currentIndex + 1} / {mockMatches.length}
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    {currentMatch.name}, {currentMatch.age}
                   </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                    {currentMatch.occupation}
+                  </Typography>
+                  <Chip label={`${currentMatch.matchData.score}% phù hợp`} color="success" />
                 </Box>
-              </Box>
-            )}
-          </Grid>
 
-          {/* Sidebar */}
-          <Grid item xs={12} md={4}>
-            {/* Preferences */}
-            <PreferenceCard sx={{ mb: 3 }}>
-              <Stack spacing={2}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Tiêu chí của bạn
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => setOpenPreferences(true)}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                </Box>
+                {/* Bio */}
                 <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Ngân sách
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Giới thiệu
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {preferences.budget[0]} - {preferences.budget[1]} triệu/tháng
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Khu vực
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {preferences.districts.length > 0 ? preferences.districts.join(', ') : 'Tất cả'}
-                  </Typography>
-                </Box>
-              </Stack>
-            </PreferenceCard>
-
-            {/* Favorites */}
-            <PreferenceCard>
-              <Stack spacing={2}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  ❤️ Yêu thích ({favorites.length})
-                </Typography>
-                {favorites.length === 0 ? (
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Chưa có ai được yêu thích
+                    {currentMatch.bio}
                   </Typography>
-                ) : (
-                  <Stack spacing={1}>
-                    {mockMatches
-                      .filter((m) => favorites.includes(m.id))
-                      .map((match) => (
-                        <Box
-                          key={match.id}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            p: 1,
-                            bgcolor: 'grey.50',
-                            borderRadius: 1,
-                          }}
-                        >
-                          <Avatar src={match.avatar} sx={{ width: 32, height: 32 }} />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {match.name}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {match.score}% phù hợp
-                            </Typography>
-                          </Box>
-                        </Box>
+                </Box>
+
+                {/* Match Reasons */}
+                {currentMatch.matchData.reasons.length > 0 && (
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                      ✨ Lý do phù hợp
+                    </Typography>
+                    <Stack spacing={1}>
+                      {currentMatch.matchData.reasons.map((reason, idx) => (
+                        <Typography key={idx} variant="body2" sx={{ color: 'text.secondary' }}>
+                          • {reason}
+                        </Typography>
                       ))}
-                  </Stack>
+                    </Stack>
+                  </Box>
                 )}
-              </Stack>
-            </PreferenceCard>
-          </Grid>
-        </Grid>
-      </Container>
 
-      {/* Profile Dialog */}
-      <Dialog open={openProfile} onClose={() => setOpenProfile(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Hồ sơ chi tiết</Typography>
-          <IconButton onClick={() => setOpenProfile(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {currentMatch && (
-            <Stack spacing={2}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Avatar
-                  src={currentMatch.avatar}
-                  sx={{ width: 80, height: 80, mx: 'auto', mb: 1 }}
-                />
-                <Typography variant="h6">{currentMatch.name}, {currentMatch.age}</Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {currentMatch.occupation}
-                </Typography>
-              </Box>
-
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Thông tin cơ bản
-                </Typography>
-                <Stack spacing={1}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Ngân sách:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {currentMatch.budget[0]} - {currentMatch.budget[1]} triệu
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Khu vực:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {currentMatch.districts.join(', ')}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
-
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Thói quen
-                </Typography>
-                <Stack spacing={1}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Lịch ngủ:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {currentMatch.habits.sleepSchedule === 'early' ? 'Sớm' : 'Muộn'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Sạch sẽ:</Typography>
-                    <Box>
-                      {[...Array(5)].map((_, i) => (
-                        <StarIcon
-                          key={i}
-                          sx={{
-                            fontSize: '1rem',
-                            color: i < currentMatch.habits.cleanliness ? '#F59E0B' : '#E5E7EB',
-                          }}
-                        />
-                      ))}
+                {/* Details */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+                    Thông tin chi tiết
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Ngân sách/tháng
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {currentMatch.budget[0]} - {currentMatch.budget[1]}M VND
+                      </Typography>
                     </Box>
-                  </Box>
-                </Stack>
-              </Box>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenProfile(false)}>Đóng</Button>
-          <Button variant="contained" color="error" startIcon={<FavoriteIcon />}>
-            Thích
-          </Button>
-        </DialogActions>
-      </Dialog>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Khu vực
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {currentMatch.locations.join(', ')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Thời gian ở
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {currentMatch.duration === 'long-term' ? 'Dài hạn' : 'Ngắn hạn'}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
 
-      {/* Preferences Dialog */}
-      <Dialog open={openPreferences} onClose={() => setOpenPreferences(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Chỉnh sửa tiêu chí</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={3} sx={{ mt: 2 }}>
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                Ngân sách (triệu/tháng)
-              </Typography>
-              <Slider
-                value={preferences.budget}
-                onChange={(e, newValue) => setPreferences({ ...preferences, budget: newValue })}
-                min={1}
-                max={15}
-                marks
-                valueLabelDisplay="auto"
-              />
-            </Box>
+                {/* Lifestyle */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Lối sống
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    {currentMatch.lifestyle.map((item) => (
+                      <Chip key={item} label={item} size="small" />
+                    ))}
+                  </Stack>
+                </Box>
 
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Mức độ sạch sẽ
-              </Typography>
-              <Slider
-                value={preferences.cleanliness}
-                onChange={(e, newValue) => setPreferences({ ...preferences, cleanliness: newValue })}
-                min={1}
-                max={5}
-                marks
-                valueLabelDisplay="auto"
-              />
-            </Box>
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={preferences.smoking}
-                  onChange={(e) => setPreferences({ ...preferences, smoking: e.target.checked })}
-                />
-              }
-              label="Chấp nhận người hút thuốc"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={preferences.pets}
-                  onChange={(e) => setPreferences({ ...preferences, pets: e.target.checked })}
-                />
-              }
-              label="Chấp nhận nuôi thú cưng"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenPreferences(false)}>Hủy</Button>
-          <Button variant="contained" onClick={() => setOpenPreferences(false)}>
-            Lưu
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  )
+                {/* Interests */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Sở thích
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    {currentMatch.interests.map((item) => (
+                      <Chip key={item} label={item} size="small" variant="outlined" />
+                    ))}
+                  </Stack>
+                </Box>
+              </Stack>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenProfileDialog(false)}>Đóng</Button>
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<FavoriteIcon />}
+              onClick={() => {
+                handleSwipeRight()
+                setOpenProfileDialog(false)
+              }}
+            >
+              Thích
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    )
+  }
 }

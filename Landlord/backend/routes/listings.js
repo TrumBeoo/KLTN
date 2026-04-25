@@ -9,13 +9,7 @@ const upload = multer({ storage: multer.memoryStorage() })
 
 router.use(authMiddleware)
 
-const validDistricts = [
-  'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10', 'Quận 11', 'Quận 12',
-  'Quận Bình Thạnh', 'Quận Tân Bình', 'Quận Tân Phú', 'Quận Phú Nhuận', 'Quận Bình Tân', 'Quận Gò Vấp', 'Quận Thủ Đức',
-  'Huyện Bình Chánh', 'Huyện Hóc Môn', 'Huyện Củ Chi', 'Huyện Nhà Bè', 'Huyện Cần Giờ'
-]
-
-const validateRow = (row) => {
+const validateRow = async (row, connection) => {
   const errors = []
   if (!row.roomCode) errors.push('Thiếu mã phòng')
   
@@ -23,7 +17,17 @@ const validateRow = (row) => {
   if (row.price && (isNaN(row.price) || row.price <= 0)) errors.push('Giá không hợp lệ')
   if (row.area && (isNaN(row.area) || row.area <= 0)) errors.push('Diện tích không hợp lệ')
   if (row.maxPeople && (isNaN(row.maxPeople) || row.maxPeople <= 0)) errors.push('Số người tối đa không hợp lệ')
-  if (row.district && !validDistricts.includes(row.district)) errors.push('Quận không hợp lệ')
+  
+  // Validate district from LOCATION table
+  if (row.district) {
+    const [districts] = await connection.query(
+      'SELECT DISTINCT District FROM LOCATION WHERE District = ? AND IsActive = TRUE',
+      [row.district]
+    )
+    if (districts.length === 0) {
+      errors.push('Quận không tồn tại trong hệ thống')
+    }
+  }
   
   return errors
 }
@@ -199,7 +203,7 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
         amenities: row['amenities'] || row['Tiện nghi'] || ''
       }
 
-      const validationErrors = validateRow(parsed)
+      const validationErrors = await validateRow(parsed, connection)
       
       if (validationErrors.length > 0) {
         await connection.query(`

@@ -41,8 +41,14 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
     numberRooms: ''
   })
   const [loading, setLoading] = useState(false)
+  const [districts, setDistricts] = useState([])
+  const [wards, setWards] = useState([])
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
 
   useEffect(() => {
+    if (open) {
+      fetchDistricts()
+    }
     if (building) {
       setFormData({
         buildingName: building.BuildingName || '',
@@ -52,6 +58,9 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
         floors: building.Floors || '',
         numberRooms: building.NumberRooms || ''
       })
+      if (building.District) {
+        fetchWards(building.District)
+      }
     } else {
       setFormData({
         buildingName: '',
@@ -64,9 +73,41 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
     }
   }, [building, open])
 
+  const fetchDistricts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/locations/districts`)
+      const data = await response.json()
+      if (data.success) {
+        setDistricts(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch districts error:', error)
+    }
+  }
+
+  const fetchWards = async (district) => {
+    try {
+      const response = await fetch(`${API_URL}/locations/wards/${encodeURIComponent(district)}`)
+      const data = await response.json()
+      if (data.success) {
+        setWards(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch wards error:', error)
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    
+    if (name === 'district') {
+      setFormData(prev => ({ ...prev, ward: '' }))
+      setWards([])
+      if (value) {
+        fetchWards(value)
+      }
+    }
   }
 
   const handleSubmit = async () => {
@@ -118,23 +159,38 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
           <Grid container spacing={1}>
             <Grid item xs={6}>
               <TextField
+                select
                 label="Quận/Huyện"
                 name="district"
                 value={formData.district}
                 onChange={handleChange}
                 size="small"
                 fullWidth
-              />
+                SelectProps={{ native: true }}
+              >
+                <option value="">Chọn quận/huyện</option>
+                {districts.map(district => (
+                  <option key={district} value={district}>{district}</option>
+                ))}
+              </TextField>
             </Grid>
             <Grid item xs={6}>
               <TextField
+                select
                 label="Phường/Xã"
                 name="ward"
                 value={formData.ward}
                 onChange={handleChange}
                 size="small"
                 fullWidth
-              />
+                disabled={!formData.district}
+                SelectProps={{ native: true }}
+              >
+                <option value="">Chọn phường/xã</option>
+                {wards.map(ward => (
+                  <option key={ward} value={ward}>{ward}</option>
+                ))}
+              </TextField>
             </Grid>
           </Grid>
 

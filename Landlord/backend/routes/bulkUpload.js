@@ -511,7 +511,7 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
 
     // Get default building
     const [buildings] = await connection.query(
-      'SELECT BuildingID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
+      'SELECT BuildingID, LocationID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
       [landlordId]
     );
 
@@ -521,6 +521,31 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     }
 
     const buildingId = buildings[0].BuildingID;
+    let locationId = buildings[0].LocationID;
+
+    // Find or create location if district/ward provided
+    if (detail.District && detail.Ward) {
+      const [existingLoc] = await connection.query(
+        'SELECT LocationID FROM LOCATION WHERE District = ? AND Ward = ? AND IsActive = TRUE LIMIT 1',
+        [detail.District, detail.Ward]
+      );
+
+      if (existingLoc.length > 0) {
+        locationId = existingLoc[0].LocationID;
+      } else {
+        const [lastLocation] = await connection.query(
+          'SELECT LocationID FROM LOCATION ORDER BY LocationID DESC LIMIT 1'
+        );
+        const lastId = lastLocation.length > 0 ? parseInt(lastLocation[0].LocationID.substring(3)) : 0;
+        locationId = 'LOC' + String(lastId + 1).padStart(3, '0');
+
+        await connection.query(
+          `INSERT INTO LOCATION (LocationID, City, District, Ward, Address, IsActive)
+           VALUES (?, 'Hà Nội', ?, ?, ?, TRUE)`,
+          [locationId, detail.District, detail.Ward, detail.Address || '']
+        );
+      }
+    }
 
     // Check duplicate room code
     const [existingRooms] = await connection.query(
@@ -546,14 +571,14 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
       roomId = 'ROM00001';
     }
 
-    // Create room with default values
+    // Create room with LocationID
     await connection.query(`
       INSERT INTO ROOM (
-        RoomID, LandlordID, BuildingID, RoomCode, RoomType, Area, Price, 
+        RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
         MaxPeople, Description, Status, DraftStatus, CreatedAt, UpdatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
     `, [
-      roomId, landlordId, buildingId, detail.RoomCode, 
+      roomId, landlordId, buildingId, locationId, detail.RoomCode, 
       detail.RoomType || 'Phòng trọ',
       detail.Area || 20, 
       detail.Price || 0, 
@@ -615,7 +640,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     // Get default building
     const [buildings] = await connection.query(
-      'SELECT BuildingID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
+      'SELECT BuildingID, LocationID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
       [landlordId]
     );
 
@@ -625,6 +650,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
     }
 
     const buildingId = buildings[0].BuildingID;
+    const defaultLocationId = buildings[0].LocationID;
 
     // Get pending details
     const [details] = await connection.query(
@@ -667,6 +693,31 @@ router.post('/bulk-create/:jobId', async (req, res) => {
           continue;
         }
 
+        // Find or create location
+        let locationId = defaultLocationId;
+        if (detail.District && detail.Ward) {
+          const [existingLoc] = await connection.query(
+            'SELECT LocationID FROM LOCATION WHERE District = ? AND Ward = ? AND IsActive = TRUE LIMIT 1',
+            [detail.District, detail.Ward]
+          );
+
+          if (existingLoc.length > 0) {
+            locationId = existingLoc[0].LocationID;
+          } else {
+            const [lastLocation] = await connection.query(
+              'SELECT LocationID FROM LOCATION ORDER BY LocationID DESC LIMIT 1'
+            );
+            const lastId = lastLocation.length > 0 ? parseInt(lastLocation[0].LocationID.substring(3)) : 0;
+            locationId = 'LOC' + String(lastId + 1).padStart(3, '0');
+
+            await connection.query(
+              `INSERT INTO LOCATION (LocationID, City, District, Ward, Address, IsActive)
+               VALUES (?, 'Hà Nội', ?, ?, ?, TRUE)`,
+              [locationId, detail.District, detail.Ward, detail.Address || '']
+            );
+          }
+        }
+
         // Generate RoomID
         const [lastRoom] = await connection.query(
           'SELECT RoomID FROM ROOM ORDER BY RoomID DESC LIMIT 1'
@@ -682,11 +733,11 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
         await connection.query(`
           INSERT INTO ROOM (
-            RoomID, LandlordID, BuildingID, RoomCode, RoomType, Area, Price, 
+            RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
             MaxPeople, Description, Status, DraftStatus, CreatedAt, UpdatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
         `, [
-          roomId, landlordId, buildingId, detail.RoomCode, detail.RoomType,
+          roomId, landlordId, buildingId, locationId, detail.RoomCode, detail.RoomType,
           detail.Area, detail.Price, detail.MaxPeople, detail.Description
         ]);
 

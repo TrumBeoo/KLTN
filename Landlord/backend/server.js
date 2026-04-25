@@ -12,6 +12,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const listingRoutes = require('./routes/listings');
 const bulkUploadRoutes = require('./routes/bulkUpload');
 const documentRoutes = require('./routes/documents');
+const locationRoutes = require('./routes/locations');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/bulk', bulkUploadRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/locations', locationRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 

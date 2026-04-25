@@ -4,7 +4,6 @@ import { useScrollToTop } from '../hooks/useScrollToTop'
 import RoomCardSkeleton from '../components/RoomCardSkeleton'
 import SecondaryMenu from '../components/SecondaryMenu'
 import RoomMap from '../components/RoomMap'
-import { sampleRoomsWithCoordinates } from '../utils/sampleRoomData'
 import {
   Box, Container, Grid, Button, Typography, Stack, IconButton, Skeleton,
 } from '@mui/material'
@@ -98,6 +97,7 @@ function ListingPage() {
   const navigate = useNavigate()
   const [favorites, setFavorites] = useState({})
   const [listings, setListings] = useState([])
+  const [roomsWithCoordinates, setRoomsWithCoordinates] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -140,9 +140,23 @@ function ListingPage() {
           maxPeople: room.MaxPeople,
           description: room.Description,
           views: Math.floor(Math.random() * 100) + 10,
+          latitude: room.Latitude,
+          longitude: room.Longitude,
         }
         })
         setListings(formattedRooms)
+        
+        // Filter rooms with coordinates for map
+        const roomsForMap = formattedRooms
+          .filter(room => room.latitude && room.longitude)
+          .map(room => ({
+            id: room.id,
+            title: room.title,
+            price: room.price,
+            latitude: room.latitude,
+            longitude: room.longitude,
+          }))
+        setRoomsWithCoordinates(roomsForMap)
       } else {
         setError('Không thể tải danh sách phòng')
       }
@@ -346,10 +360,16 @@ function ListingPage() {
               <Box sx={{ position: 'sticky', top: 96 }}>
                 {/* Map */}
                 <Box sx={{ borderRadius: '12px', overflow: 'hidden', height: 350, backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', mb: 3 }}>
-                  <RoomMap 
-                    rooms={sampleRoomsWithCoordinates}
-                    onMarkerClick={(room) => navigate(`/room/${room.id}`)}
-                  />
+                  {roomsWithCoordinates.length > 0 ? (
+                    <RoomMap 
+                      rooms={roomsWithCoordinates}
+                      onMarkerClick={(room) => navigate(`/room/${room.id}`)}
+                    />
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                      <Typography sx={{ color: '#6a6a6a' }}>Chưa có phòng với tọa độ</Typography>
+                    </Box>
+                  )}
                 </Box>
 
                 {/* Latest Listings */}

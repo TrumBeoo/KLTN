@@ -85,8 +85,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 // Create building
 router.post('/', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
   try {
-    const { buildingName, address, district, ward, floors, numberRooms } = req.body;
+    const { buildingName, address, locationId, district, ward, street } = req.body;
 
     if (!buildingName || !address) {
       return res.status(400).json({
@@ -95,13 +96,16 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
+    await connection.beginTransaction();
+
     // Get LandlordID from AccountID
-    const [landlords] = await db.query(
+    const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
     );
 
     if (landlords.length === 0) {
+      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy thông tin chủ nhà'
@@ -110,8 +114,33 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
+    // Find or create location
+    let finalLocationId = locationId;
+    if (!finalLocationId && district && ward) {
+      const [existing] = await connection.query(
+        'SELECT LocationID FROM LOCATION WHERE District = ? AND Ward = ? AND Street = ? AND Address = ? AND IsActive = TRUE LIMIT 1',
+        [district, ward, street || '', address]
+      );
+
+      if (existing.length > 0) {
+        finalLocationId = existing[0].LocationID;
+      } else {
+        const [lastLocation] = await connection.query(
+          'SELECT LocationID FROM LOCATION ORDER BY LocationID DESC LIMIT 1'
+        );
+        const lastId = lastLocation.length > 0 ? parseInt(lastLocation[0].LocationID.substring(3)) : 0;
+        finalLocationId = 'LOC' + String(lastId + 1).padStart(3, '0');
+
+        await connection.query(
+          `INSERT INTO LOCATION (LocationID, City, District, Ward, Street, Address, IsActive)
+           VALUES (?, 'Hà Nội', ?, ?, ?, ?, TRUE)`,
+          [finalLocationId, district, ward, street || '', address]
+        );
+      }
+    }
+
     // Generate BuildingID
-    const [lastBuilding] = await db.query(
+    const [lastBuilding] = await connection.query(
       'SELECT BuildingID FROM BUILDING ORDER BY BuildingID DESC LIMIT 1'
     );
     
@@ -123,11 +152,13 @@ router.post('/', authMiddleware, async (req, res) => {
       buildingId = 'BLD00001';
     }
 
-    const [result] = await db.query(
-      `INSERT INTO BUILDING (BuildingID, LandlordID, BuildingName, Address, District, Ward, Floors, NumberRooms, CreatedAt, UpdatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [buildingId, landlordId, buildingName, address, district || null, ward || null, floors || null, numberRooms || 0]
+    await connection.query(
+      `INSERT INTO BUILDING (BuildingID, LandlordID, LocationID, BuildingName, Address, District, Ward, Floors, NumberRooms, CreatedAt, UpdatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [buildingId, landlordId, finalLocationId, buildingName, address, district || null, ward || null, req.body.floors || null, req.body.numberRooms || 0]
     );
+
+    await connection.commit();
 
     res.status(201).json({
       success: true,
@@ -135,26 +166,33 @@ router.post('/', authMiddleware, async (req, res) => {
       buildingId: buildingId
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Create building error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Lỗi server: ' + error.message
     });
+  } finally {
+    connection.release();
   }
 });
 
 // Update building
 router.put('/:id', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
   try {
-    const { buildingName, address, district, ward, floors, numberRooms } = req.body;
+    const { buildingName, address, locationId, district, ward, street, floors, numberRooms } = req.body;
+
+    await connection.beginTransaction();
 
     // Get LandlordID from AccountID
-    const [landlords] = await db.query(
+    const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
     );
 
     if (landlords.length === 0) {
+      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy thông tin chủ nhà'
@@ -164,41 +202,73 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const landlordId = landlords[0].LandlordID;
 
     // Check if building belongs to landlord
-    const [buildings] = await db.query(
+    const [buildings] = await connection.query(
       'SELECT * FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
       [req.params.id, landlordId]
     );
 
     if (buildings.length === 0) {
+      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy tòa nhà'
       });
     }
 
-    await db.query(
+    // Find or create location if needed
+    let finalLocationId = locationId;
+    if (!finalLocationId && district && ward) {
+      const [existing] = await connection.query(
+        'SELECT LocationID FROM LOCATION WHERE District = ? AND Ward = ? AND Street = ? AND Address = ? AND IsActive = TRUE LIMIT 1',
+        [district, ward, street || '', address]
+      );
+
+      if (existing.length > 0) {
+        finalLocationId = existing[0].LocationID;
+      } else {
+        const [lastLocation] = await connection.query(
+          'SELECT LocationID FROM LOCATION ORDER BY LocationID DESC LIMIT 1'
+        );
+        const lastId = lastLocation.length > 0 ? parseInt(lastLocation[0].LocationID.substring(3)) : 0;
+        finalLocationId = 'LOC' + String(lastId + 1).padStart(3, '0');
+
+        await connection.query(
+          `INSERT INTO LOCATION (LocationID, City, District, Ward, Street, Address, IsActive)
+           VALUES (?, 'Hà Nội', ?, ?, ?, ?, TRUE)`,
+          [finalLocationId, district, ward, street || '', address]
+        );
+      }
+    }
+
+    await connection.query(
       `UPDATE BUILDING SET
         BuildingName = ?,
         Address = ?,
+        LocationID = ?,
         District = ?,
         Ward = ?,
         Floors = ?,
         NumberRooms = ?,
         UpdatedAt = NOW()
       WHERE BuildingID = ?`,
-      [buildingName, address, district || null, ward || null, floors || null, numberRooms || 0, req.params.id]
+      [buildingName, address, finalLocationId, district || null, ward || null, floors || null, numberRooms || 0, req.params.id]
     );
+
+    await connection.commit();
 
     res.json({
       success: true,
       message: 'Cập nhật tòa nhà thành công'
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Update building error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Lỗi server: ' + error.message
     });
+  } finally {
+    connection.release();
   }
 });
 

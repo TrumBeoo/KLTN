@@ -313,3 +313,38 @@ Ensure the UI feels:
 
 Do not change business logic.
 Only improve UI/UX.
+
+Kế hoạch Refactor:
+Thứ tự sections mới:
+✅ Hero Section (giữ nguyên + redesign theo design system)
+
+✅ Phòng phù hợp với bạn (redesign RoomCard - Modern + Booking.com-like)
+
+✅ Phòng nổi bật + Phòng mới đăng (redesign)
+
+🆕 Statistics Section (mock data)
+
+🆕 How It Works (4 bước)
+
+✅ Tìm theo khu vực (redesign LocationCard + fetch từ API)
+
+✅ Tại sao chọn Rentify?
+
+✅ CTA Cards
+
+🆕 FAQ Section
+
+Design System áp dụng:
+Typography: 14px, 16px, 20px, 23px, 24px
+
+Spacing: 2px, 4px, 5px, 8px, 11px, 12px, 16px, 32px
+
+Radius: 4px, 8px, 50px, 9999px
+
+Shadow: rgba(26, 26, 26, 0.16) 0px 2px 8px 0px
+
+Motion: 120ms
+
+Color: #4A90E2
+
+Accessibility: Level 1 + 2 + 3
