@@ -278,7 +278,7 @@ export default function HomePage() {
           const imgUrl = room.images?.[0]?.ImageURL
           return {
             id: room.RoomID,
-            title: `${room.RoomType} - ${room.RoomCode}`,
+            title: room.Title || `${room.RoomType} - ${room.RoomCode}`,
             location: room.BuildingAddress || 'Chưa cập nhật',
             price: room.Price?.toString() || '0',
             area: room.Area || 0,
@@ -461,7 +461,7 @@ export default function HomePage() {
                     onClick={() => navigate(`/room/${listing.id}`)}
                     tabIndex={0}
                     role="article"
-                    aria-label={`${listing.buildingName || listing.title}, ${fmt(listing.price)}đ/tháng`}
+                    aria-label={`${listing.title}, ${fmt(listing.price)}đ/tháng`}
                     onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
                   >
                     {/* Image */}
@@ -513,12 +513,12 @@ export default function HomePage() {
                         fontWeight: 700, fontSize: '0.857rem', color: T.text, mb: 0.5,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
-                        {listing.buildingName || listing.title}
+                        {listing.title}
                       </Typography>
                       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
                         <LocationIcon sx={{ fontSize: 12, color: T.muted }} />
                         <Typography sx={{ fontSize: '0.786rem', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {listing.location.split(',')[0]}
+                          {listing.buildingName || 'Chưa cập nhật'}
                         </Typography>
                       </Stack>
                       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
@@ -551,7 +551,7 @@ export default function HomePage() {
       <Box sx={{ py: 4 }}>
         <Container maxWidth="lg" component="section" aria-labelledby="district-heading">
           <SectionHeader>
-            <span id="district-heading">Khám phá theo khu vực</span>
+            <span id="district-heading">Tìm theo quận</span>
           </SectionHeader>
           <Grid container spacing={2}>
             {loadingDistricts

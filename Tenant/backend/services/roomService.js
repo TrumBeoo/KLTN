@@ -18,6 +18,51 @@ class RoomService {
     
     const room = rooms[0];
     
+    // Lấy services từ bảng liên kết
+    const [services] = await db.query(
+      `SELECT s.Name FROM ROOM_SERVICE rs
+       JOIN SERVICE s ON rs.ServiceID = s.ServiceID
+       WHERE rs.RoomID = ?`,
+      [roomId]
+    );
+    const servicesFromTable = services.map(s => s.Name);
+    
+    // Lấy services từ cột TEXT (nếu có)
+    const servicesFromText = room.Service ? room.Service.split(',').map(s => s.trim()).filter(s => s) : [];
+    
+    // Gộp cả 2 nguồn và loại bỏ trùng lặp
+    room.services = [...new Set([...servicesFromTable, ...servicesFromText])];
+    
+    // Lấy furniture từ bảng liên kết
+    const [furniture] = await db.query(
+      `SELECT f.Name FROM ROOM_FURNITURE rf
+       JOIN FURNITURE f ON rf.FurnitureID = f.FurnitureID
+       WHERE rf.RoomID = ?`,
+      [roomId]
+    );
+    const furnitureFromTable = furniture.map(f => f.Name);
+    
+    // Lấy furniture từ cột TEXT (nếu có)
+    const furnitureFromText = room.Furniture ? room.Furniture.split(',').map(f => f.trim()).filter(f => f) : [];
+    
+    // Gộp cả 2 nguồn và loại bỏ trùng lặp
+    room.furniture = [...new Set([...furnitureFromTable, ...furnitureFromText])];
+    
+    // Lấy rules từ bảng liên kết
+    const [rules] = await db.query(
+      `SELECT r.Name FROM ROOM_RULE rr
+       JOIN RULE r ON rr.RuleID = r.RuleID
+       WHERE rr.RoomID = ?`,
+      [roomId]
+    );
+    const rulesFromTable = rules.map(r => r.Name);
+    
+    // Lấy rules từ cột TEXT (nếu có)
+    const rulesFromText = room.Rules ? room.Rules.split(',').map(r => r.trim()).filter(r => r) : [];
+    
+    // Gộp cả 2 nguồn và loại bỏ trùng lặp
+    room.rules = [...new Set([...rulesFromTable, ...rulesFromText])];
+    
     // Kiểm tra xem user hiện tại có lịch xem cho phòng này không
     let userScheduleStatus = null;
     if (currentUserId) {

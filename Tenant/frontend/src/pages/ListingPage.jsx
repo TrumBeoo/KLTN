@@ -147,7 +147,7 @@ export default function ListingPage() {
           const imgUrl = room.images?.[0]?.ImageURL
           return {
             id: room.RoomID,
-            title: `${room.RoomType} - ${room.RoomCode}`,
+            title: room.Title || `${room.RoomType} - ${room.RoomCode}`,
             location: room.BuildingAddress || 'Chưa cập nhật',
             price: room.Price?.toString() || '0',
             area: room.Area || 0,
@@ -164,6 +164,7 @@ export default function ListingPage() {
             views: Math.floor(Math.random() * 200) + 20,
             latitude: room.Latitude,
             longitude: room.Longitude,
+            createdAt: room.CreatedAt || room.created_at || new Date().toISOString(),
           }
         })
         setListings(formatted)
@@ -186,6 +187,7 @@ export default function ListingPage() {
 
   const paginated = listings.slice((page - 1) * PER_PAGE, page * PER_PAGE)
   const totalPages = Math.ceil(listings.length / PER_PAGE)
+  const latestListings = [...listings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10)
 
   return (
     <Box sx={{ backgroundColor: T.bg, minHeight: '100vh' }}>
@@ -241,11 +243,11 @@ export default function ListingPage() {
                           key={listing.id}
                           onClick={() => navigate(`/room/${listing.id}`)}
                           tabIndex={0} role="article"
-                          aria-label={`${listing.buildingName || listing.title}, ${fmt(listing.price)}đ/tháng, ${statusLabel[listing.status]}`}
+                          aria-label={`${listing.title}, ${fmt(listing.price)}đ/tháng, ${statusLabel[listing.status]}`}
                           onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
                         >
                           {/* Image */}
-                          <Box sx={{ width: 220, height: 180, position: 'relative', flexShrink: 0, backgroundColor: T.bg }}>
+                          <Box sx={{ width: 260, height: 250, position: 'relative', flexShrink: 0, backgroundColor: T.bg }}>
                             {listing.image ? (
                               <Box
                                 component="img" src={listing.image} alt={listing.title} loading="lazy"
@@ -296,7 +298,7 @@ export default function ListingPage() {
                                 flex: 1, mr: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 '&:hover': { textDecoration: 'underline' },
                               }}>
-                                {listing.buildingName || listing.title}
+                                {listing.title}
                               </Typography>
                               {/* Score */}
                               <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
@@ -314,7 +316,7 @@ export default function ListingPage() {
                             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.75 }}>
                               <LocationIcon sx={{ fontSize: 14, color: T.muted }} />
                               <Typography sx={{ fontSize: '0.857rem', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {listing.buildingName || listing.location}
+                                {listing.buildingName || 'Chưa cập nhật'}
                               </Typography>
                             </Stack>
 
@@ -356,7 +358,7 @@ export default function ListingPage() {
                               <Button
                                 size="small" variant="contained" endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
                                 onClick={e => { e.stopPropagation(); navigate(`/room/${listing.id}`) }}
-                                aria-label={`Xem chi tiết ${listing.buildingName || listing.title}`}
+                                aria-label={`Xem chi tiết ${listing.title}`}
                                 sx={{
                                   backgroundColor: T.blue, borderRadius: '4px', fontWeight: 700,
                                   fontSize: '0.857rem', px: 2, py: 0.75,
@@ -412,15 +414,15 @@ export default function ListingPage() {
                 {/* Latest listings sidebar */}
                 <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, boxShadow: T.shadow1, p: 2 }}>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 1.5, pb: 1, borderBottom: `1px solid ${T.border}` }}>
-                    Mới đăng gần đây
+                    Phòng mới đăng (10 tin)
                   </Typography>
                   <Stack spacing={0}>
-                    {listings.slice(0, 6).map(listing => (
+                    {latestListings.map(listing => (
                       <Box
                         key={listing.id}
                         onClick={() => navigate(`/room/${listing.id}`)}
                         tabIndex={0} role="article"
-                        aria-label={`${listing.buildingName || listing.title}`}
+                        aria-label={`${listing.title}`}
                         onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
                         sx={{
                           display: 'flex', gap: 1.5, py: 1.25,
@@ -447,7 +449,7 @@ export default function ListingPage() {
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             transition: 'color 120ms ease',
                           }}>
-                            {listing.buildingName || listing.title}
+                            {listing.title}
                           </Typography>
                           <Typography sx={{ fontSize: '0.857rem', color: T.blue, fontWeight: 700 }}>
                             {fmt(listing.price)}đ/tháng

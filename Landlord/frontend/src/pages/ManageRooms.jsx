@@ -163,6 +163,10 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     price: '',
     maxPeople: '',
     amenities: [],
+    furniture: '',
+    service: '',
+    rules: '',
+    floorType: '',
     description: ''
   })
   const [loading, setLoading] = useState(false)
@@ -203,6 +207,10 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
           }
           return Array.isArray(room.Amenities) ? room.Amenities : [];
         })(),
+        furniture: room.Furniture || '',
+        service: room.Service || '',
+        rules: room.Rules || '',
+        floorType: room.FloorType || '',
         description: room.Description || ''
       })
       // Load existing images from Cloudinary URLs
@@ -224,6 +232,10 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         price: '',
         maxPeople: '',
         amenities: [],
+        furniture: '',
+        service: '',
+        rules: '',
+        floorType: '',
         description: ''
       })
       setImages([])
@@ -393,6 +405,56 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
             size="small"
             fullWidth
           />
+
+          <TextField
+            label="Nội thất"
+            name="furniture"
+            value={formData.furniture}
+            onChange={handleChange}
+            placeholder="VD: Giường, tủ, bàn ghế, điều hòa"
+            multiline
+            rows={2}
+            fullWidth
+          />
+
+          <TextField
+            label="Dịch vụ"
+            name="service"
+            value={formData.service}
+            onChange={handleChange}
+            placeholder="VD: Điện, nước, internet, giặt là"
+            multiline
+            rows={2}
+            fullWidth
+          />
+
+          <TextField
+            label="Nội quy"
+            name="rules"
+            value={formData.rules}
+            onChange={handleChange}
+            placeholder="VD: Không nuôi thú cưng, Không hút thuốc"
+            multiline
+            rows={2}
+            fullWidth
+          />
+
+          <FormControl fullWidth>
+            <FormLabel>Loại sàn</FormLabel>
+            <Select
+              name="floorType"
+              value={formData.floorType}
+              onChange={handleChange}
+              size="small"
+            >
+              <MenuItem value="">Chọn loại sàn</MenuItem>
+              <MenuItem value="Gạch men">Gạch men</MenuItem>
+              <MenuItem value="Gỗ">Gỗ</MenuItem>
+              <MenuItem value="Ceramic">Ceramic</MenuItem>
+              <MenuItem value="Đá">Đá</MenuItem>
+              <MenuItem value="Nhựa">Nhựa</MenuItem>
+            </Select>
+          </FormControl>
 
           <Box>
             <FormLabel sx={{ mb: 1, display: 'block' }}>Tiện nghi</FormLabel>

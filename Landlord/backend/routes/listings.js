@@ -268,6 +268,12 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
           VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
         `, [listingId, roomId, landlordId, parsed.title, parsed.description])
 
+        // Đồng bộ Title sang bảng ROOM
+        await connection.query(`
+          UPDATE ROOM SET Title = ?, UpdatedAt = NOW()
+          WHERE RoomID = ?
+        `, [parsed.title, roomId])
+
         await connection.query(`
           INSERT INTO UPLOAD_DETAIL (UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Status, ListingID)
           VALUES (?, ?, ?, ?, ?, 'success', ?)
@@ -519,6 +525,12 @@ router.post('/', async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [listingId, roomId, landlordId, title, description, isVisible])
 
+    // Đồng bộ Title sang bảng ROOM
+    await db.query(`
+      UPDATE ROOM SET Title = ?, UpdatedAt = NOW()
+      WHERE RoomID = ?
+    `, [title, roomId])
+
     res.json({
       success: true,
       message: 'Tạo tin đăng thành công',
@@ -569,6 +581,15 @@ router.put('/:id', async (req, res) => {
       SET Title = ?, Description = ?, IsVisible = ?, UpdatedAt = NOW()
       WHERE ListingID = ?
     `, [title, description, isVisible, listingId])
+
+    // Đồng bộ Title sang bảng ROOM
+    const [listing] = await db.query('SELECT RoomID FROM LISTING WHERE ListingID = ?', [listingId])
+    if (listing.length > 0) {
+      await db.query(`
+        UPDATE ROOM SET Title = ?, UpdatedAt = NOW()
+        WHERE RoomID = ?
+      `, [title, listing[0].RoomID])
+    }
 
     res.json({
       success: true,
@@ -637,6 +658,60 @@ router.put('/:id/visibility', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Lỗi server khi thay đổi trạng thái hiển thị'
+    })
+  }
+})
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const listingId = req.params.id
+    
+    const [landlords] = await db.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    )
+
+    if (landlords.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin chủ nhà'
+      })
+    }
+
+    const landlordId = landlords[0].LandlordID
+
+    const [listings] = await db.query(`
+      SELECT l.ListingID, l.RoomID FROM LISTING l
+      WHERE l.ListingID = ? AND l.LandlordID = ?
+    `, [listingId, landlordId])
+
+    if (listings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tin đăng hoặc bạn không có quyền truy cập'
+      })
+    }
+
+    const roomId = listings[0].RoomID
+
+    // Xóa listing
+    await db.query('DELETE FROM LISTING WHERE ListingID = ?', [listingId])
+
+    // Xóa Title trong ROOM
+    await db.query(`
+      UPDATE ROOM SET Title = NULL, UpdatedAt = NOW()
+      WHERE RoomID = ?
+    `, [roomId])
+
+    res.json({
+      success: true,
+      message: 'Xóa tin đăng thành công'
+    })
+  } catch (error) {
+    console.error('Delete listing error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi xóa tin đăng'
     })
   }
 })

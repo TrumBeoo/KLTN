@@ -231,7 +231,7 @@ export default function RoomDetailPage() {
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
             <Box>
               <Typography sx={{ fontWeight: 700, fontSize: '1.429rem', color: T.text, mb: 0.5 }}>
-                {room.Description || room.RoomType}
+                {room.Title || room.RoomType}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
                 <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -279,7 +279,7 @@ export default function RoomDetailPage() {
           {images.length > 0 ? (
             <Box>
               {/* Main image */}
-              <Box sx={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', height: { xs: 240, md: 420 }, backgroundColor: T.bg, mb: 1 }}>
+              <Box sx={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', height: { xs: 240, md: 600 }, backgroundColor: T.bg, mb: 1 }}>
                 <Box
                   component="img" src={images[imgIdx]} alt={`Hình ${imgIdx + 1}`}
                   sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'opacity 200ms ease' }}

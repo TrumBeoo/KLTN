@@ -706,14 +706,14 @@ export default function ExcelUploadWithImages() {
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                    <TableCell>ST</TableCell>
                     <TableCell>Mã phòng</TableCell>
                     <TableCell>Tiêu đề</TableCell>
                     <TableCell>Giá</TableCell>
                     <TableCell>Diện tích</TableCell>
                     <TableCell>Số người</TableCell>
-                    <TableCell>Quận</TableCell>
-                    <TableCell>Lỗi</TableCell>
+                    <TableCell>Loại phòng</TableCell>
+                    <TableCell>Loại sàn</TableCell>
+                    <TableCell>Nội thất</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -722,19 +722,21 @@ export default function ExcelUploadWithImages() {
                       key={idx}
                       sx={{ backgroundColor: row.errors?.length > 0 ? 'error.lighter' : 'inherit' }}
                     >
-                      <TableCell>{getStatusIcon(row.errors)}</TableCell>
-                      <TableCell>{row.roomCode}</TableCell>
-                      <TableCell sx={{ maxWidth: 200 }}>
-                        <Typography variant="body2" noWrap>{row.title}</Typography>
+                      <TableCell sx={{ minWidth: 80 }}>{row.roomCode}</TableCell>
+                      <TableCell sx={{ maxWidth: 150, minWidth: 100 }}>
+                        <Typography variant="body2" noWrap>{row.title || '-'}</Typography>
                       </TableCell>
-                      <TableCell>{row.price?.toLocaleString('vi-VN')} đ</TableCell>
+                      <TableCell sx={{ minWidth: 100 }}>{row.price?.toLocaleString('vi-VN')} đ</TableCell>
                       <TableCell>{row.area} m²</TableCell>
                       <TableCell>{row.maxPeople}</TableCell>
-                      <TableCell>{row.district}</TableCell>
-                      <TableCell>
-                        {row.errors?.map((err, i) => (
-                          <Chip key={i} label={err} size="small" color="error" sx={{ mr: 0.5, mb: 0.5 }} />
-                        ))}
+                      <TableCell sx={{ maxWidth: 120 }}>
+                        <Typography variant="body2" noWrap>{row.roomType || '-'}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 100 }}>
+                        <Typography variant="body2" noWrap>{row.floorType || '-'}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 150 }}>
+                        <Typography variant="body2" noWrap title={row.furniture}>{row.furniture || '-'}</Typography>
                       </TableCell>
                     </TableRow>
                   ))}
