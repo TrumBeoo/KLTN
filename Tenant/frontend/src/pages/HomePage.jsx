@@ -139,6 +139,43 @@ const GridCard = styled(Box)({
   },
 })
 
+const TrendCard = styled(Box)({
+  borderRadius: '8px',
+  overflow: 'hidden',
+  cursor: 'pointer',
+  position: 'relative',
+  border: `1px solid ${T.border}`,
+  transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
+  '&:hover': {
+    boxShadow: 'rgba(26,26,26,0.24) 0px 8px 24px',
+    transform: 'translateY(-2px)',
+  },
+  '&:hover .trend-img': { transform: 'scale(1.04)' },
+  '&:focus-visible': {
+    outline: `2px solid ${T.blue}`,
+    outlineOffset: '2px',
+  },
+})
+
+const TrendCardH = styled(Box)({
+  display: 'flex',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  cursor: 'pointer',
+  border: `1px solid ${T.border}`,
+  transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
+  backgroundColor: T.white,
+  '&:hover': {
+    boxShadow: 'rgba(26,26,26,0.24) 0px 4px 16px',
+    transform: 'translateY(-2px)',
+  },
+  '&:hover .trend-h-img': { transform: 'scale(1.05)' },
+  '&:focus-visible': {
+    outline: `2px solid ${T.blue}`,
+    outlineOffset: '2px',
+  },
+})
+
 /** Score badge — Booking.com style dark blue */
 const ScoreBadge = styled(Box)({
   backgroundColor: '#003580',
@@ -229,6 +266,63 @@ export default function HomePage() {
     { value: '5.000+',  label: 'Người dùng',          icon: <PeopleIcon sx={{ fontSize: 32, color: T.blue }} /> },
     { value: '98%',     label: 'Hài lòng',             icon: <StarIcon sx={{ fontSize: 32, color: T.yellow }} /> },
     { value: '24/7',    label: 'Hỗ trợ AI',            icon: <BotIcon sx={{ fontSize: 32, color: T.blue }} /> },
+  ]
+
+  const featuredByPrice = [
+    {
+      name: 'Phòng tiết kiệm',
+      priceRange: 'Dưới 2 triệu',
+      rooms: 156,
+      badge: '💰 Giá tốt',
+      badgeColor: '#008234',
+      tag: 'Phù hợp sinh viên',
+      tagColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80',
+      isBig: true,
+    },
+    {
+      name: 'Phòng trung cấp',
+      priceRange: '2-4 triệu',
+      rooms: 289,
+      badge: 'Phổ biến',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80',
+    },
+    {
+      name: 'Phòng cao cấp',
+      priceRange: 'Trên 4 triệu',
+      rooms: 124,
+      badge: '⭐ Premium',
+      badgeColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=600&q=80',
+    },
+  ]
+
+  const featuredHorizontal = [
+    {
+      name: 'Studio khép kín',
+      rooms: 87,
+      priceFrom: '3.500.000',
+      tag: 'Đầy đủ nội thất',
+      tagColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=300&q=80',
+    },
+    {
+      name: 'Phòng có gác',
+      rooms: 142,
+      priceFrom: '2.800.000',
+      tag: 'Rộng rãi · 2 tầng',
+      tagColor: T.muted,
+      image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=300&q=80',
+    },
+    {
+      name: 'Chung cư mini',
+      rooms: 98,
+      priceFrom: '4.200.000',
+      tag: 'An ninh 24/7',
+      tagColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1515263487990-61b07816b324?w=300&q=80',
+    },
   ]
 
   const howItWorks = [
@@ -589,6 +683,184 @@ export default function HomePage() {
                 ))
             }
           </Grid>
+        </Container>
+      </Box>
+
+      {/* ─── Featured by Price ─────────────────────────────────────────────── */}
+      <Box sx={{ py: 4 }}>
+        <Container maxWidth="lg" component="section" aria-labelledby="featured-price-heading">
+          <SectionHeader
+            action={
+              <Button
+                size="small"
+                endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+                onClick={() => navigate('/listings')}
+                sx={{ color: T.blue, fontSize: '0.857rem', fontWeight: 600, p: 0 }}
+              >
+                Xem tất cả
+              </Button>
+            }
+          >
+            <span id="featured-price-heading">Phòng nổi bật</span>
+          </SectionHeader>
+
+          {/* Grid chính: 1 big card bên trái + 2 small stacked bên phải */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gridTemplateRows: 'auto',
+              gap: 1.5,
+              mb: 1.5,
+            }}
+          >
+            {/* Big card — span 2 rows */}
+            <TrendCard
+              sx={{ gridColumn: 1, gridRow: { md: '1 / 3' }, height: { xs: 220, md: 340 } }}
+              onClick={() => navigate('/listings')}
+              tabIndex={0}
+              role="article"
+              aria-label={`${featuredByPrice[0].name} - ${featuredByPrice[0].rooms} phòng`}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+            >
+              <Box
+                className="trend-img"
+                component="img"
+                src={featuredByPrice[0].image}
+                alt={featuredByPrice[0].name}
+                loading="lazy"
+                sx={{
+                  width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                  transition: 'transform 300ms ease',
+                }}
+              />
+              {/* Gradient overlay */}
+              <Box sx={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 70%)',
+              }} />
+              {/* Badge */}
+              <Box sx={{
+                position: 'absolute', top: 12, left: 12,
+                backgroundColor: featuredByPrice[0].badgeColor,
+                color: T.white, fontSize: '0.714rem', fontWeight: 700,
+                px: 1, py: 0.25, borderRadius: '4px', letterSpacing: '0.03em',
+              }}>
+                {featuredByPrice[0].badge}
+              </Box>
+              {/* Content */}
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '14px 16px' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1.286rem', color: T.white, lineHeight: 1.25, mb: 0.25 }}>
+                  {featuredByPrice[0].name}
+                </Typography>
+                <Typography sx={{ fontSize: '0.857rem', color: 'rgba(255,255,255,0.85)' }}>
+                  {featuredByPrice[0].priceRange} · {featuredByPrice[0].rooms} phòng
+                </Typography>
+                {featuredByPrice[0].tag && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75 }}>
+                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: featuredByPrice[0].tagColor, flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>
+                      {featuredByPrice[0].tag}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </TrendCard>
+
+            {/* Small card 1 */}
+            <TrendCard
+              sx={{ height: { xs: 160, md: 164 } }}
+              onClick={() => navigate('/listings')}
+              tabIndex={0}
+              role="article"
+              aria-label={`${featuredByPrice[1].name} - ${featuredByPrice[1].rooms} phòng`}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+            >
+              <Box
+                className="trend-img"
+                component="img"
+                src={featuredByPrice[1].image}
+                alt={featuredByPrice[1].name}
+                loading="lazy"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
+              />
+              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
+              <Box sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: featuredByPrice[1].badgeColor, color: T.white, fontSize: '0.714rem', fontWeight: 700, px: 1, py: 0.25, borderRadius: '4px' }}>
+                {featuredByPrice[1].badge}
+              </Box>
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{featuredByPrice[1].name}</Typography>
+                <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>{featuredByPrice[1].priceRange} · {featuredByPrice[1].rooms} phòng</Typography>
+              </Box>
+            </TrendCard>
+
+            {/* Small card 2 */}
+            <TrendCard
+              sx={{ height: { xs: 160, md: 164 } }}
+              onClick={() => navigate('/listings')}
+              tabIndex={0}
+              role="article"
+              aria-label={`${featuredByPrice[2].name} - ${featuredByPrice[2].rooms} phòng`}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+            >
+              <Box
+                className="trend-img"
+                component="img"
+                src={featuredByPrice[2].image}
+                alt={featuredByPrice[2].name}
+                loading="lazy"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
+              />
+              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
+              <Box sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: featuredByPrice[2].badgeColor, color: T.white, fontSize: '0.714rem', fontWeight: 700, px: 1, py: 0.25, borderRadius: '4px' }}>
+                {featuredByPrice[2].badge}
+              </Box>
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{featuredByPrice[2].name}</Typography>
+                <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>{featuredByPrice[2].priceRange} · {featuredByPrice[2].rooms} phòng</Typography>
+              </Box>
+            </TrendCard>
+          </Box>
+
+          {/* Hàng dưới: 3 horizontal cards */}
+          <Grid container spacing={1.5}>
+            {featuredHorizontal.map(d => (
+              <Grid item xs={12} sm={4} key={d.name}>
+                <TrendCardH
+                  onClick={() => navigate('/listings')}
+                  tabIndex={0}
+                  role="article"
+                  aria-label={`${d.name} - từ ${d.priceFrom}đ/tháng`}
+                  onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+                >
+                  {/* Image */}
+                  <Box sx={{ width: 100, flexShrink: 0, overflow: 'hidden' }}>
+                    <Box
+                      className="trend-h-img"
+                      component="img"
+                      src={d.image}
+                      alt={d.name}
+                      loading="lazy"
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
+                    />
+                  </Box>
+                  {/* Content */}
+                  <Box sx={{ p: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.25 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text }}>{d.name}</Typography>
+                    <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>{d.rooms} phòng</Typography>
+                    <Typography sx={{ fontSize: '0.786rem', fontWeight: 700, color: T.blue, mt: 0.5 }}>
+                      từ {d.priceFrom}đ/tháng
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: d.tagColor, flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: '0.714rem', color: d.tagColor, fontWeight: 500 }}>{d.tag}</Typography>
+                    </Box>
+                  </Box>
+                </TrendCardH>
+              </Grid>
+            ))}
+          </Grid>
+
         </Container>
       </Box>
 
