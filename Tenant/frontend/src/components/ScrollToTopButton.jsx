@@ -24,7 +24,7 @@ export default function ScrollToTopButton() {
       size="small"
       sx={{
         position: 'fixed',
-        bottom: 65,
+        bottom: 45,
         right: 33,
         zIndex: 1000,
         width: 45,

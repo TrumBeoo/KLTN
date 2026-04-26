@@ -342,8 +342,15 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
   const connection = await db.getConnection();
   
   try {
+    await connection.beginTransaction();
+
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Không có file được tải lên' });
+    }
+
+    const buildingId = req.body.buildingId;
+    if (!buildingId) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn tòa nhà' });
     }
 
     const [landlords] = await connection.query(
@@ -352,10 +359,25 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     );
 
     if (landlords.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' });
     }
 
     const landlordId = landlords[0].LandlordID;
+
+    // Verify building ownership and get building's district
+    const [buildings] = await connection.query(
+      'SELECT BuildingID, LocationID, District FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [buildingId, landlordId]
+    );
+
+    if (buildings.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ success: false, message: 'Không tìm thấy tòa nhà hoặc bạn không có quyền truy cập' });
+    }
+
+    const buildingDistrict = buildings[0].District;
+    console.log('Building district:', buildingDistrict);
 
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -374,19 +396,26 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       uploadJobId = 'UJ' + String(1).padStart(8, '0');
     }
 
-    // Create upload job
-    await connection.query(`
-      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, FileName, TotalRows, Status)
-      VALUES (?, ?, ?, ?, 'pending')
-    `, [uploadJobId, landlordId, req.file.originalname, data.length]);
+    // Create upload job with BuildingID
+    try {
+      await connection.query(`
+        INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, BuildingID, Mode, FileName, TotalRows, Status)
+        VALUES (?, ?, ?, 'single_building', ?, ?, 'pending')
+      `, [uploadJobId, landlordId, buildingId, req.file.originalname, data.length]);
+      console.log('Created UPLOAD_JOB:', uploadJobId);
+    } catch (error) {
+      console.error('Error creating UPLOAD_JOB:', error);
+      await connection.rollback();
+      throw error;
+    }
 
-    // Save details
+    // Save details with district filtering
     const preview = [];
+    let filteredCount = 0;
+    let rowCounter = 1;
+
     for (let index = 0; index < data.length; index++) {
       const row = data[index];
-      
-      // Generate UploadDetailID (CHAR(10) max)
-      const uploadDetailId = 'UD' + String(index + 1).padStart(8, '0');
       
       const parsed = {
         roomCode: row['room_code'] || row['Mã phòng'] || '',
@@ -401,27 +430,100 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
         description: row['description'] || row['Mô tả'] || ''
       };
 
-      await connection.query(`
-        INSERT INTO UPLOAD_DETAIL (
-          UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
-          District, Ward, Address, RoomType, Description, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-      `, [
-        uploadDetailId, uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
-        parsed.area, parsed.maxPeople, parsed.district, parsed.ward,
-        parsed.address, parsed.roomType, parsed.description
-      ]);
+      // Filter by building's district - normalize district name for comparison
+      const rowDistrict = (parsed.district || '').trim();
+      const normalizedBuildingDistrict = (buildingDistrict || '').trim();
+      
+      if (rowDistrict && normalizedBuildingDistrict && rowDistrict === normalizedBuildingDistrict) {
+        // Generate UploadDetailID (CHAR(10) max)
+        const uploadDetailId = 'UD' + String(rowCounter).padStart(8, '0');
+        
+        try {
+          await connection.query(`
+            INSERT INTO UPLOAD_DETAIL (
+              UploadDetailID, UploadJobID, BuildingID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
+              Address, RoomType, Description, Status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+          `, [
+            uploadDetailId, uploadJobId, buildingId, rowCounter, parsed.roomCode, parsed.title, parsed.price,
+            parsed.area, parsed.maxPeople, parsed.address, parsed.roomType, parsed.description
+          ]);
+          console.log('Created UPLOAD_DETAIL:', uploadDetailId, 'for district:', rowDistrict);
+        } catch (error) {
+          console.error('Error creating UPLOAD_DETAIL:', error, 'for row:', index + 1);
+          await connection.rollback();
+          throw error;
+        }
 
-      preview.push(parsed);
+        preview.push(parsed);
+        rowCounter++;
+      } else {
+        filteredCount++;
+        console.log('Filtered out row:', index + 1, 'district:', rowDistrict, 'building district:', normalizedBuildingDistrict);
+      }
+    }
+
+    // Update UPLOAD_JOB with actual filtered rows count
+    await connection.query(
+      'UPDATE UPLOAD_JOB SET TotalRows = ? WHERE UploadJobID = ?',
+      [preview.length, uploadJobId]
+    );
+
+    await connection.commit();
+    console.log('Transaction committed successfully. Filtered:', filteredCount, 'rows, Kept:', preview.length, 'rows');
+
+    res.json({
+      success: true,
+      data: { 
+        uploadJobId, 
+        preview,
+        stats: {
+          totalRows: data.length,
+          filteredRows: filteredCount,
+          importRows: preview.length,
+          buildingDistrict: buildingDistrict
+        }
+      }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Preview Excel error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi xử lý file' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get building info for upload (with district)
+router.get('/building-info/:buildingId', async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    const [landlords] = await connection.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' });
+    }
+
+    const [buildings] = await connection.query(
+      'SELECT BuildingID, BuildingName, District, Ward, Address FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [req.params.buildingId, landlords[0].LandlordID]
+    );
+
+    if (buildings.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tòa nhà' });
     }
 
     res.json({
       success: true,
-      data: { uploadJobId, preview }
+      data: buildings[0]
     });
   } catch (error) {
-    console.error('Preview Excel error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi xử lý file' });
+    console.error('Get building info error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy thông tin tòa nhà' });
   } finally {
     connection.release();
   }
@@ -509,54 +611,39 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
       });
     }
 
-    // Get default building
-    const [buildings] = await connection.query(
-      'SELECT BuildingID, LocationID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
-      [landlordId]
-    );
+    // Get building from upload detail
+    let buildingId = detail.BuildingID;
+    let locationId = null;
 
-    if (buildings.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Vui lòng tạo tòa nhà trước' });
-    }
-
-    const buildingId = buildings[0].BuildingID;
-    let locationId = buildings[0].LocationID;
-
-    // Find or create location if district/ward provided
-    if (detail.District && detail.Ward) {
-      const [existingLoc] = await connection.query(
-        'SELECT LocationID FROM LOCATION WHERE District = ? AND Ward = ? AND IsActive = TRUE LIMIT 1',
-        [detail.District, detail.Ward]
+    if (buildingId) {
+      const [buildings] = await connection.query(
+        'SELECT BuildingID, LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+        [buildingId, landlordId]
       );
 
-      if (existingLoc.length > 0) {
-        locationId = existingLoc[0].LocationID;
-      } else {
-        const [lastLocation] = await connection.query(
-          'SELECT LocationID FROM LOCATION ORDER BY LocationID DESC LIMIT 1'
-        );
-        const lastId = lastLocation.length > 0 ? parseInt(lastLocation[0].LocationID.substring(3)) : 0;
-        locationId = 'LOC' + String(lastId + 1).padStart(3, '0');
-
-        await connection.query(
-          `INSERT INTO LOCATION (LocationID, City, District, Ward, Address, IsActive)
-           VALUES (?, 'Hà Nội', ?, ?, ?, TRUE)`,
-          [locationId, detail.District, detail.Ward, detail.Address || '']
-        );
+      if (buildings.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ success: false, message: 'Không tìm thấy tòa nhà' });
       }
+
+      locationId = buildings[0].LocationID;
+    } else {
+      // Fallback to default building if not specified
+      const [buildings] = await connection.query(
+        'SELECT BuildingID, LocationID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
+        [landlordId]
+      );
+
+      if (buildings.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ success: false, message: 'Vui lòng tạo tòa nhà trước' });
+      }
+
+      buildingId = buildings[0].BuildingID;
+      locationId = buildings[0].LocationID;
     }
 
-    // Check duplicate room code
-    const [existingRooms] = await connection.query(
-      'SELECT RoomID FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
-      [detail.RoomCode, landlordId]
-    );
-
-    if (existingRooms.length > 0) {
-      await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Mã phòng đã tồn tại' });
-    }
+    // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
     // Generate RoomID
     const [lastRoom] = await connection.query(
@@ -638,18 +725,29 @@ router.post('/bulk-create/:jobId', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy job' });
     }
 
-    // Get default building
+    // Get building from upload job
+    const [jobInfo] = await connection.query(
+      'SELECT BuildingID FROM UPLOAD_JOB WHERE UploadJobID = ? AND LandlordID = ?',
+      [req.params.jobId, landlordId]
+    );
+
+    if (jobInfo.length === 0 || !jobInfo[0].BuildingID) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Không tìm thấy thông tin tòa nhà' });
+    }
+
+    const buildingId = jobInfo[0].BuildingID;
+
     const [buildings] = await connection.query(
-      'SELECT BuildingID, LocationID FROM BUILDING WHERE LandlordID = ? ORDER BY CreatedAt DESC LIMIT 1',
-      [landlordId]
+      'SELECT BuildingID, LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [buildingId, landlordId]
     );
 
     if (buildings.length === 0) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Vui lòng tạo tòa nhà trước' });
+      return res.status(400).json({ success: false, message: 'Không tìm thấy tòa nhà' });
     }
 
-    const buildingId = buildings[0].BuildingID;
     const defaultLocationId = buildings[0].LocationID;
 
     // Get pending details
@@ -678,45 +776,10 @@ router.post('/bulk-create/:jobId', async (req, res) => {
           continue;
         }
 
-        // Check duplicate
-        const [existingRooms] = await connection.query(
-          'SELECT RoomID FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
-          [detail.RoomCode, landlordId]
-        );
+        // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
-        if (existingRooms.length > 0) {
-          await connection.query(
-            'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
-            ['Mã phòng đã tồn tại', detail.UploadDetailID]
-          );
-          failedCount++;
-          continue;
-        }
-
-        // Find or create location
+        // Find or create location - use building's location
         let locationId = defaultLocationId;
-        if (detail.District && detail.Ward) {
-          const [existingLoc] = await connection.query(
-            'SELECT LocationID FROM LOCATION WHERE District = ? AND Ward = ? AND IsActive = TRUE LIMIT 1',
-            [detail.District, detail.Ward]
-          );
-
-          if (existingLoc.length > 0) {
-            locationId = existingLoc[0].LocationID;
-          } else {
-            const [lastLocation] = await connection.query(
-              'SELECT LocationID FROM LOCATION ORDER BY LocationID DESC LIMIT 1'
-            );
-            const lastId = lastLocation.length > 0 ? parseInt(lastLocation[0].LocationID.substring(3)) : 0;
-            locationId = 'LOC' + String(lastId + 1).padStart(3, '0');
-
-            await connection.query(
-              `INSERT INTO LOCATION (LocationID, City, District, Ward, Address, IsActive)
-               VALUES (?, 'Hà Nội', ?, ?, ?, TRUE)`,
-              [locationId, detail.District, detail.Ward, detail.Address || '']
-            );
-          }
-        }
 
         // Generate RoomID
         const [lastRoom] = await connection.query(
@@ -798,9 +861,9 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
-    // Get successful details with RoomID
+    // Get details with RoomID (both newly created and linked to existing)
     const [details] = await connection.query(
-      'SELECT * FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = "success" AND RoomID IS NOT NULL AND ListingID IS NULL',
+      'SELECT * FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND RoomID IS NOT NULL AND ListingID IS NULL',
       [req.params.jobId]
     );
 
@@ -825,18 +888,60 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
           continue;
         }
 
-        // Check if listing already exists
+        // Check if listing already exists for this room
         const [existingListings] = await connection.query(
-          'SELECT ListingID FROM LISTING WHERE RoomID = ?',
+          'SELECT ListingID, LandlordID FROM LISTING WHERE RoomID = ?',
           [detail.RoomID]
         );
 
-        if (existingListings.length > 0) {
+        // If listing exists but belongs to different landlord, create new listing
+        if (existingListings.length > 0 && existingListings[0].LandlordID !== landlordId) {
+          // Generate new ListingID
+          const [lastListing] = await connection.query(
+            'SELECT ListingID FROM LISTING ORDER BY ListingID DESC LIMIT 1'
+          );
+          
+          let listingId;
+          if (lastListing.length > 0) {
+            const lastId = parseInt(lastListing[0].ListingID.substring(3));
+            listingId = 'LST' + String(lastId + 1).padStart(5, '0');
+          } else {
+            listingId = 'LST00001';
+          }
+
+          const title = detail.Title || `${detail.RoomType} ${detail.Area}m² - ${detail.RoomCode}`;
+          const description = detail.Description || `Phòng ${detail.RoomCode} với diện tích ${detail.Area}m², giá ${detail.Price.toLocaleString('vi-VN')}đ/tháng`;
+
+          await connection.query(`
+            INSERT INTO LISTING (ListingID, RoomID, LandlordID, Title, Description, IsVisible, CreatedAt, UpdatedAt)
+            VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
+          `, [listingId, detail.RoomID, landlordId, title, description]);
+
+          await connection.query(
+            'UPDATE ROOM SET DraftStatus = "published" WHERE RoomID = ?',
+            [detail.RoomID]
+          );
+
+          await connection.query(
+            'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
+            [listingId, detail.UploadDetailID]
+          );
+
+          successCount++;
+          continue;
+        }
+
+        // If listing exists and belongs to current landlord
+        if (existingListings.length > 0 && existingListings[0].LandlordID === landlordId) {
           await connection.query(
             'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
             [existingListings[0].ListingID, detail.UploadDetailID]
           );
-          failedCount++;
+          await connection.query(
+            'UPDATE ROOM SET DraftStatus = "published" WHERE RoomID = ?',
+            [detail.RoomID]
+          );
+          successCount++;
           continue;
         }
 
@@ -881,7 +986,7 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
 
     // Check if all details are completed
     const [allDetails] = await connection.query(
-      'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = "success"',
+      'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND RoomID IS NOT NULL',
       [req.params.jobId]
     );
 
@@ -929,7 +1034,7 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
 
     // Get detail
     const [details] = await connection.query(
-      'SELECT * FROM UPLOAD_DETAIL WHERE UploadDetailID = ? AND UploadJobID = ? AND Status = "success" AND RoomID IS NOT NULL',
+      'SELECT * FROM UPLOAD_DETAIL WHERE UploadDetailID = ? AND UploadJobID = ? AND RoomID IS NOT NULL',
       [req.params.detailId, req.params.jobId]
     );
 
@@ -959,15 +1064,80 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
 
     // Check if listing already exists
     const [existingListings] = await connection.query(
-      'SELECT ListingID FROM LISTING WHERE RoomID = ?',
+      'SELECT ListingID, LandlordID FROM LISTING WHERE RoomID = ?',
       [detail.RoomID]
     );
 
-    if (existingListings.length > 0) {
+    // If listing exists but belongs to different landlord, create new listing
+    if (existingListings.length > 0 && existingListings[0].LandlordID !== landlordId) {
+      // Generate new ListingID
+      const [lastListing] = await connection.query(
+        'SELECT ListingID FROM LISTING ORDER BY ListingID DESC LIMIT 1'
+      );
+      
+      let listingId;
+      if (lastListing.length > 0) {
+        const lastId = parseInt(lastListing[0].ListingID.substring(3));
+        listingId = 'LST' + String(lastId + 1).padStart(5, '0');
+      } else {
+        listingId = 'LST00001';
+      }
+
+      const title = detail.Title || `${detail.RoomType} ${detail.Area}m² - ${detail.RoomCode}`;
+      const description = detail.Description || `Phòng ${detail.RoomCode} với diện tích ${detail.Area}m², giá ${detail.Price.toLocaleString('vi-VN')}đ/tháng`;
+
+      await connection.query(`
+        INSERT INTO LISTING (ListingID, RoomID, LandlordID, Title, Description, IsVisible, CreatedAt, UpdatedAt)
+        VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
+      `, [listingId, detail.RoomID, landlordId, title, description]);
+
+      await connection.query(
+        'UPDATE ROOM SET DraftStatus = "published" WHERE RoomID = ?',
+        [detail.RoomID]
+      );
+
+      await connection.query(
+        'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
+        [listingId, detail.UploadDetailID]
+      );
+
+      // Check if all details are completed
+      const [allDetails] = await connection.query(
+        'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND RoomID IS NOT NULL',
+        [req.params.jobId]
+      );
+
+      if (allDetails[0].total === allDetails[0].published) {
+        await connection.query(
+          'UPDATE UPLOAD_JOB SET Status = "completed", CompletedAt = NOW() WHERE UploadJobID = ?',
+          [req.params.jobId]
+        );
+      }
+
+      await connection.commit();
+      return res.json({ success: true, message: 'Đã tạo listing mới', data: { listingId } });
+    }
+
+    // If listing exists and belongs to current landlord
+    if (existingListings.length > 0 && existingListings[0].LandlordID === landlordId) {
       await connection.query(
         'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
         [existingListings[0].ListingID, detail.UploadDetailID]
       );
+
+      // Check if all details are completed
+      const [allDetails] = await connection.query(
+        'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND RoomID IS NOT NULL',
+        [req.params.jobId]
+      );
+
+      if (allDetails[0].total === allDetails[0].published) {
+        await connection.query(
+          'UPDATE UPLOAD_JOB SET Status = "completed", CompletedAt = NOW() WHERE UploadJobID = ?',
+          [req.params.jobId]
+        );
+      }
+
       await connection.commit();
       return res.json({ success: true, message: 'Phòng đã có tin đăng', data: { listingId: existingListings[0].ListingID } });
     }
@@ -1006,7 +1176,7 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
 
     // Check if all details are completed
     const [allDetails] = await connection.query(
-      'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = "success"',
+      'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND RoomID IS NOT NULL',
       [req.params.jobId]
     );
 

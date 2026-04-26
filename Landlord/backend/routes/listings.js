@@ -44,6 +44,11 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'File phải có định dạng .xlsx hoặc .xls' })
     }
 
+    const buildingId = req.body.buildingId;
+    if (!buildingId) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn tòa nhà' });
+    }
+
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' })
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
     const data = xlsx.utils.sheet_to_json(sheet)
@@ -63,6 +68,16 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
 
     const landlordId = landlords[0].LandlordID
 
+    // Verify building ownership
+    const [buildings] = await connection.query(
+      'SELECT BuildingID, LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [buildingId, landlordId]
+    );
+
+    if (buildings.length === 0) {
+      return res.status(403).json({ success: false, message: 'Không tìm thấy tòa nhà hoặc bạn không có quyền truy cập' });
+    }
+
     // Generate UploadJobID
     const [lastJob] = await connection.query(
       'SELECT UploadJobID FROM UPLOAD_JOB ORDER BY UploadJobID DESC LIMIT 1'
@@ -76,11 +91,11 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       uploadJobId = 'UJ00000001'
     }
 
-    // Create upload job
+    // Create upload job with BuildingID
     await connection.query(`
-      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, FileName, TotalRows, Status)
-      VALUES (?, ?, ?, ?, 'pending')
-    `, [uploadJobId, landlordId, req.file.originalname, data.length])
+      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, BuildingID, Mode, FileName, TotalRows, Status)
+      VALUES (?, ?, ?, 'single_building', ?, ?, 'pending')
+    `, [uploadJobId, landlordId, buildingId, req.file.originalname, data.length])
 
     // Save details
     const preview = []
@@ -105,13 +120,12 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
 
       const [result] = await connection.query(`
         INSERT INTO UPLOAD_DETAIL (
-          UploadDetailID, UploadJobID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
-          District, Ward, Address, RoomType, Description, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+          UploadDetailID, UploadJobID, BuildingID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
+          Address, RoomType, Description, Status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
       `, [
-        uploadDetailId, uploadJobId, index + 1, parsed.roomCode, parsed.title, parsed.price,
-        parsed.area, parsed.maxPeople, parsed.district, parsed.ward,
-        parsed.address, parsed.roomType, parsed.description
+        uploadDetailId, uploadJobId, buildingId, index + 1, parsed.roomCode, parsed.title, parsed.price,
+        parsed.area, parsed.maxPeople, parsed.address, parsed.roomType, parsed.description
       ])
 
       preview.push({ ...parsed, detailId: uploadDetailId })
@@ -168,8 +182,8 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
     }
 
     await connection.query(`
-      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, FileName, TotalRows, Status)
-      VALUES (?, ?, ?, ?, 'processing')
+      INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, Mode, FileName, TotalRows, Status)
+      VALUES (?, ?, 'multi_building', ?, ?, 'processing')
     `, [uploadJobId, landlordId, req.file.originalname, data.length])
 
     let successCount = 0

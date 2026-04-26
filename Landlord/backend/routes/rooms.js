@@ -426,6 +426,82 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Bulk delete rooms
+router.post('/bulk-delete', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    const { roomIds } = req.body;
+
+    if (!roomIds || !Array.isArray(roomIds) || roomIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng chọn ít nhất 1 phòng'
+      });
+    }
+
+    await connection.beginTransaction();
+
+    // Get LandlordID from AccountID
+    const [landlords] = await connection.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin chủ nhà'
+      });
+    }
+
+    const landlordId = landlords[0].LandlordID;
+
+    // Verify all rooms belong to landlord
+    const placeholders = roomIds.map(() => '?').join(',');
+    const [rooms] = await connection.query(
+      `SELECT RoomID FROM ROOM WHERE RoomID IN (${placeholders}) AND LandlordID = ?`,
+      [...roomIds, landlordId]
+    );
+
+    if (rooms.length !== roomIds.length) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Một số phòng không thuộc về bạn'
+      });
+    }
+
+    // Delete related data for all rooms
+    await connection.query(`DELETE FROM ROOM_AMENITY WHERE RoomID IN (${placeholders})`, roomIds);
+    await connection.query(`DELETE FROM ROOM_IMAGE WHERE RoomID IN (${placeholders})`, roomIds);
+    await connection.query(`DELETE FROM VIEWING_SCHEDULE WHERE RoomID IN (${placeholders})`, roomIds);
+    await connection.query(`DELETE FROM AI_MATCHING WHERE RoomID IN (${placeholders})`, roomIds);
+    await connection.query(`DELETE FROM REVIEW WHERE RoomID IN (${placeholders})`, roomIds);
+    await connection.query(`DELETE FROM LISTING WHERE RoomID IN (${placeholders})`, roomIds);
+
+    // Delete all rooms
+    await connection.query(`DELETE FROM ROOM WHERE RoomID IN (${placeholders})`, roomIds);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: `Đã xóa ${roomIds.length} phòng thành công`
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Bulk delete rooms error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server: ' + error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 // Upload room images
 router.post('/:id/images', authMiddleware, upload.array('images', 10), async (req, res) => {
   try {

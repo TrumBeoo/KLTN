@@ -27,7 +27,11 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
 import {
   CloudUpload as UploadIcon,
@@ -54,6 +58,10 @@ export default function ExcelUploadWithImages() {
   const [loading, setLoading] = useState(true)
   const [draftBatches, setDraftBatches] = useState([])
   const [showBatches, setShowBatches] = useState(false)
+  const [buildings, setBuildings] = useState([])
+  const [selectedBuilding, setSelectedBuilding] = useState('')
+  const [filterStats, setFilterStats] = useState(null)
+  const [buildingInfo, setBuildingInfo] = useState(null)
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api'
   const token = localStorage.getItem('token')
@@ -62,7 +70,22 @@ export default function ExcelUploadWithImages() {
 
   useEffect(() => {
     loadDraftBatches()
+    loadBuildings()
   }, [])
+
+  const loadBuildings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/buildings`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setBuildings(data.data || [])
+      }
+    } catch (error) {
+      console.error('Load buildings error:', error)
+    }
+  }
 
   const loadDraftBatches = async () => {
     try {
@@ -140,13 +163,32 @@ export default function ExcelUploadWithImages() {
       return
     }
 
+    if (!selectedBuilding) {
+      showError('Lỗi!', 'Vui lòng chọn tòa nhà trước khi upload file')
+      return
+    }
+
     setFile(selectedFile)
+    
+    // Get building info first
+    try {
+      const infoResponse = await fetch(`${API_URL}/bulk/building-info/${selectedBuilding}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const infoData = await infoResponse.json()
+      if (infoData.success) {
+        setBuildingInfo(infoData.data)
+      }
+    } catch (error) {
+      console.error('Get building info error:', error)
+    }
     
     const formData = new FormData()
     formData.append('file', selectedFile)
+    formData.append('buildingId', selectedBuilding)
 
     try {
-      const response = await fetch(`${API_URL}/listings/preview-excel`, {
+      const response = await fetch(`${API_URL}/bulk/preview-excel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -156,6 +198,7 @@ export default function ExcelUploadWithImages() {
       if (data.success) {
         setUploadJobId(data.data.uploadJobId)
         setPreview(data.data.preview)
+        setFilterStats(data.data.stats) // Lưu thống kê lọc
         setActiveStep(1)
       } else {
         showError('Lỗi!', data.message)
@@ -447,6 +490,9 @@ export default function ExcelUploadWithImages() {
     setUploadJobId(null)
     setActiveStep(0)
     setShowBatches(true)
+    setSelectedBuilding('')
+    setFilterStats(null)
+    setBuildingInfo(null)
   }
 
   const getStatusIcon = (errors) => {
@@ -566,30 +612,78 @@ export default function ExcelUploadWithImages() {
               </Typography>
             </Alert>
 
+            <FormControl fullWidth required>
+              <InputLabel>Chọn tòa nhà</InputLabel>
+              <Select
+                value={selectedBuilding}
+                onChange={(e) => setSelectedBuilding(e.target.value)}
+                label="Chọn tòa nhà"
+              >
+                <MenuItem value="">
+                  <em>-- Chọn tòa nhà --</em>
+                </MenuItem>
+                {buildings.map((building) => (
+                  <MenuItem key={building.BuildingID} value={building.BuildingID}>
+                    {building.BuildingName} - {building.Address}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <Button
               variant="outlined"
               component="label"
               startIcon={<UploadIcon />}
               fullWidth
+              disabled={!selectedBuilding}
               sx={{ py: 3, borderStyle: 'dashed' }}
             >
-              {file ? file.name : 'Chọn file Excel hoặc kéo thả vào đây'}
+              {file ? file.name : selectedBuilding ? 'Chọn file Excel hoặc kéo thả vào đây' : 'Vui lòng chọn tòa nhà trước'}
               <input
                 type="file"
                 hidden
                 accept=".xlsx,.xls"
                 onChange={handleFileSelect}
+                disabled={!selectedBuilding}
               />
             </Button>
+
+            {selectedBuilding && (
+              <Alert severity="success">
+                <Typography variant="body2">
+                  Đã chọn: <strong>{buildings.find(b => b.BuildingID === selectedBuilding)?.BuildingName}</strong>
+                </Typography>
+              </Alert>
+            )}
           </Stack>
         )}
 
         {activeStep === 1 && preview.length > 0 && (
           <>
             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Preview dữ liệu ({preview.length} phòng)
-              </Typography>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Preview dữ liệu ({preview.length} phòng)
+                </Typography>
+                {buildingInfo && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Tòa nhà: <strong>{buildingInfo.BuildingName}</strong> - Quận: <strong>{buildingInfo.District}</strong>
+                  </Typography>
+                )}
+                {filterStats && (
+                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      📊 Tổng: {filterStats.totalRows} hàng
+                    </Typography>
+                    <Typography variant="body2" color="warning.main">
+                      ⛔ Lọc: {filterStats.filteredRows} hàng (không khớp quận)
+                    </Typography>
+                    <Typography variant="body2" color="success.main">
+                      ✅ Import: {filterStats.importRows} hàng (khớp quận)
+                    </Typography>
+                  </Stack>
+                )}
+              </Box>
               <Stack direction="row" spacing={1}>
                 <Button onClick={resetState} color="error">Hủy</Button>
                 <Button

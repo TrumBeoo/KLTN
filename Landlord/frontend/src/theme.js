@@ -114,7 +114,7 @@ const theme = createTheme({
     '0 10px 15px rgba(0,0,0,0.07), 0 4px 6px rgba(0,0,0,0.04)',
     '0 20px 25px rgba(0,0,0,0.08), 0 10px 10px rgba(0,0,0,0.04)',
     '0 25px 50px rgba(0,0,0,0.1)',
-    ...Array(17).fill('0 25px 50px rgba(0,0,0,0.1)')
+    ...Array(18).fill('0 25px 50px rgba(0,0,0,0.1)')
   ],
   transitions: {
     easing: {

@@ -486,6 +486,7 @@ export default function ManageRooms() {
   const [rooms, setRooms] = useState([])
   const [buildings, setBuildings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedRooms, setSelectedRooms] = useState([])
   const [filters, setFilters] = useState({
     building: '',
     status: '',
@@ -592,6 +593,47 @@ export default function ManageRooms() {
         }
       } catch (error) {
         console.error('Delete room error:', error)
+        showError('Lỗi!', error.message)
+      }
+    })
+  }
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedRooms(rooms.map(r => r.RoomID))
+    } else {
+      setSelectedRooms([])
+    }
+  }
+
+  const handleSelectRoom = (roomId) => {
+    setSelectedRooms(prev => 
+      prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]
+    )
+  }
+
+  const handleDeleteMultiple = async () => {
+    if (selectedRooms.length === 0) return
+    showConfirm('Xác nhận xóa', `Bạn chắc chắn muốn xóa ${selectedRooms.length} phòng đã chọn?`, async () => {
+      try {
+        const response = await fetch(`${API_URL}/rooms/bulk-delete`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ roomIds: selectedRooms })
+        })
+        const data = await response.json()
+        if (data.success) {
+          showSuccess('Thành công!', `Đã xóa ${selectedRooms.length} phòng`)
+          setSelectedRooms([])
+          fetchRooms()
+        } else {
+          showError('Lỗi!', data.message)
+        }
+      } catch (error) {
+        console.error('Delete multiple rooms error:', error)
         showError('Lỗi!', error.message)
       }
     })
@@ -715,6 +757,16 @@ export default function ManageRooms() {
             Danh sách phòng ({rooms.length})
           </Typography>
           <Stack direction="row" spacing={1}>
+            {selectedRooms.length > 0 && (
+              <Button 
+                variant="contained" 
+                color="error" 
+                startIcon={<DeleteIcon />} 
+                onClick={handleDeleteMultiple}
+              >
+                Xóa {selectedRooms.length} phòng
+              </Button>
+            )}
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} disabled={buildings.length === 0}>
               Thêm phòng
             </Button>
@@ -725,6 +777,13 @@ export default function ManageRooms() {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={rooms.length > 0 && selectedRooms.length === rooms.length}
+                    indeterminate={selectedRooms.length > 0 && selectedRooms.length < rooms.length}
+                    onChange={handleSelectAll}
+                  />
+                </TableCell>
                 <TableCell>Mã phòng</TableCell>
                 <TableCell>Tòa</TableCell>
                 <TableCell>Loại phòng</TableCell>
@@ -753,7 +812,13 @@ export default function ManageRooms() {
                 rooms.map((room) => {
                   const firstImageUrl = room.Images ? room.Images.split(',')[0].trim() : null
                   return (
-                  <TableRow key={room.RoomID} hover>
+                  <TableRow key={room.RoomID} hover selected={selectedRooms.includes(room.RoomID)}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedRooms.includes(room.RoomID)}
+                        onChange={() => handleSelectRoom(room.RoomID)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <RoomImage imageUrl={firstImageUrl} roomCode={room.RoomCode} />

@@ -1,105 +1,138 @@
+/**
+ * ListingPage — Booking.com style redesign
+ *
+ * Layout: left column (cards) + right sticky (map + sidebar)
+ * Card: horizontal image + content — Booking.com hotel-list pattern
+ * Tokens: same as theme.js
+ */
+
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
-import RoomCardSkeleton from '../components/RoomCardSkeleton'
 import SecondaryMenu from '../components/SecondaryMenu'
 import RoomMap from '../components/RoomMap'
 import {
-  Box, Container, Grid, Button, Typography, Stack, IconButton, Skeleton,
+  Box, Container, Grid, Button, Typography, Stack, IconButton,
+  Skeleton, Chip, Tooltip, Pagination,
 } from '@mui/material'
 import {
-  Star as StarIcon, LocationOn as LocationIcon, Straighten as RulerIcon,
-  Wifi as WifiIcon, AcUnit as AcIcon, Opacity as DropletIcon,
+  Star as StarIcon, LocationOn as LocationIcon,
+  Straighten as RulerIcon,
+  Wifi as WifiIcon, AcUnit as AcIcon,
   Security as ShieldIcon, DirectionsCar as CarIcon,
   Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon,
-  Visibility as EyeIcon, AccessTime as ClockIcon,
-  Tv as TvIcon, LocalLaundryService as WasherIcon,
-  Kitchen as FridgeIcon, Balcony as BalconyIcon,
-  ImageNotSupported as NoImageIcon, Group as GroupIcon,
+  Visibility as EyeIcon, Group as GroupIcon,
+  ImageNotSupported as NoImageIcon,
   ArrowForward as ArrowForwardIcon,
+  FilterList as FilterIcon,
+  Sort as SortIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
-const ImageWrapper = styled(Box)({
-  borderRadius: '10px',
-  overflow: 'hidden',
-  position: 'relative',
-  backgroundColor: '#f2f2f2',
-  width: 280,
-  height: 210,
-  flexShrink: 0,
-  '& img': {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transition: 'transform 400ms ease',
-    display: 'block',
-  },
-})
-
-const ListingRow = styled(Box)({
-  display: 'flex',
-  gap: 20,
-  padding: '20px 0',
-  borderBottom: '1px solid #e8e8e8',
-  cursor: 'pointer',
-  '&:hover .listing-image': { transform: 'scale(1.04)' },
-  '&:last-child': { borderBottom: 'none' },
-})
-
-const AmenityIcon = ({ amenity }) => {
-  const icons = {
-    wifi: <WifiIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    ac: <AcIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    heater: <DropletIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    security: <ShieldIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    parking: <CarIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    washer: <WasherIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    fridge: <FridgeIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    tv: <TvIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-    balcony: <BalconyIcon sx={{ fontSize: '1rem', color: '#222222' }} />,
-  }
-  return icons[amenity] || null
+// ─── Tokens ──────────────────────────────────────────────────────────────
+const T = {
+  blue:    '#006ce4',
+  blueDk:  '#003f8a',
+  blueLt:  '#e8f2ff',
+  text:    '#1a1a1a',
+  muted:   '#595959',
+  bg:      '#f2f4f8',
+  white:   '#ffffff',
+  border:  '#d4d6d9',
+  yellow:  '#febb02',
+  green:   '#008234',
+  greenLt: '#e8f5ee',
+  shadow1: 'rgba(26,26,26,0.16) 0px 2px 8px 0px',
+  motion:  '120ms',
 }
 
+// ─── Styled ──────────────────────────────────────────────────────────────
+
+/** Horizontal listing card — Booking.com hotel-card style */
+const ListingCard = styled(Box)({
+  backgroundColor: T.white,
+  borderRadius: '8px',
+  border: `1px solid ${T.border}`,
+  boxShadow: T.shadow1,
+  overflow: 'hidden',
+  cursor: 'pointer',
+  display: 'flex',
+  transition: `box-shadow ${T.motion} ease`,
+  '&:hover': { boxShadow: 'rgba(26,26,26,0.24) 0px 4px 16px' },
+  '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+})
+
+const ScoreBadge = styled(Box)({
+  backgroundColor: '#003580',
+  color: T.white, borderRadius: '4px 4px 4px 0',
+  padding: '4px 8px',
+  fontWeight: 700, fontSize: '0.929rem',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+})
+
 const StatusBadge = styled(Box)(({ status }) => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '4px 10px',
-  borderRadius: '12px',
-  fontSize: '0.8125rem',
-  fontWeight: 500,
+  display: 'inline-flex', alignItems: 'center', gap: 4,
+  padding: '3px 8px', borderRadius: '4px',
+  fontSize: '0.786rem', fontWeight: 600,
   backgroundColor:
-    status === 'available' ? '#e8f5e9' :
-    status === 'pending' ? '#fff3e0' :
-    status === 'booked' ? '#e8f0fe' : '#fce8e6',
+    status === 'available' ? T.greenLt :
+    status === 'pending'   ? '#fef6e8' :
+    status === 'booked'    ? T.blueLt  : '#fde8eb',
   color:
-    status === 'available' ? '#5CB85C' :
-    status === 'pending' ? '#F0AD4E' :
-    status === 'booked' ? '#5BC0DE' : '#c13515',
+    status === 'available' ? '#005a23' :
+    status === 'pending'   ? '#a16100' :
+    status === 'booked'    ? T.blue    : '#8b0d1f',
 }))
+
+function AmenityTag({ amenity }) {
+  const map = {
+    wifi: { icon: <WifiIcon sx={{ fontSize: 14 }} />, label: 'Wifi' },
+    ac:   { icon: <AcIcon  sx={{ fontSize: 14 }} />, label: 'Điều hòa' },
+    security: { icon: <ShieldIcon sx={{ fontSize: 14 }} />, label: 'An ninh' },
+    parking:  { icon: <CarIcon sx={{ fontSize: 14 }} />, label: 'Đỗ xe' },
+  }
+  const entry = map[amenity]
+  if (!entry) return null
+  return (
+    <Box sx={{
+      display: 'inline-flex', alignItems: 'center', gap: 0.5,
+      px: 1, py: 0.25, borderRadius: '4px',
+      backgroundColor: T.bg, color: T.muted, fontSize: '0.786rem',
+    }}>
+      {entry.icon}{entry.label}
+    </Box>
+  )
+}
 
 const statusLabel = { available: 'Còn trống', pending: 'Chờ duyệt', booked: 'Đã đặt lịch', rented: 'Đã thuê' }
 
-const SideCard = styled(Box)({
-  cursor: 'pointer',
-  display: 'flex',
-  gap: 12,
-  padding: '12px 0',
-  borderBottom: '1px solid #f2f2f2',
-  '&:last-child': { borderBottom: 'none' },
-  '&:hover .side-title': { color: '#4A90E2' },
-})
+function SkeletonCard() {
+  return (
+    <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, display: 'flex', overflow: 'hidden' }}>
+      <Skeleton variant="rectangular" width={220} height={160} animation="wave" sx={{ flexShrink: 0 }} />
+      <Box sx={{ flex: 1, p: 2 }}>
+        <Skeleton variant="text" width="70%" height={22} />
+        <Skeleton variant="text" width="50%" height={16} />
+        <Skeleton variant="text" width="40%" height={16} />
+        <Skeleton variant="text" width="30%" height={28} sx={{ mt: 1 }} />
+      </Box>
+    </Box>
+  )
+}
 
-function ListingPage() {
+// ─── Component ────────────────────────────────────────────────────────────
+export default function ListingPage() {
   useScrollToTop()
   const navigate = useNavigate()
+
   const [favorites, setFavorites] = useState({})
-  const [listings, setListings] = useState([])
-  const [roomsWithCoordinates, setRoomsWithCoordinates] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [listings, setListings]   = useState([])
+  const [mapRooms, setMapRooms]   = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(null)
+  const [page, setPage]           = useState(1)
+  const PER_PAGE = 8
+
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
   useEffect(() => { fetchRooms() }, [])
@@ -107,301 +140,323 @@ function ListingPage() {
   const fetchRooms = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/rooms`)
-      const data = await response.json()
+      const res = await fetch(`${API_URL}/rooms`)
+      const data = await res.json()
       if (data.success) {
-        const formattedRooms = data.data.map(room => {
-          let imageUrl = null
-          if (room.images?.length > 0) {
-            const imgUrl = room.images[0].ImageURL
-            // If URL is already a full URL (http/https), use it directly
-            if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
-              imageUrl = imgUrl
-            } else {
-              // Otherwise, treat as local path
-              imageUrl = `${API_URL.replace('/api', '')}${imgUrl}`
-            }
-          }
+        const formatted = data.data.map(room => {
+          const imgUrl = room.images?.[0]?.ImageURL
           return {
-          id: room.RoomID,
-          title: `${room.RoomType} - ${room.RoomCode}`,
-          location: room.BuildingAddress || 'Địa chỉ chưa cập nhật',
-          price: room.Price?.toString() || '0',
-          area: room.Area || 0,
-          rating: 4.5,
-          reviews: Math.floor(Math.random() * 50) + 1,
-          image: imageUrl,
-          status: (room.DisplayStatus || room.Status) === 'available' ? 'available' :
-                  (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending' :
-                  (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
-          amenities: parseAmenities(room.Amenities),
-          landlordName: room.LandlordName,
-          buildingName: room.BuildingName,
-          maxPeople: room.MaxPeople,
-          description: room.Description,
-          views: Math.floor(Math.random() * 100) + 10,
-          latitude: room.Latitude,
-          longitude: room.Longitude,
-        }
+            id: room.RoomID,
+            title: `${room.RoomType} - ${room.RoomCode}`,
+            location: room.BuildingAddress || 'Chưa cập nhật',
+            price: room.Price?.toString() || '0',
+            area: room.Area || 0,
+            rating: 4.5,
+            reviews: Math.floor(Math.random() * 80) + 5,
+            image: imgUrl ? (imgUrl.startsWith('http') ? imgUrl : `${API_URL.replace('/api', '')}${imgUrl}`) : null,
+            status: (room.DisplayStatus || room.Status) === 'available' ? 'available'
+              : (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending'
+              : (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
+            amenities: parseAmenities(room.Amenities),
+            buildingName: room.BuildingName,
+            maxPeople: room.MaxPeople,
+            landlordName: room.LandlordName,
+            views: Math.floor(Math.random() * 200) + 20,
+            latitude: room.Latitude,
+            longitude: room.Longitude,
+          }
         })
-        setListings(formattedRooms)
-        
-        // Filter rooms with coordinates for map
-        const roomsForMap = formattedRooms
-          .filter(room => room.latitude && room.longitude)
-          .map(room => ({
-            id: room.id,
-            title: room.title,
-            price: room.price,
-            latitude: room.latitude,
-            longitude: room.longitude,
-          }))
-        setRoomsWithCoordinates(roomsForMap)
-      } else {
-        setError('Không thể tải danh sách phòng')
-      }
-    } catch {
-      setError('Lỗi kết nối server')
-    } finally {
-      setLoading(false)
-    }
+        setListings(formatted)
+        setMapRooms(formatted.filter(r => r.latitude && r.longitude).map(r => ({
+          id: r.id, title: r.title, price: r.price, latitude: r.latitude, longitude: r.longitude,
+        })))
+      } else setError('Không thể tải danh sách phòng')
+    } catch { setError('Lỗi kết nối server') }
+    finally { setLoading(false) }
   }
 
-  const parseAmenities = (d) => {
+  const parseAmenities = d => {
     if (!d) return []
     try { return typeof d === 'string' ? JSON.parse(d) : Array.isArray(d) ? d : [] }
     catch { return [] }
   }
 
-  const toggleFavorite = (id, e) => {
-    e?.stopPropagation()
-    setFavorites(prev => ({ ...prev, [id]: !prev[id] }))
-  }
+  const toggleFav = (id, e) => { e?.stopPropagation(); setFavorites(prev => ({ ...prev, [id]: !prev[id] })) }
+  const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
 
-  const formatPrice = (price) => Math.floor(parseFloat(price)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const paginated = listings.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  const totalPages = Math.ceil(listings.length / PER_PAGE)
 
   return (
-    <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <Box sx={{ backgroundColor: T.bg, minHeight: '100vh' }}>
       <SecondaryMenu onCategoryChange={() => {}} onDistrictChange={() => {}} />
-      <Container maxWidth="lg" sx={{ py: 5 }}>
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.375rem', color: '#222222', mb: 0.5 }}>
-            Danh sách phòng cho thuê
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#6a6a6a' }}>
-            <Box component="span" sx={{ fontWeight: 600, color: '#222222' }}>{listings.length}</Box> phòng đang cho thuê tại Hà Nội
-          </Typography>
-        </Box>
 
-        {loading ? (
-          <Grid container spacing={4}>
-            <Grid item xs={12} lg={8}>
-              <Stack spacing={0}>
-                {[1, 2, 3, 4].map(i => <RoomCardSkeleton key={i} />)}
-              </Stack>
-            </Grid>
-            <Grid item xs={12} lg={4}>
-              <Skeleton variant="rectangular" height={400} sx={{ borderRadius: '12px' }} />
-            </Grid>
-          </Grid>
-        ) : error ? (
-          <Box sx={{ textAlign: 'center', py: 10 }}>
-            <Typography sx={{ color: '#c13515', mb: 2, fontWeight: 500 }}>{error}</Typography>
-            <Button onClick={fetchRooms} variant="contained" sx={{ backgroundColor: '#4A90E2' }}>Thử lại</Button>
-          </Box>
-        ) : listings.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 10 }}>
-            <Typography sx={{ color: '#6a6a6a', mb: 1, fontSize: '1.125rem' }}>Chưa có phòng nào được đăng</Typography>
-            <Typography variant="body2" sx={{ color: '#929292' }}>Vui lòng quay lại sau</Typography>
+      {/* ─── Toolbar ─────────────────────────────────────────────────────── */}
+      <Box sx={{ backgroundColor: T.white, borderBottom: `1px solid ${T.border}` }}>
+        <Container maxWidth="lg">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text }}>
+              <Box component="span" sx={{ color: T.blue }}>{listings.length}</Box>
+              &nbsp;phòng tại Hà Nội
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small" startIcon={<SortIcon sx={{ fontSize: 16 }} />}
+                sx={{ color: T.text, border: `1px solid ${T.border}`, borderRadius: '4px', fontSize: '0.857rem', '&:hover': { borderColor: T.text } }}
+              >
+                Sắp xếp
+              </Button>
+              <Button
+                size="small" startIcon={<FilterIcon sx={{ fontSize: 16 }} />}
+                sx={{ color: T.blue, border: `1px solid ${T.blue}`, borderRadius: '4px', fontSize: '0.857rem', fontWeight: 600, backgroundColor: T.blueLt, '&:hover': { backgroundColor: '#d0e8ff' } }}
+              >
+                Bộ lọc
+              </Button>
+            </Stack>
+          </Stack>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        {error ? (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography sx={{ color: '#8b0d1f', mb: 2 }}>{error}</Typography>
+            <Button variant="contained" onClick={fetchRooms} sx={{ backgroundColor: T.blue }}>Thử lại</Button>
           </Box>
         ) : (
-          <Grid container spacing={5}>
-            {/* Left: Listings */}
+          <Grid container spacing={3}>
+            {/* ─── Left: listings ─────────────────────────────────────────── */}
             <Grid item xs={12} lg={8}>
-              <Box>
-                {listings.map(listing => (
-                  <ListingRow key={listing.id} onClick={() => navigate(`/room/${listing.id}`)}>
-                    <ImageWrapper>
-                      {listing.image ? (
-                        <img className="listing-image" src={listing.image} alt={listing.title} />
-                      ) : (
-                        <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <NoImageIcon sx={{ fontSize: 48, color: '#c1c1c1' }} />
-                        </Box>
-                      )}
-                      <IconButton
-                        size="small"
-                        onClick={e => toggleFavorite(listing.id, e)}
-                        sx={{ position: 'absolute', top: 6, right: 6, color: favorites[listing.id] ? '#4A90E2' : 'rgba(255,255,255,0.85)', p: 0.5 }}
-                      >
-                        {favorites[listing.id]
-                          ? <FavoriteIcon sx={{ fontSize: '1.125rem' }} />
-                          : <FavoriteBorderIcon sx={{ fontSize: '1.125rem', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
-                        }
-                      </IconButton>
-                      {/* Views Badge */}
-                      <Box sx={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', alignItems: 'center', gap: 0.5, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '8px', px: 0.75, py: 0.25 }}>
-                        <EyeIcon sx={{ fontSize: '0.75rem', color: '#6a6a6a' }} />
-                        <Typography sx={{ fontSize: '0.6875rem', fontWeight: 600, color: '#6a6a6a' }}>{listing.views}</Typography>
+              <Stack spacing={2}>
+                {loading
+                  ? [1,2,3,4,5].map(i => <SkeletonCard key={i} />)
+                  : paginated.length === 0
+                    ? (
+                      <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <Typography sx={{ color: T.muted }}>Không có phòng nào</Typography>
                       </Box>
-                    </ImageWrapper>
+                    )
+                    : paginated.map(listing => (
+                        <ListingCard
+                          key={listing.id}
+                          onClick={() => navigate(`/room/${listing.id}`)}
+                          tabIndex={0} role="article"
+                          aria-label={`${listing.buildingName || listing.title}, ${fmt(listing.price)}đ/tháng, ${statusLabel[listing.status]}`}
+                          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
+                        >
+                          {/* Image */}
+                          <Box sx={{ width: 220, height: 180, position: 'relative', flexShrink: 0, backgroundColor: T.bg }}>
+                            {listing.image ? (
+                              <Box
+                                component="img" src={listing.image} alt={listing.title} loading="lazy"
+                                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                                  transition: 'transform 300ms ease',
+                                  '&:hover': { transform: 'scale(1.04)' },
+                                }}
+                                onError={e => { e.target.style.display = 'none' }}
+                              />
+                            ) : (
+                              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <NoImageIcon sx={{ fontSize: 40, color: T.border }} />
+                              </Box>
+                            )}
+                            {/* Fav */}
+                            <IconButton
+                              size="small"
+                              onClick={e => toggleFav(listing.id, e)}
+                              aria-label={favorites[listing.id] ? 'Bỏ lưu' : 'Lưu phòng'}
+                              sx={{
+                                position: 'absolute', top: 8, right: 8,
+                                backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
+                                color: favorites[listing.id] ? T.blue : '#595959', p: '4px',
+                                '&:hover': { backgroundColor: T.white, color: T.blue },
+                                '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                              }}
+                            >
+                              {favorites[listing.id] ? <FavoriteIcon sx={{ fontSize: 16 }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
+                            </IconButton>
+                            {/* Views */}
+                            <Box sx={{
+                              position: 'absolute', bottom: 8, left: 8,
+                              display: 'flex', alignItems: 'center', gap: 0.5,
+                              backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: '4px',
+                              px: 0.75, py: 0.25,
+                            }}>
+                              <EyeIcon sx={{ fontSize: 12, color: T.white }} />
+                              <Typography sx={{ fontSize: '0.714rem', color: T.white, fontWeight: 600 }}>{listing.views}</Typography>
+                            </Box>
+                          </Box>
 
-                    {/* Content */}
-                    <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', py: 0.5 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.75 }}>
-                        <Typography sx={{ fontWeight: 600, fontSize: '1.0625rem', color: '#222222', flex: 1, mr: 2 }}>
-                          {listing.buildingName || listing.title}
-                        </Typography>
-                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
-                          <StarIcon sx={{ fontSize: '0.875rem', color: '#222222' }} />
-                          <Typography sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#222222' }}>{listing.rating}</Typography>
-                          <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>({listing.reviews})</Typography>
-                        </Stack>
-                      </Stack>
+                          {/* Content */}
+                          <Box sx={{ flex: 1, p: 2, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            {/* Title row */}
+                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.5 }}>
+                              <Typography sx={{
+                                fontWeight: 700, fontSize: '0.957rem', color: T.blue,
+                                flex: 1, mr: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                '&:hover': { textDecoration: 'underline' },
+                              }}>
+                                {listing.buildingName || listing.title}
+                              </Typography>
+                              {/* Score */}
+                              <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
+                                <Box sx={{ textAlign: 'right' }}>
+                                  <Typography sx={{ fontSize: '0.714rem', color: T.muted, lineHeight: 1 }}>
+                                    {listing.reviews} đánh giá
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>Rất tốt</Typography>
+                                </Box>
+                                <ScoreBadge>{listing.rating}</ScoreBadge>
+                              </Box>
+                            </Stack>
 
-                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-                        <LocationIcon sx={{ fontSize: '0.875rem', color: '#6a6a6a' }} />
-                        <Typography variant="body2" sx={{ color: '#6a6a6a', fontSize: '0.8125rem' }}>
-                          {listing.buildingName || listing.location}
-                        </Typography>
-                      </Stack>
+                            {/* Location */}
+                            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.75 }}>
+                              <LocationIcon sx={{ fontSize: 14, color: T.muted }} />
+                              <Typography sx={{ fontSize: '0.857rem', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {listing.buildingName || listing.location}
+                              </Typography>
+                            </Stack>
 
-                      {/* Status */}
-                      <StatusBadge status={listing.status} sx={{ mb: 1.5, alignSelf: 'flex-start' }}>
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'currentColor', flexShrink: 0 }} />
-                        {statusLabel[listing.status]}
-                      </StatusBadge>
+                            {/* Status */}
+                            <StatusBadge status={listing.status} sx={{ mb: 1, alignSelf: 'flex-start' }}>
+                              <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'currentColor' }} />
+                              {statusLabel[listing.status]}
+                            </StatusBadge>
 
-                      {/* Specs */}
-                      <Stack direction="row" spacing={2.5} sx={{ mb: 1.5 }}>
-                        <Stack direction="row" alignItems="center" spacing={0.75}>
-                          <RulerIcon sx={{ fontSize: '0.875rem', color: '#6a6a6a' }} />
-                          <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>{listing.area}m²</Typography>
-                        </Stack>
-                        {listing.maxPeople && (
-                          <Stack direction="row" alignItems="center" spacing={0.75}>
-                            <GroupIcon sx={{ fontSize: '0.875rem', color: '#6a6a6a' }} />
-                            <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>{listing.maxPeople} người</Typography>
-                          </Stack>
-                        )}
-                        {listing.landlordName && (
-                          <Typography sx={{ fontSize: '0.8125rem', color: '#6a6a6a' }}>
-                            Chủ: {listing.landlordName}
-                          </Typography>
-                        )}
-                      </Stack>
+                            {/* Specs */}
+                            <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
+                              <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <RulerIcon sx={{ fontSize: 14, color: T.muted }} />
+                                <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>{listing.area}m²</Typography>
+                              </Stack>
+                              {listing.maxPeople && (
+                                <Stack direction="row" alignItems="center" spacing={0.5}>
+                                  <GroupIcon sx={{ fontSize: 14, color: T.muted }} />
+                                  <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>{listing.maxPeople} người</Typography>
+                                </Stack>
+                              )}
+                            </Stack>
 
-                      {/* Amenities */}
-                      {listing.amenities.length > 0 && (
-                        <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
-                          {listing.amenities.slice(0, 6).map(a => (
-                            <Box key={a} title={a}><AmenityIcon amenity={a} /></Box>
-                          ))}
-                          {listing.amenities.length > 6 && (
-                            <Typography sx={{ fontSize: '0.75rem', color: '#6a6a6a', alignSelf: 'center' }}>+{listing.amenities.length - 6}</Typography>
-                          )}
-                        </Stack>
-                      )}
+                            {/* Amenities */}
+                            {listing.amenities.length > 0 && (
+                              <Stack direction="row" spacing={0.75} sx={{ mb: 1.5, flexWrap: 'wrap', gap: '4px !important' }}>
+                                {listing.amenities.slice(0, 4).map(a => <AmenityTag key={a} amenity={a} />)}
+                              </Stack>
+                            )}
 
-                      {/* Price & CTA */}
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 'auto' }}>
-                        <Typography sx={{ fontSize: '1.0625rem' }}>
-                          <Box component="span" sx={{ fontWeight: 700, color: '#222222' }}>{formatPrice(listing.price)}đ</Box>
-                          <Box component="span" sx={{ color: '#6a6a6a', fontWeight: 400 }}>/tháng</Box>
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            size="small"
-                            onClick={e => { e.stopPropagation(); toggleFavorite(listing.id, e) }}
-                            sx={{ color: favorites[listing.id] ? '#4A90E2' : '#6a6a6a', borderColor: favorites[listing.id] ? '#4A90E2' : '#c1c1c1', border: '1px solid', borderRadius: '20px', px: 1.5, py: 0.75, minWidth: 'auto', fontSize: '0.8125rem' }}
-                          >
-                            {favorites[listing.id] ? 'Đã lưu' : 'Lưu'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            endIcon={<ArrowForwardIcon sx={{ fontSize: '0.875rem' }} />}
-                            sx={{ backgroundColor: '#4A90E2', '&:hover': { backgroundColor: '#2E5C8A' }, borderRadius: '20px', px: 2, py: 0.75, fontSize: '0.8125rem', fontWeight: 600 }}
-                          >
-                            Xem chi tiết
-                          </Button>
-                        </Stack>
-                      </Stack>
-                    </Box>
-                  </ListingRow>
-                ))}
-              </Box>
+                            {/* Price + CTA */}
+                            <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mt: 'auto' }}>
+                              <Box>
+                                <Typography sx={{ fontWeight: 800, fontSize: '1.143rem', color: T.text }}>
+                                  {fmt(listing.price)}đ
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>mỗi tháng</Typography>
+                              </Box>
+                              <Button
+                                size="small" variant="contained" endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+                                onClick={e => { e.stopPropagation(); navigate(`/room/${listing.id}`) }}
+                                aria-label={`Xem chi tiết ${listing.buildingName || listing.title}`}
+                                sx={{
+                                  backgroundColor: T.blue, borderRadius: '4px', fontWeight: 700,
+                                  fontSize: '0.857rem', px: 2, py: 0.75,
+                                  '&:hover': { backgroundColor: T.blueDk },
+                                  '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                                }}
+                              >
+                                Xem phòng
+                              </Button>
+                            </Box>
+                          </Box>
+                        </ListingCard>
+                      ))
+                }
+              </Stack>
 
               {/* Pagination */}
-              <Stack direction="row" spacing={1} sx={{ mt: 5, justifyContent: 'center' }}>
-                {['← Trước', '1', '2', '3', '...', '10', 'Tiếp →'].map((label, i) => (
-                  <Button
-                    key={i}
-                    variant={label === '1' ? 'contained' : 'text'}
+              {!loading && totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={totalPages} page={page}
+                    onChange={(_, v) => { setPage(v); window.scrollTo(0, 0) }}
+                    color="primary"
                     sx={{
-                      minWidth: 40, height: 40, fontWeight: label === '1' ? 700 : 400,
-                      backgroundColor: label === '1' ? '#222222' : 'transparent',
-                      color: label === '1' ? '#ffffff' : '#222222',
-                      '&:hover': { backgroundColor: label === '1' ? '#3f3f3f' : '#f7f7f7' },
-                      fontSize: '0.875rem',
-                      padding: label.includes('←') || label.includes('→') ? '0 16px' : undefined,
-                      borderRadius: label.includes('←') || label.includes('→') ? '8px' : '50%',
+                      '& .MuiPaginationItem-root': {
+                        borderRadius: '4px', fontSize: '0.857rem',
+                        '&.Mui-selected': { backgroundColor: T.blue, color: T.white, fontWeight: 700 },
+                        '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                      },
                     }}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </Stack>
+                  />
+                </Box>
+              )}
             </Grid>
 
-            {/* Right Sidebar */}
+            {/* ─── Right sidebar ───────────────────────────────────────────── */}
             <Grid item xs={12} lg={4}>
-              <Box sx={{ position: 'sticky', top: 96 }}>
+              <Box sx={{ position: 'sticky', top: 76, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {/* Map */}
-                <Box sx={{ borderRadius: '12px', overflow: 'hidden', height: 350, backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', mb: 3 }}>
-                  {roomsWithCoordinates.length > 0 ? (
-                    <RoomMap 
-                      rooms={roomsWithCoordinates}
-                      onMarkerClick={(room) => navigate(`/room/${room.id}`)}
-                    />
+                <Box sx={{
+                  borderRadius: '8px', overflow: 'hidden', height: 320,
+                  border: `1px solid ${T.border}`, boxShadow: T.shadow1,
+                }}>
+                  {mapRooms.length > 0 ? (
+                    <RoomMap rooms={mapRooms} onMarkerClick={r => navigate(`/room/${r.id}`)} />
                   ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                      <Typography sx={{ color: '#6a6a6a' }}>Chưa có phòng với tọa độ</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: T.bg }}>
+                      <Typography sx={{ color: T.muted, fontSize: '0.857rem' }}>Không có tọa độ</Typography>
                     </Box>
                   )}
                 </Box>
 
-                {/* Latest Listings */}
-                <Box sx={{ border: '1px solid #e8e8e8', borderRadius: '12px', overflow: 'hidden', p: 3 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2.5 }}>
-                    <ClockIcon sx={{ fontSize: '1.125rem', color: '#4A90E2' }} />
-                    <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: '#222222' }}>Tin đăng mới nhất</Typography>
+                {/* Latest listings sidebar */}
+                <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, boxShadow: T.shadow1, p: 2 }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 1.5, pb: 1, borderBottom: `1px solid ${T.border}` }}>
+                    Mới đăng gần đây
+                  </Typography>
+                  <Stack spacing={0}>
+                    {listings.slice(0, 6).map(listing => (
+                      <Box
+                        key={listing.id}
+                        onClick={() => navigate(`/room/${listing.id}`)}
+                        tabIndex={0} role="article"
+                        aria-label={`${listing.buildingName || listing.title}`}
+                        onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
+                        sx={{
+                          display: 'flex', gap: 1.5, py: 1.25,
+                          borderBottom: `1px solid ${T.border}`,
+                          cursor: 'pointer',
+                          '&:last-child': { borderBottom: 'none', pb: 0 },
+                          '&:hover .side-title': { color: T.blue, textDecoration: 'underline' },
+                          '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px', borderRadius: '4px' },
+                        }}
+                      >
+                        <Box sx={{ width: 64, height: 56, borderRadius: '4px', overflow: 'hidden', flexShrink: 0, backgroundColor: T.bg }}>
+                          {listing.image ? (
+                            <Box component="img" src={listing.image} alt={listing.title}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          ) : (
+                            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <NoImageIcon sx={{ fontSize: 20, color: T.border }} />
+                            </Box>
+                          )}
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography className="side-title" sx={{
+                            fontWeight: 600, fontSize: '0.857rem', color: T.text,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            transition: 'color 120ms ease',
+                          }}>
+                            {listing.buildingName || listing.title}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.857rem', color: T.blue, fontWeight: 700 }}>
+                            {fmt(listing.price)}đ/tháng
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>{listing.area}m²</Typography>
+                        </Box>
+                      </Box>
+                    ))}
                   </Stack>
-                  {listings.slice(0, 10).map(listing => (
-                    <SideCard key={listing.id} onClick={() => navigate(`/room/${listing.id}`)}>
-                      <Box sx={{ width: 72, height: 72, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: '#f2f2f2' }}>
-                        {listing.image ? (
-                          <Box component="img" src={listing.image} alt={listing.title} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <NoImageIcon sx={{ fontSize: 24, color: '#c1c1c1' }} />
-                          </Box>
-                        )}
-                      </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography className="side-title" sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#222222', mb: 0.375, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 150ms' }}>
-                          {listing.buildingName || listing.title}
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#4A90E2', fontWeight: 600, mb: 0.25 }}>
-                          {formatPrice(listing.price)}đ/tháng
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: '#6a6a6a' }}>
-                          {listing.area}m² · Mới đăng
-                        </Typography>
-                      </Box>
-                    </SideCard>
-                  ))}
                 </Box>
               </Box>
             </Grid>
@@ -411,5 +466,3 @@ function ListingPage() {
     </Box>
   )
 }
-
-export default ListingPage
