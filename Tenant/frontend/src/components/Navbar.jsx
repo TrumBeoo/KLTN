@@ -406,10 +406,8 @@ export default function Navbar() {
         </Box>
         {[
           { label: 'Hồ sơ của tôi',     action: () => { navigate('/profile'); setUserMenuAnchor(null) } },
-          { label: 'Sở thích & Tiêu chí', action: () => setUserMenuAnchor(null) },
-          { label: 'Lịch sử thuê phòng', action: () => setUserMenuAnchor(null) },
-          { label: 'Lịch xem phòng',     action: () => setUserMenuAnchor(null) },
-          { label: 'Phòng yêu thích',    action: () => setUserMenuAnchor(null) },
+          { label: 'Sở thích & Tiêu chí', action: () => { navigate('/profile?tab=preferences'); setUserMenuAnchor(null) } },
+          { label: 'Phòng yêu thích',    action: () => { navigate('/profile?tab=favorites'); setUserMenuAnchor(null) } },
           { label: 'Đổi mật khẩu',       action: () => { navigate('/change-password'); setUserMenuAnchor(null) } },
         ].map(item => (
           <MenuItem key={item.label} onClick={item.action} sx={{ py: 1, fontSize: '0.857rem' }}>

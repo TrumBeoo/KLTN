@@ -12,6 +12,7 @@ import LandlordProfile from './pages/LandlordProfile'
 import ViewingSchedulesPage from './pages/ViewingSchedulesPage'
 import ManageListings from './pages/ManageListings'
 import ManageContracts from './pages/ManageContracts'
+import ReportsPage from './pages/ReportsPage'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/listings" element={<ManageListings />} />
           <Route path="/viewing-schedules" element={<ViewingSchedulesPage />} />
           <Route path="/contracts" element={<ManageContracts />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/profile" element={<LandlordProfile />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,6 +8,7 @@ const notificationRoutes = require('./routes/notifications');
 const viewingScheduleRoutes = require('./routes/viewingSchedule');
 const roomRoutes = require('./routes/rooms');
 const locationRoutes = require('./routes/locations');
+const profileRoutes = require('./routes/profile');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api', viewingScheduleRoutes);
 app.use('/api', roomRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/tenant', profileRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 

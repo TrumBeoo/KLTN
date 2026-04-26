@@ -1,171 +1,261 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Card,
   CardContent,
-  Tabs,
-  Tab,
-  TextField,
-  Button,
+  Grid,
+  Typography,
   Avatar,
   Stack,
-  Typography,
-  Grid,
-  Paper,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  Button,
+  Chip,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Divider,
+  Paper,
+  Rating,
+  CircularProgress,
   Alert
 } from '@mui/material'
 import {
   Edit as EditIcon,
   Logout as LogoutIcon,
-  Upload as UploadIcon,
   Apartment as ApartmentIcon,
+  MeetingRoom as RoomIcon,
+  TrendingUp as TrendingUpIcon,
+  Visibility as VisibilityIcon,
+  Star as StarIcon,
   LocationOn as LocationIcon,
-  MeetingRoom as DoorIcon,
-  Check as CheckIcon,
-  Close as CloseIcon
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  CalendarToday as CalendarIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material'
 
-function TabPanel(props) {
-  const { children, value, index, ...other } = props
-  return (
-    <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-    </div>
-  )
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api'
 
 export default function LandlordProfile() {
-  const [tabValue, setTabValue] = useState(0)
-  const [editMode, setEditMode] = useState(false)
-  const [formData, setFormData] = useState({
-    name: 'Trần Thị B',
-    phone: '0987 654 321',
-    email: 'tranthib@email.com',
-    dob: '1985-05-15',
-    address: 'Quận 1, TP. Hồ Chí Minh'
-  })
-  const [passwordData, setPasswordData] = useState({
-    current: '',
-    new: '',
-    confirm: ''
-  })
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [profileData, setProfileData] = useState(null)
+  const [buildings, setBuildings] = useState([])
+  const [listings, setListings] = useState([])
+  const [reviews, setReviews] = useState([])
 
-  const buildings = [
-    {
-      name: 'Chung cư Mini Phú Nhuận',
-      address: '123 Phan Đăng Lưu, Phú Nhuận, TP.HCM',
-      rooms: { total: 12, empty: 5, rented: 7 }
-    },
-    {
-      name: 'Nhà trọ Tân Bình',
-      address: '456 Lạc Long Quân, Tân Bình, TP.HCM',
-      rooms: { total: 8, empty: 2, rented: 6 }
-    },
-    {
-      name: 'Chung cư Sinh viên Quận 7',
-      address: '789 Nguyễn Văn Linh, Quận 7, TP.HCM',
-      rooms: { total: 4, empty: 1, rented: 3 }
+  useEffect(() => {
+    fetchProfileData()
+  }, [])
+
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        navigate('/login')
+        return
+      }
+
+      // Fetch profile with stats
+      const profileRes = await fetch(`${API_URL}/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const profileJson = await profileRes.json()
+
+      if (!profileJson.success) {
+        throw new Error(profileJson.message)
+      }
+
+      setProfileData(profileJson.data)
+
+      // Fetch buildings
+      const buildingsRes = await fetch(`${API_URL}/profile/buildings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const buildingsJson = await buildingsRes.json()
+      if (buildingsJson.success) {
+        setBuildings(buildingsJson.data)
+      }
+
+      // Fetch listings
+      const listingsRes = await fetch(`${API_URL}/profile/listings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const listingsJson = await listingsRes.json()
+      if (listingsJson.success) {
+        setListings(listingsJson.data)
+      }
+
+      // Fetch reviews
+      const reviewsRes = await fetch(`${API_URL}/profile/reviews`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const reviewsJson = await reviewsRes.json()
+      if (reviewsJson.success) {
+        setReviews(reviewsJson.data)
+      }
+
+      setLoading(false)
+    } catch (err) {
+      console.error('Fetch profile error:', err)
+      setError(err.message)
+      setLoading(false)
     }
-  ]
-
-  const stats = [
-    { label: 'Tổng số phòng', value: '24', icon: ApartmentIcon },
-    { label: 'Phòng trống', value: '8', icon: DoorIcon },
-    { label: 'Phòng đã thuê', value: '14', icon: DoorIcon },
-    { label: 'Doanh thu tháng', value: '75.5M', icon: ApartmentIcon }
-  ]
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target
-    setPasswordData(prev => ({ ...prev, [name]: value }))
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/login')
   }
 
-  const handleSaveProfile = () => {
-    console.log('Saving profile:', formData)
-    setEditMode(false)
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
-  const handleChangePassword = () => {
-    console.log('Changing password:', passwordData)
-    setShowPasswordDialog(false)
-    setPasswordData({ current: '', new: '', confirm: '' })
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    )
   }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    )
+  }
+
+  if (!profileData) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning">Không tìm thấy thông tin hồ sơ</Alert>
+      </Box>
+    )
+  }
+
+  const { profile, stats } = profileData
 
   return (
     <Box>
       {/* Profile Header */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%)', color: 'white' }}>
-        <CardContent>
+      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #5E6AD2 0%, #7170FF 100%)', color: 'white', border: 'none' }}>
+        <CardContent sx={{ p: 3 }}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ xs: 'center', md: 'flex-start' }}>
+            {/* Avatar */}
             <Box sx={{ position: 'relative' }}>
               <Avatar
-                src="https://i.pravatar.cc/150?img=8"
-                sx={{ width: 112, height: 112, border: '4px solid white' }}
+                src={profile.avatarURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&size=128&background=7170FF&color=fff`}
+                sx={{ width: 112, height: 112, border: '4px solid white', boxShadow: 3 }}
               />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: 32,
-                  height: 32,
-                  backgroundColor: '#22C55E',
-                  border: '3px solid white',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1rem'
-                }}
-              >
-                <CheckIcon sx={{ fontSize: '1.25rem' }} />
-              </Box>
+              {profile.status === 'Active' && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 4,
+                    right: 4,
+                    width: 28,
+                    height: 28,
+                    backgroundColor: '#22C55E',
+                    border: '3px solid white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <CheckCircleIcon sx={{ fontSize: '1rem', color: 'white' }} />
+                </Box>
+              )}
             </Box>
 
-            <Box sx={{ flex: 1 }}>
+            {/* Profile Info */}
+            <Box sx={{ flex: 1, textAlign: { xs: 'center', md: 'left' } }}>
               <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                Trần Thị B
+                {profile.name}
               </Typography>
-              <Stack direction="row" spacing={2} sx={{ mb: 1, fontSize: '0.9375rem' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  📧 tranthib@email.com
+              <Stack 
+                direction={{ xs: 'column', sm: 'row' }} 
+                spacing={{ xs: 0.5, sm: 2 }} 
+                sx={{ mb: 1.5, fontSize: '0.9375rem', opacity: 0.95 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                  <EmailIcon sx={{ fontSize: '1rem' }} />
+                  {profile.email}
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  📱 0987 654 321
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                  <PhoneIcon sx={{ fontSize: '1rem' }} />
+                  {profile.phone}
                 </Box>
               </Stack>
-              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, backgroundColor: 'rgba(255,255,255,0.25)', px: 1.5, py: 0.5, borderRadius: 1, fontSize: '0.875rem', fontWeight: 600 }}>
-                🟢 Tài khoản hoạt động
-              </Box>
+              <Stack direction="row" spacing={1} sx={{ justifyContent: { xs: 'center', md: 'flex-start' }, flexWrap: 'wrap', gap: 1 }}>
+                <Chip
+                  icon={<CheckCircleIcon />}
+                  label="Đã xác thực"
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.25)', 
+                    color: 'white',
+                    fontWeight: 600,
+                    '& .MuiChip-icon': { color: 'white' }
+                  }}
+                />
+                <Chip
+                  icon={<StarIcon />}
+                  label={`${stats.avgRating} ⭐ (${stats.totalReviews} đánh giá)`}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.25)', 
+                    color: 'white',
+                    fontWeight: 600,
+                    '& .MuiChip-icon': { color: 'white' }
+                  }}
+                />
+                <Chip
+                  icon={<CalendarIcon />}
+                  label={`Tham gia ${formatDate(profile.memberSince)}`}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.25)', 
+                    color: 'white',
+                    fontWeight: 600,
+                    '& .MuiChip-icon': { color: 'white' }
+                  }}
+                />
+              </Stack>
             </Box>
 
-            <Stack direction="row" spacing={1}>
+            {/* Action Buttons */}
+            <Stack direction="row" spacing={1} sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}>
               <Button
                 variant="contained"
-                sx={{ backgroundColor: 'white', color: 'primary.main', textTransform: 'none' }}
+                sx={{ 
+                  backgroundColor: 'white', 
+                  color: 'primary.main',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
+                }}
                 startIcon={<EditIcon />}
+                onClick={() => navigate('/profile/edit')}
               >
                 Chỉnh sửa
               </Button>
               <Button
                 variant="outlined"
-                sx={{ borderColor: 'white', color: 'white', textTransform: 'none' }}
+                sx={{ 
+                  borderColor: 'white', 
+                  color: 'white',
+                  '&:hover': { borderColor: 'white', backgroundColor: 'rgba(255,255,255,0.1)' }
+                }}
                 startIcon={<LogoutIcon />}
+                onClick={handleLogout}
               >
                 Đăng xuất
               </Button>
@@ -174,225 +264,339 @@ export default function LandlordProfile() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Card>
-        <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="Thông tin cá nhân" />
-          <Tab label="Đổi mật khẩu" />
-          <Tab label="Thông tin chung cư" />
-        </Tabs>
+      {/* Stats Overview */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={6} sm={6} md={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+              <Box sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: 2, 
+                backgroundColor: 'primary.subtle', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 1.5
+              }}>
+                <ApartmentIcon sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {stats.totalBuildings}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Tòa nhà
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        {/* Tab 1: Personal Info */}
-        <TabPanel value={tabValue} index={0}>
-          <CardContent>
-            {editMode ? (
-              <Stack spacing={2}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Họ và tên"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleFormChange}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Số điện thoại"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleFormChange}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleFormChange}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Ngày sinh"
-                      name="dob"
-                      type="date"
-                      value={formData.dob}
-                      onChange={handleFormChange}
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      label="Địa chỉ"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleFormChange}
-                      multiline
-                      rows={2}
-                      fullWidth
-                    />
-                  </Grid>
-                </Grid>
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
-                  <Button onClick={() => setEditMode(false)}>Hủy</Button>
-                  <Button variant="contained" onClick={handleSaveProfile}>
-                    Lưu thay đổi
-                  </Button>
-                </Stack>
-              </Stack>
-            ) : (
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Họ và tên
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {formData.name}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Số điện thoại
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {formData.phone}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Email
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {formData.email}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Địa chỉ
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {formData.address}
-                  </Typography>
-                </Box>
-                <Button variant="outlined" onClick={() => setEditMode(true)} sx={{ alignSelf: 'flex-start' }}>
-                  Chỉnh sửa
+        <Grid item xs={6} sm={6} md={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+              <Box sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: 2, 
+                backgroundColor: 'info.light', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 1.5
+              }}>
+                <RoomIcon sx={{ fontSize: '1.5rem', color: 'info.main' }} />
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {stats.totalRooms}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Tổng phòng
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={6} sm={6} md={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+              <Box sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: 2, 
+                backgroundColor: 'success.light', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 1.5
+              }}>
+                <TrendingUpIcon sx={{ fontSize: '1.5rem', color: 'success.main' }} />
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {stats.occupancyRate}%
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Tỷ lệ lấp đầy
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={6} sm={6} md={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+              <Box sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: 2, 
+                backgroundColor: 'warning.light', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 1.5
+              }}>
+                <VisibilityIcon sx={{ fontSize: '1.5rem', color: 'warning.main' }} />
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {stats.activeListings}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Tin đang đăng
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        {/* Buildings List */}
+        <Grid item xs={12} lg={8}>
+          <Card>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Danh sách tòa nhà ({buildings.length})
+                </Typography>
+                <Button 
+                  size="small" 
+                  onClick={() => navigate('/buildings')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Xem tất cả
                 </Button>
               </Stack>
-            )}
-          </CardContent>
-        </TabPanel>
+              <Divider sx={{ mb: 2 }} />
+              
+              {buildings.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có tòa nhà nào
+                  </Typography>
+                </Box>
+              ) : (
+                <Stack spacing={2}>
+                  {buildings.map((building) => (
+                    <Paper 
+                      key={building.BuildingID} 
+                      sx={{ 
+                        p: 2, 
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          boxShadow: 2
+                        }
+                      }}
+                      onClick={() => navigate(`/buildings/${building.BuildingID}`)}
+                    >
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                        <Box sx={{ 
+                          width: 56, 
+                          height: 56, 
+                          borderRadius: 2, 
+                          backgroundColor: 'primary.subtle', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <ApartmentIcon sx={{ fontSize: '1.75rem', color: 'primary.main' }} />
+                        </Box>
+                        
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                            {building.BuildingName}
+                          </Typography>
+                          <Stack spacing={0.5}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.875rem', color: 'text.secondary' }}>
+                              <LocationIcon sx={{ fontSize: '1rem' }} />
+                              {building.Address}, {building.Ward}, {building.District}
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={`${building.totalRooms} phòng`} 
+                                size="small" 
+                                sx={{ fontSize: '0.75rem' }}
+                              />
+                              <Chip 
+                                label={`${building.rentedRooms} đã thuê`} 
+                                size="small" 
+                                color="success"
+                                sx={{ fontSize: '0.75rem' }}
+                              />
+                              <Chip 
+                                label={`${building.availableRooms} trống`} 
+                                size="small" 
+                                color="info"
+                                sx={{ fontSize: '0.75rem' }}
+                              />
+                              <Chip 
+                                label={`${building.occupancyRate}% lấp đầy`} 
+                                size="small" 
+                                sx={{ fontSize: '0.75rem' }}
+                              />
+                            </Box>
+                          </Stack>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Tab 2: Change Password */}
-        <TabPanel value={tabValue} index={1}>
-          <CardContent>
-            <Button variant="contained" onClick={() => setShowPasswordDialog(true)}>
-              Đổi mật khẩu
-            </Button>
-          </CardContent>
-        </TabPanel>
-
-        {/* Tab 3: Buildings */}
-        <TabPanel value={tabValue} index={2}>
-          <CardContent>
-            {/* Stats */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              {stats.map((stat, i) => (
-                <Grid item xs={12} sm={6} md={3} key={i}>
-                  <Paper sx={{ p: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      {stat.label}
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, mt: 1 }}>
-                      {stat.value}
-                    </Typography>
-                  </Paper>
+          {/* Active Listings */}
+          <Card sx={{ mt: 3 }}>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Tin đăng đang hoạt động ({listings.length})
+                </Typography>
+                <Button 
+                  size="small" 
+                  onClick={() => navigate('/listings')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Xem tất cả
+                </Button>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              
+              {listings.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có tin đăng nào
+                  </Typography>
+                </Box>
+              ) : (
+                <Grid container spacing={2}>
+                  {listings.slice(0, 6).map((listing) => (
+                    <Grid item xs={12} sm={6} key={listing.ListingID}>
+                      <Paper 
+                        sx={{ 
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          overflow: 'hidden',
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            boxShadow: 2
+                          }
+                        }}
+                        onClick={() => navigate(`/listings/${listing.ListingID}`)}
+                      >
+                        {listing.primaryImage && (
+                          <Box
+                            component="img"
+                            src={listing.primaryImage}
+                            alt={listing.Title}
+                            sx={{
+                              width: '100%',
+                              height: 160,
+                              objectFit: 'cover'
+                            }}
+                          />
+                        )}
+                        <Box sx={{ p: 2 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, noWrap: true }}>
+                            {listing.Title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.8125rem' }}>
+                            {listing.BuildingName} • {listing.RoomCode}
+                          </Typography>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                              {listing.Price?.toLocaleString('vi-VN')}đ
+                            </Typography>
+                            <Chip 
+                              icon={<VisibilityIcon />}
+                              label={listing.viewCount}
+                              size="small"
+                              sx={{ fontSize: '0.75rem' }}
+                            />
+                          </Stack>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
 
-            {/* Buildings List */}
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-              Danh sách chung cư đang quản lý
-            </Typography>
-            <Stack spacing={2}>
-              {buildings.map((building, i) => (
-                <Card key={i}>
-                  <CardContent>
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }}>
-                      <Box sx={{ width: 56, height: 56, backgroundColor: 'primary.light', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.main', fontSize: '1.75rem', flexShrink: 0 }}>
-                        🏢
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                          {building.name}
-                        </Typography>
-                        <Stack spacing={0.5}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.875rem', color: 'text.secondary' }}>
-                            <LocationIcon sx={{ fontSize: '1rem' }} />
-                            {building.address}
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.875rem', color: 'primary.main', fontWeight: 600 }}>
-                            <DoorIcon sx={{ fontSize: '1rem' }} />
-                            {building.rooms.total} phòng ({building.rooms.empty} trống, {building.rooms.rented} đã thuê)
-                          </Box>
-                        </Stack>
-                      </Box>
-                      <Button variant="outlined" sx={{ textTransform: 'none' }}>
-                        Xem chi tiết
-                      </Button>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              ))}
-            </Stack>
-          </CardContent>
-        </TabPanel>
-      </Card>
-
-      {/* Change Password Dialog */}
-      <Dialog open={showPasswordDialog} onClose={() => setShowPasswordDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Đổi mật khẩu</DialogTitle>
-        <DialogContent dividers sx={{ pt: 2 }}>
-          <Stack spacing={2}>
-            <TextField
-              label="Mật khẩu hiện tại"
-              type="password"
-              name="current"
-              value={passwordData.current}
-              onChange={handlePasswordChange}
-              fullWidth
-            />
-            <TextField
-              label="Mật khẩu mới"
-              type="password"
-              name="new"
-              value={passwordData.new}
-              onChange={handlePasswordChange}
-              fullWidth
-            />
-            <TextField
-              label="Xác nhận mật khẩu mới"
-              type="password"
-              name="confirm"
-              value={passwordData.confirm}
-              onChange={handlePasswordChange}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowPasswordDialog(false)}>Hủy</Button>
-          <Button variant="contained" onClick={handleChangePassword}>
-            Cập nhật mật khẩu
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Reviews Section */}
+        <Grid item xs={12} lg={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                Đánh giá từ người thuê
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              
+              {reviews.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có đánh giá nào
+                  </Typography>
+                </Box>
+              ) : (
+                <Stack spacing={2}>
+                  {reviews.slice(0, 5).map((review) => (
+                    <Paper key={review.ReviewID} sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
+                      <Stack direction="row" spacing={1.5} sx={{ mb: 1 }}>
+                        <Avatar 
+                          src={review.TenantAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.TenantName)}&size=40`}
+                          sx={{ width: 40, height: 40 }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {review.TenantName}
+                          </Typography>
+                          <Rating value={review.Rating} size="small" readOnly />
+                        </Box>
+                      </Stack>
+                      <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+                        {review.Content}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                        {review.BuildingName} • {review.RoomCode} • {formatDate(review.ReviewDate)}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   )
 }
