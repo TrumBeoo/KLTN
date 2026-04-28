@@ -17,8 +17,7 @@ import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box, Container, Typography, Button, Grid, Chip, Stack,
-  IconButton, Tabs, Tab, Skeleton, Fab, Tooltip, Accordion,
-  AccordionSummary, AccordionDetails,
+  IconButton, Tabs, Tab, Skeleton, Fab, Tooltip,
 } from '@mui/material'
 import {
   Star as StarIcon,
@@ -39,7 +38,6 @@ import {
   Search as SearchIcon,
   CalendarToday as CalendarIcon,
   CheckCircle as CheckIcon,
-  ExpandMore as ExpandMoreIcon,
   ArrowForward as ArrowForwardIcon,
   TrendingUp as TrendingIcon,
   Close as CloseIcon,
@@ -222,10 +220,7 @@ const StatusDot = styled(Box)(({ status }) => ({
 function SectionHeader({ children, action }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ width: 4, height: 24, backgroundColor: T.blue, borderRadius: '2px' }} />
-        <Typography sx={{ fontWeight: 700, fontSize: '1.143rem', color: T.text }}>{children}</Typography>
-      </Box>
+      <Typography sx={{ fontWeight: 700, fontSize: '1.5rem', color: T.text }}>{children}</Typography>
       {action}
     </Box>
   )
@@ -257,7 +252,7 @@ export default function HomePage() {
   const [chatOpen, setChatOpen]           = useState(false)
   const [districts, setDistricts]         = useState([])
   const [loadingDistricts, setLoadingDistricts] = useState(true)
-  const [expandedFaq, setExpandedFaq]     = useState(false)
+  const [selectedMetroLine, setSelectedMetroLine] = useState('2A')
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -268,75 +263,305 @@ export default function HomePage() {
     { value: '24/7',    label: 'Hỗ trợ AI',            icon: <BotIcon sx={{ fontSize: 32, color: T.blue }} /> },
   ]
 
-  const featuredByPrice = [
+  const nearUniversities = [
     {
-      name: 'Phòng tiết kiệm',
-      priceRange: 'Dưới 2 triệu',
-      rooms: 156,
-      badge: '💰 Giá tốt',
+      name: 'ĐH Bách Khoa Hà Nội',
+      distance: 'Trong bán kính 2km',
+      rooms: 245,
+      badge: '🎓 Sinh viên',
       badgeColor: '#008234',
-      tag: 'Phù hợp sinh viên',
+      tag: 'Đi bộ 10-15 phút',
       tagColor: '#008234',
-      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80',
-      isBig: true,
+      priceFrom: '1.800.000',
+      image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80',
     },
     {
-      name: 'Phòng trung cấp',
-      priceRange: '2-4 triệu',
-      rooms: 289,
+      name: 'ĐH Ngoại Thương',
+      distance: 'Dưới 1.5km',
+      rooms: 189,
       badge: 'Phổ biến',
       badgeColor: T.blue,
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80',
+      priceFrom: '2.200.000',
+      image: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600&q=80',
     },
     {
-      name: 'Phòng cao cấp',
-      priceRange: 'Trên 4 triệu',
-      rooms: 124,
-      badge: '⭐ Premium',
+      name: 'ĐH Kinh Tế Quốc Dân',
+      distance: 'Trong bán kính 1km',
+      rooms: 167,
+      badge: '⭐ Gần nhất',
       badgeColor: '#c8102e',
-      image: 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=600&q=80',
+      priceFrom: '2.500.000',
+      image: 'https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80',
+    },
+    {
+      name: 'ĐH FPT Hà Nội',
+      rooms: 134,
+      priceFrom: '2.000.000',
+      tag: 'Gần khu công nghệ',
+      tagColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=300&q=80',
+    },
+    {
+      name: 'ĐH Quốc Gia Hà Nội',
+      rooms: 198,
+      priceFrom: '1.900.000',
+      tag: 'Khu vực Cầu Giấy',
+      tagColor: T.muted,
+      image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=300&q=80',
+    },
+    {
+      name: 'Học viện Ngân Hàng',
+      rooms: 142,
+      priceFrom: '2.300.000',
+      tag: 'An ninh tốt',
+      tagColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?w=300&q=80',
     },
   ]
 
-  const featuredHorizontal = [
+  const metroLine2A = [
     {
-      name: 'Studio khép kín',
-      rooms: 87,
-      priceFrom: '3.500.000',
-      tag: 'Đầy đủ nội thất',
-      tagColor: T.blue,
-      image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=300&q=80',
+      name: 'Ga Cát Linh',
+      line: 'Tuyến 2A',
+      rooms: 245,
+      priceAvg: '2.500.000',
+      walkTime: '5-10 phút',
+      badge: '🚇 Ga đầu',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1554224311-beee415c201f?w=400&q=80',
     },
     {
-      name: 'Phòng có gác',
+      name: 'Ga La Thành',
+      line: 'Tuyến 2A',
+      rooms: 189,
+      priceAvg: '2.300.000',
+      walkTime: '8-12 phút',
+      badge: 'Phổ biến',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1569950593140-9b5b93fd0d86?w=400&q=80',
+    },
+    {
+      name: 'Ga Thái Hà',
+      line: 'Tuyến 2A',
+      rooms: 167,
+      priceAvg: '2.800.000',
+      walkTime: '6-10 phút',
+      badge: 'Trung tâm',
+      badgeColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=400&q=80',
+    },
+    {
+      name: 'Ga Láng',
+      line: 'Tuyến 2A',
+      rooms: 134,
+      priceAvg: '2.600.000',
+      walkTime: '7-11 phút',
+      badge: 'Yên tĩnh',
+      badgeColor: T.muted,
+      image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&q=80',
+    },
+    {
+      name: 'Ga Đại học Quốc gia',
+      line: 'Tuyến 2A',
+      rooms: 198,
+      priceAvg: '2.400.000',
+      walkTime: '5-8 phút',
+      badge: '🎓 Sinh viên',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&q=80',
+    },
+    {
+      name: 'Ga Vành đai 3',
+      line: 'Tuyến 2A',
+      rooms: 156,
+      priceAvg: '2.200.000',
+      walkTime: '10-15 phút',
+      badge: 'Giá tốt',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=400&q=80',
+    },
+    {
+      name: 'Ga Thanh Xuân 3',
+      line: 'Tuyến 2A',
+      rooms: 176,
+      priceAvg: '2.300.000',
+      walkTime: '8-12 phút',
+      badge: 'Tiện lợi',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80',
+    },
+    {
+      name: 'Ga bến xe Hà Đông',
+      line: 'Tuyến 2A',
+      rooms: 203,
+      priceAvg: '2.100.000',
+      walkTime: '5-10 phút',
+      badge: 'Sầm uất',
+      badgeColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80',
+    },
+    {
+      name: 'Ga Hà Đông',
+      line: 'Tuyến 2A',
+      rooms: 187,
+      priceAvg: '2.000.000',
+      walkTime: '6-10 phút',
+      badge: 'Phổ biến',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&q=80',
+    },
+    {
+      name: 'Ga La Khê',
+      line: 'Tuyến 2A',
       rooms: 142,
-      priceFrom: '2.800.000',
-      tag: 'Rộng rãi · 2 tầng',
-      tagColor: T.muted,
-      image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=300&q=80',
+      priceAvg: '1.900.000',
+      walkTime: '10-15 phút',
+      badge: 'Rẻ nhất',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80',
     },
     {
-      name: 'Chung cư mini',
-      rooms: 98,
-      priceFrom: '4.200.000',
-      tag: 'An ninh 24/7',
-      tagColor: '#c8102e',
-      image: 'https://images.unsplash.com/photo-1515263487990-61b07816b324?w=300&q=80',
+      name: 'Ga Văn Khê',
+      line: 'Tuyến 2A',
+      rooms: 165,
+      priceAvg: '1.950.000',
+      walkTime: '8-12 phút',
+      badge: 'Yên tĩnh',
+      badgeColor: T.muted,
+      image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&q=80',
+    },
+    {
+      name: 'Ga bến xe Yên Nghĩa',
+      line: 'Tuyến 2A',
+      rooms: 128,
+      priceAvg: '1.850.000',
+      walkTime: '12-18 phút',
+      badge: '🚇 Ga cuối',
+      badgeColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?w=400&q=80',
     },
   ]
+
+  const metroLine3 = [
+    {
+      name: 'Ga Nhổn',
+      line: 'Tuyến 3',
+      rooms: 267,
+      priceAvg: '2.700.000',
+      walkTime: '5-10 phút',
+      badge: '🚇 Ga đầu',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1554224311-beee415c201f?w=400&q=80',
+    },
+    {
+      name: 'Ga Cầu Giấy',
+      line: 'Tuyến 3',
+      rooms: 212,
+      priceAvg: '2.900.000',
+      walkTime: '6-11 phút',
+      badge: 'Trung tâm',
+      badgeColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1569950593140-9b5b93fd0d86?w=400&q=80',
+    },
+    {
+      name: 'Ga Bạch Mai',
+      line: 'Tuyến 3',
+      rooms: 189,
+      priceAvg: '2.600.000',
+      walkTime: '7-12 phút',
+      badge: 'Phổ biến',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=400&q=80',
+    },
+    {
+      name: 'Ga Chợ Dừa',
+      line: 'Tuyến 3',
+      rooms: 156,
+      priceAvg: '2.400.000',
+      walkTime: '8-13 phút',
+      badge: 'Yên tĩnh',
+      badgeColor: T.muted,
+      image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&q=80',
+    },
+    {
+      name: 'Ga Giáp Bát',
+      line: 'Tuyến 3',
+      rooms: 201,
+      priceAvg: '2.200.000',
+      walkTime: '6-10 phút',
+      badge: 'Giá tốt',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&q=80',
+    },
+    {
+      name: 'Ga Bồ Đề',
+      line: 'Tuyến 3',
+      rooms: 178,
+      priceAvg: '2.350.000',
+      walkTime: '7-11 phút',
+      badge: 'Tiện lợi',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80',
+    },
+    {
+      name: 'Ga Yên Phụ',
+      line: 'Tuyến 3',
+      rooms: 145,
+      priceAvg: '2.150.000',
+      walkTime: '9-14 phút',
+      badge: 'Yên tĩnh',
+      badgeColor: T.muted,
+      image: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=400&q=80',
+    },
+    {
+      name: 'Ga Cầu Diễn',
+      line: 'Tuyến 3',
+      rooms: 192,
+      priceAvg: '2.050.000',
+      walkTime: '8-12 phút',
+      badge: 'Phổ biến',
+      badgeColor: T.blue,
+      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80',
+    },
+    {
+      name: 'Ga Tây Mỗ',
+      line: 'Tuyến 3',
+      rooms: 168,
+      priceAvg: '1.950.000',
+      walkTime: '10-15 phút',
+      badge: 'Giá tốt',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&q=80',
+    },
+    {
+      name: 'Ga Thượng Thanh',
+      line: 'Tuyến 3',
+      rooms: 154,
+      priceAvg: '1.900.000',
+      walkTime: '9-13 phút',
+      badge: 'Rẻ nhất',
+      badgeColor: '#008234',
+      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80',
+    },
+    {
+      name: 'Ga Đông Anh',
+      line: 'Tuyến 3',
+      rooms: 131,
+      priceAvg: '1.800.000',
+      walkTime: '11-16 phút',
+      badge: '🚇 Ga cuối',
+      badgeColor: '#c8102e',
+      image: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?w=400&q=80',
+    },
+  ]
+
+  const metroStations = selectedMetroLine === '2A' ? metroLine2A : metroLine3
 
   const howItWorks = [
-    { step: 1, icon: <SearchIcon sx={{ fontSize: 28, color: T.blue }} />, title: 'Tìm phòng', desc: 'Tìm kiếm theo khu vực, ngân sách và tiện nghi' },
-    { step: 2, icon: <CalendarIcon sx={{ fontSize: 28, color: T.blue }} />, title: 'Đặt lịch xem', desc: 'Chọn khung giờ thuận tiện để đến tận nơi' },
-    { step: 3, icon: <EyeIcon sx={{ fontSize: 28, color: T.blue }} />, title: 'Xem phòng', desc: 'Gặp chủ nhà, kiểm tra thực tế' },
-    { step: 4, icon: <CheckIcon sx={{ fontSize: 28, color: T.blue }} />, title: 'Thuê phòng', desc: 'Ký hợp đồng và dọn vào ở ngay' },
-  ]
-
-  const faqs = [
-    { q: 'Làm sao để đặt lịch xem phòng?', a: 'Chọn phòng yêu thích → nhấn "Đặt lịch xem" → chọn ngày giờ. Chủ nhà xác nhận trong 24 giờ.' },
-    { q: 'Có mất phí khi sử dụng không?', a: 'Hoàn toàn miễn phí cho người thuê. Bạn chỉ trả tiền thuê trực tiếp cho chủ nhà.' },
-    { q: 'Thông tin phòng có đáng tin không?', a: '100% phòng được xác thực và kiểm duyệt. Chủ nhà phải cung cấp hình ảnh thật và thông tin chính xác.' },
-    { q: 'Tìm bạn ở ghép như thế nào?', a: 'Vào mục "Ở ghép", tạo profile và AI sẽ gợi ý người phù hợp về lối sống, ngân sách, khu vực.' },
+    { step: 1, icon: '🔍', title: 'Tìm phòng', desc: 'Tìm kiếm theo khu vực, ngân sách và tiện nghi' },
+    { step: 2, icon: '📅', title: 'Đặt lịch xem', desc: 'Chọn khung giờ thuận tiện để đến tận nơi' },
+    { step: 3, icon: '👁️', title: 'Xem phòng', desc: 'Gặp chủ nhà, kiểm tra thực tế' },
+    { step: 4, icon: '✅', title: 'Thuê phòng', desc: 'Ký hợp đồng và dọn vào ở ngay' },
   ]
 
   useEffect(() => { fetchRooms(); fetchDistricts() }, [])
@@ -488,14 +713,14 @@ export default function HomePage() {
         <SectionHeader><span id="why-heading">Tại sao chọn Rentify?</span></SectionHeader>
         <Grid container spacing={2}>
           {[
-            { icon: <VerifiedIcon sx={{ fontSize: 28, color: T.blue }} />, title: 'Phòng xác thực', desc: '100% phòng được kiểm duyệt trước khi đăng' },
-            { icon: <CameraIcon sx={{ fontSize: 28, color: T.blue }} />,    title: 'Ảnh thật 100%', desc: 'Hình ảnh chụp thực tế, không chỉnh sửa' },
-            { icon: <ShieldIcon sx={{ fontSize: 28, color: T.blue }} />,    title: 'Chủ nhà uy tín', desc: 'Xác minh danh tính và đánh giá cộng đồng' },
-            { icon: <BotIcon sx={{ fontSize: 28, color: T.blue }} />,       title: 'AI tư vấn 24/7', desc: 'Trợ lý thông minh tìm phòng siêu nhanh' },
+            { icon: <VerifiedIcon sx={{ fontSize: 50, color: '#008234' }} />, title: 'Phòng xác thực', desc: '100% phòng được kiểm duyệt trước khi đăng' },
+            { icon: <CameraIcon sx={{ fontSize: 50, color: '#f5a623' }} />,    title: 'Ảnh thật 100%', desc: 'Hình ảnh chụp thực tế, không chỉnh sửa' },
+            { icon: <ShieldIcon sx={{ fontSize: 50, color: '#c8102e' }} />,    title: 'Chủ nhà uy tín', desc: 'Xác minh danh tính và đánh giá cộng đồng' },
+            { icon: <BotIcon sx={{ fontSize: 50, color: '#6a1b9a' }} />,       title: 'AI tư vấn 24/7', desc: 'Trợ lý thông minh tìm phòng siêu nhanh' },
           ].map((item, i) => (
             <Grid item xs={6} md={3} key={i}>
               <Box sx={{
-                p: 2, backgroundColor: T.white, borderRadius: '8px',
+                p: 2, backgroundColor: T.blueLt, borderRadius: '8px',
                 border: `1px solid ${T.border}`, height: '100%',
                 transition: `box-shadow ${T.motion} ease`,
                 '&:hover': { boxShadow: T.shadow1 },
@@ -686,184 +911,6 @@ export default function HomePage() {
         </Container>
       </Box>
 
-      {/* ─── Featured by Price ─────────────────────────────────────────────── */}
-      <Box sx={{ py: 4 }}>
-        <Container maxWidth="lg" component="section" aria-labelledby="featured-price-heading">
-          <SectionHeader
-            action={
-              <Button
-                size="small"
-                endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
-                onClick={() => navigate('/listings')}
-                sx={{ color: T.blue, fontSize: '0.857rem', fontWeight: 600, p: 0 }}
-              >
-                Xem tất cả
-              </Button>
-            }
-          >
-            <span id="featured-price-heading">Phòng nổi bật</span>
-          </SectionHeader>
-
-          {/* Grid chính: 1 big card bên trái + 2 small stacked bên phải */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gridTemplateRows: 'auto',
-              gap: 1.5,
-              mb: 1.5,
-            }}
-          >
-            {/* Big card — span 2 rows */}
-            <TrendCard
-              sx={{ gridColumn: 1, gridRow: { md: '1 / 3' }, height: { xs: 220, md: 340 } }}
-              onClick={() => navigate('/listings')}
-              tabIndex={0}
-              role="article"
-              aria-label={`${featuredByPrice[0].name} - ${featuredByPrice[0].rooms} phòng`}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
-            >
-              <Box
-                className="trend-img"
-                component="img"
-                src={featuredByPrice[0].image}
-                alt={featuredByPrice[0].name}
-                loading="lazy"
-                sx={{
-                  width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                  transition: 'transform 300ms ease',
-                }}
-              />
-              {/* Gradient overlay */}
-              <Box sx={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 70%)',
-              }} />
-              {/* Badge */}
-              <Box sx={{
-                position: 'absolute', top: 12, left: 12,
-                backgroundColor: featuredByPrice[0].badgeColor,
-                color: T.white, fontSize: '0.714rem', fontWeight: 700,
-                px: 1, py: 0.25, borderRadius: '4px', letterSpacing: '0.03em',
-              }}>
-                {featuredByPrice[0].badge}
-              </Box>
-              {/* Content */}
-              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '14px 16px' }}>
-                <Typography sx={{ fontWeight: 700, fontSize: '1.286rem', color: T.white, lineHeight: 1.25, mb: 0.25 }}>
-                  {featuredByPrice[0].name}
-                </Typography>
-                <Typography sx={{ fontSize: '0.857rem', color: 'rgba(255,255,255,0.85)' }}>
-                  {featuredByPrice[0].priceRange} · {featuredByPrice[0].rooms} phòng
-                </Typography>
-                {featuredByPrice[0].tag && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75 }}>
-                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: featuredByPrice[0].tagColor, flexShrink: 0 }} />
-                    <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>
-                      {featuredByPrice[0].tag}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </TrendCard>
-
-            {/* Small card 1 */}
-            <TrendCard
-              sx={{ height: { xs: 160, md: 164 } }}
-              onClick={() => navigate('/listings')}
-              tabIndex={0}
-              role="article"
-              aria-label={`${featuredByPrice[1].name} - ${featuredByPrice[1].rooms} phòng`}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
-            >
-              <Box
-                className="trend-img"
-                component="img"
-                src={featuredByPrice[1].image}
-                alt={featuredByPrice[1].name}
-                loading="lazy"
-                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
-              />
-              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
-              <Box sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: featuredByPrice[1].badgeColor, color: T.white, fontSize: '0.714rem', fontWeight: 700, px: 1, py: 0.25, borderRadius: '4px' }}>
-                {featuredByPrice[1].badge}
-              </Box>
-              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
-                <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{featuredByPrice[1].name}</Typography>
-                <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>{featuredByPrice[1].priceRange} · {featuredByPrice[1].rooms} phòng</Typography>
-              </Box>
-            </TrendCard>
-
-            {/* Small card 2 */}
-            <TrendCard
-              sx={{ height: { xs: 160, md: 164 } }}
-              onClick={() => navigate('/listings')}
-              tabIndex={0}
-              role="article"
-              aria-label={`${featuredByPrice[2].name} - ${featuredByPrice[2].rooms} phòng`}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
-            >
-              <Box
-                className="trend-img"
-                component="img"
-                src={featuredByPrice[2].image}
-                alt={featuredByPrice[2].name}
-                loading="lazy"
-                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
-              />
-              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
-              <Box sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: featuredByPrice[2].badgeColor, color: T.white, fontSize: '0.714rem', fontWeight: 700, px: 1, py: 0.25, borderRadius: '4px' }}>
-                {featuredByPrice[2].badge}
-              </Box>
-              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
-                <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{featuredByPrice[2].name}</Typography>
-                <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>{featuredByPrice[2].priceRange} · {featuredByPrice[2].rooms} phòng</Typography>
-              </Box>
-            </TrendCard>
-          </Box>
-
-          {/* Hàng dưới: 3 horizontal cards */}
-          <Grid container spacing={1.5}>
-            {featuredHorizontal.map(d => (
-              <Grid item xs={12} sm={4} key={d.name}>
-                <TrendCardH
-                  onClick={() => navigate('/listings')}
-                  tabIndex={0}
-                  role="article"
-                  aria-label={`${d.name} - từ ${d.priceFrom}đ/tháng`}
-                  onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
-                >
-                  {/* Image */}
-                  <Box sx={{ width: 100, flexShrink: 0, overflow: 'hidden' }}>
-                    <Box
-                      className="trend-h-img"
-                      component="img"
-                      src={d.image}
-                      alt={d.name}
-                      loading="lazy"
-                      sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
-                    />
-                  </Box>
-                  {/* Content */}
-                  <Box sx={{ p: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.25 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text }}>{d.name}</Typography>
-                    <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>{d.rooms} phòng</Typography>
-                    <Typography sx={{ fontSize: '0.786rem', fontWeight: 700, color: T.blue, mt: 0.5 }}>
-                      từ {d.priceFrom}đ/tháng
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
-                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: d.tagColor, flexShrink: 0 }} />
-                      <Typography sx={{ fontSize: '0.714rem', color: d.tagColor, fontWeight: 500 }}>{d.tag}</Typography>
-                    </Box>
-                  </Box>
-                </TrendCardH>
-              </Grid>
-            ))}
-          </Grid>
-
-        </Container>
-      </Box>
-
       {/* ─── How it works ─────────────────────────────────────────────────── */}
       <Box sx={{ py: 4 }}>
         <Container maxWidth="lg" component="section">
@@ -882,7 +929,7 @@ export default function HomePage() {
                     }}>
                       {step.step}
                     </Box>
-                    {step.icon}
+                    <Box sx={{ fontSize: '1.714rem' }}>{step.icon}</Box>
                   </Box>
                   <Box>
                     <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 0.25 }}>{step.title}</Typography>
@@ -892,6 +939,704 @@ export default function HomePage() {
               </Grid>
             ))}
           </Grid>
+        </Container>
+      </Box>
+
+      {/* ─── Near Universities ─────────────────────────────────────────────── */}
+      <Box sx={{ py: 4 }}>
+        <Container maxWidth="lg" component="section" aria-labelledby="near-universities-heading">
+          <SectionHeader
+            action={
+              <Button
+                size="small"
+                endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+                onClick={() => navigate('/listings')}
+                sx={{ color: T.blue, fontSize: '0.857rem', fontWeight: 600, p: 0 }}
+              >
+                Xem tất cả
+              </Button>
+            }
+          >
+            <span id="near-universities-heading">Phòng gần trường ĐH</span>
+          </SectionHeader>
+          <Typography variant="body2" sx={{ color: T.muted, mb: 2, mt: -1, fontSize: '0.857rem' }}>
+            Tiện lợi cho sinh viên · Tiết kiệm thời gian di chuyển
+          </Typography>
+
+          {/* Grid chính: 1 big card bên trái + 2 small stacked bên phải */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gridTemplateRows: 'auto',
+              gap: 1.5,
+              mb: 1.5,
+            }}
+          >
+            {/* Big card — span 2 rows */}
+            <TrendCard
+              sx={{ gridColumn: 1, gridRow: { md: '1 / 3' }, height: { xs: 220, md: 340 } }}
+              onClick={() => navigate('/listings')}
+              tabIndex={0}
+              role="article"
+              aria-label={`${nearUniversities[0].name} - ${nearUniversities[0].rooms} phòng`}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+            >
+              <Box
+                className="trend-img"
+                component="img"
+                src={nearUniversities[0].image}
+                alt={nearUniversities[0].name}
+                loading="lazy"
+                sx={{
+                  width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                  transition: 'transform 300ms ease',
+                }}
+              />
+              {/* Gradient overlay */}
+              <Box sx={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 70%)',
+              }} />
+              {/* Badge */}
+              <Box sx={{
+                position: 'absolute', top: 12, left: 12,
+                backgroundColor: nearUniversities[0].badgeColor,
+                color: T.white, fontSize: '0.714rem', fontWeight: 700,
+                px: 1, py: 0.25, borderRadius: '4px', letterSpacing: '0.03em',
+              }}>
+                {nearUniversities[0].badge}
+              </Box>
+              {/* Content */}
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '14px 16px' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1.286rem', color: T.white, lineHeight: 1.25, mb: 0.25 }}>
+                  {nearUniversities[0].name}
+                </Typography>
+                <Typography sx={{ fontSize: '0.857rem', color: 'rgba(255,255,255,0.85)' }}>
+                  {nearUniversities[0].distance} · {nearUniversities[0].rooms} phòng
+                </Typography>
+                {nearUniversities[0].tag && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75 }}>
+                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: nearUniversities[0].tagColor, flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>
+                      {nearUniversities[0].tag}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </TrendCard>
+
+            {/* Small card 1 */}
+            <TrendCard
+              sx={{ height: { xs: 160, md: 164 } }}
+              onClick={() => navigate('/listings')}
+              tabIndex={0}
+              role="article"
+              aria-label={`${nearUniversities[1].name} - ${nearUniversities[1].rooms} phòng`}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+            >
+              <Box
+                className="trend-img"
+                component="img"
+                src={nearUniversities[1].image}
+                alt={nearUniversities[1].name}
+                loading="lazy"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
+              />
+              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
+              <Box sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: nearUniversities[1].badgeColor, color: T.white, fontSize: '0.714rem', fontWeight: 700, px: 1, py: 0.25, borderRadius: '4px' }}>
+                {nearUniversities[1].badge}
+              </Box>
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{nearUniversities[1].name}</Typography>
+                <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>{nearUniversities[1].distance} · {nearUniversities[1].rooms} phòng</Typography>
+              </Box>
+            </TrendCard>
+
+            {/* Small card 2 */}
+            <TrendCard
+              sx={{ height: { xs: 160, md: 164 } }}
+              onClick={() => navigate('/listings')}
+              tabIndex={0}
+              role="article"
+              aria-label={`${nearUniversities[2].name} - ${nearUniversities[2].rooms} phòng`}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+            >
+              <Box
+                className="trend-img"
+                component="img"
+                src={nearUniversities[2].image}
+                alt={nearUniversities[2].name}
+                loading="lazy"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
+              />
+              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
+              <Box sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: nearUniversities[2].badgeColor, color: T.white, fontSize: '0.714rem', fontWeight: 700, px: 1, py: 0.25, borderRadius: '4px' }}>
+                {nearUniversities[2].badge}
+              </Box>
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{nearUniversities[2].name}</Typography>
+                <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>{nearUniversities[2].distance} · {nearUniversities[2].rooms} phòng</Typography>
+              </Box>
+            </TrendCard>
+          </Box>
+
+          {/* Hàng dưới: 3 cards với ảnh full */}
+          <Grid container spacing={1.5}>
+            {nearUniversities.slice(3, 6).map(d => (
+              <Grid item xs={12} sm={4} key={d.name}>
+                <TrendCard
+                  sx={{ height: { xs: 160, md: 164 } }}
+                  onClick={() => navigate('/listings')}
+                  tabIndex={0}
+                  role="article"
+                  aria-label={`${d.name} - từ ${d.priceFrom}đ/tháng`}
+                  onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+                >
+                  <Box
+                    className="trend-img"
+                    component="img"
+                    src={d.image}
+                    alt={d.name}
+                    loading="lazy"
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 300ms ease' }}
+                  />
+                  <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
+                  <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: '10px 14px' }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, lineHeight: 1.2 }}>{d.name}</Typography>
+                    <Typography sx={{ fontSize: '0.786rem', color: 'rgba(255,255,255,0.85)' }}>
+                      {d.rooms} phòng · từ {d.priceFrom}đ/tháng
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: d.tagColor, flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: '0.714rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>{d.tag}</Typography>
+                    </Box>
+                  </Box>
+                </TrendCard>
+              </Grid>
+            ))}
+          </Grid>
+
+        </Container>
+      </Box>
+
+      {/* ─── Near Metro Stations ───────────────────────────────────────────── */}
+      <Box sx={{ py: 4 }}>
+        <Container maxWidth="lg" component="section" aria-labelledby="metro-heading">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box>
+              <Typography sx={{ fontWeight: 700, fontSize: '1.5rem', color: T.text }}>Phòng gần tàu điện/Metro</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button
+                size="small"
+                endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+                onClick={() => navigate('/listings')}
+                sx={{ color: T.blue, fontSize: '0.857rem', fontWeight: 600, p: 0 }}
+              >
+                Xem tất cả
+              </Button>
+            </Box>
+          </Box>
+          
+          {/* Metro Line Toggle */}
+          <Box sx={{ display: 'flex', gap: 1, mb: 3, alignItems: 'center' }}>
+            <Typography sx={{ fontSize: '0.857rem', color: T.muted, fontWeight: 500 }}>Chọn tuyến:</Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                onClick={() => setSelectedMetroLine('2A')}
+                variant={selectedMetroLine === '2A' ? 'contained' : 'outlined'}
+                size="small"
+                aria-label="Tuyến 2A"
+                sx={{
+                  borderRadius: '20px',
+                  fontSize: '0.857rem',
+                  fontWeight: 600,
+                  px: 2,
+                  backgroundColor: selectedMetroLine === '2A' ? T.blue : 'transparent',
+                  color: selectedMetroLine === '2A' ? T.white : T.blue,
+                  border: `1px solid ${T.blue}`,
+                  '&:hover': {
+                    backgroundColor: selectedMetroLine === '2A' ? T.blueDk : T.blueLt,
+                  },
+                }}
+              >
+                🚇 Tuyến 2A
+              </Button>
+              <Button
+                onClick={() => setSelectedMetroLine('3')}
+                variant={selectedMetroLine === '3' ? 'contained' : 'outlined'}
+                size="small"
+                aria-label="Tuyến 3"
+                sx={{
+                  borderRadius: '20px',
+                  fontSize: '0.857rem',
+                  fontWeight: 600,
+                  px: 2,
+                  backgroundColor: selectedMetroLine === '3' ? T.blue : 'transparent',
+                  color: selectedMetroLine === '3' ? T.white : T.blue,
+                  border: `1px solid ${T.blue}`,
+                  '&:hover': {
+                    backgroundColor: selectedMetroLine === '3' ? T.blueDk : T.blueLt,
+                  },
+                }}
+              >
+                🚇 Tuyến 3
+              </Button>
+            </Box>
+          </Box>
+          
+          <Typography variant="body2" sx={{ color: T.muted, mb: 3, mt: -1, fontSize: '0.857rem' }}>
+            {selectedMetroLine === '2A' ? 'Tuyến 2A Cát Linh - Hà Đông' : 'Tuyến 3 Nhổn - Đông Anh'} · Di chuyển nhanh · Tiết kiệm thời gian
+          </Typography>
+
+          {/* Metro Timeline - Horizontal Scroll */}
+          <Box
+            sx={{
+              position: 'relative',
+              overflowX: 'auto',
+              overflowY: 'visible',
+              pb: 2,
+              '&::-webkit-scrollbar': { height: 6 },
+              '&::-webkit-scrollbar-track': { backgroundColor: T.bg, borderRadius: '3px' },
+              '&::-webkit-scrollbar-thumb': { backgroundColor: T.border, borderRadius: '3px', '&:hover': { backgroundColor: T.muted } },
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'stretch',
+                gap: 0,
+                minWidth: 'max-content',
+                position: 'relative',
+                pt: 3,
+              }}
+            >
+              {metroStations.map((station, idx) => (
+                <Box
+                  key={station.name}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    position: 'relative',
+                    minWidth: 200,
+                  }}
+                >
+                  {/* Metro Line */}
+                  {idx < metroStations.length - 1 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 16,
+                        left: '50%',
+                        width: '100%',
+                        height: 3,
+                        background: `repeating-linear-gradient(to right, ${T.blue} 0px, ${T.blue} 8px, transparent 8px, transparent 16px)`,
+                        zIndex: 0,
+                      }}
+                    />
+                  )}
+
+                  {/* Station Icon */}
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      backgroundColor: T.blue,
+                      border: `4px solid ${T.white}`,
+                      boxShadow: `0 0 0 2px ${T.blue}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 2,
+                      mb: 1.5,
+                    }}
+                  >
+                    <Box sx={{ fontSize: '1rem' }}>🚇</Box>
+                  </Box>
+
+                  {/* Station Card */}
+                  <Box
+                    onClick={() => navigate('/listings')}
+                    tabIndex={0}
+                    role="article"
+                    aria-label={`${station.name} - ${station.rooms} phòng`}
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+                    sx={{
+                      width: 180,
+                      backgroundColor: T.white,
+                      border: `1px solid ${T.border}`,
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: `all ${T.motion} ease`,
+                      '&:hover': {
+                        boxShadow: 'rgba(26,26,26,0.24) 0px 8px 24px',
+                        transform: 'translateY(-4px)',
+                        borderColor: T.blue,
+                      },
+                      '&:hover .metro-img': { transform: 'scale(1.08)' },
+                      '&:focus-visible': {
+                        outline: `2px solid ${T.blue}`,
+                        outlineOffset: '2px',
+                      },
+                    }}
+                  >
+                    {/* Image */}
+                    <Box sx={{ height: 100, position: 'relative', overflow: 'hidden', backgroundColor: T.bg }}>
+                      <Box
+                        className="metro-img"
+                        component="img"
+                        src={station.image}
+                        alt={station.name}
+                        loading="lazy"
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: 'block',
+                          transition: 'transform 300ms ease',
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)',
+                        }}
+                      />
+                      {/* Badge */}
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 6,
+                          left: 6,
+                          backgroundColor: station.badgeColor,
+                          color: T.white,
+                          fontSize: '0.643rem',
+                          fontWeight: 700,
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: '3px',
+                        }}
+                      >
+                        {station.badge}
+                      </Box>
+                    </Box>
+
+                    {/* Content */}
+                    <Box sx={{ p: 1.5 }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.857rem',
+                          color: T.text,
+                          mb: 0.5,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {station.name}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: '0.714rem',
+                          color: T.muted,
+                          mb: 1,
+                        }}
+                      >
+                        {station.line}
+                      </Typography>
+
+                      {/* Walking time */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
+                        <Box sx={{ fontSize: '0.857rem' }}>🚶</Box>
+                        <Typography sx={{ fontSize: '0.714rem', color: T.muted }}>
+                          {station.walkTime}
+                        </Typography>
+                      </Box>
+
+                      {/* Rooms count */}
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          pt: 0.75,
+                          borderTop: `1px solid ${T.border}`,
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '0.714rem', color: T.muted }}>
+                          {station.rooms} phòng
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontSize: '0.786rem',
+                            fontWeight: 700,
+                            color: T.blue,
+                          }}
+                        >
+                          ~{fmt(station.priceAvg)}đ
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Info note */}
+          <Box
+            sx={{
+              mt: 3,
+              p: 2,
+              backgroundColor: T.blueLt,
+              borderRadius: '8px',
+              border: `1px solid ${T.blue}20`,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Box sx={{ fontSize: '1.286rem', flexShrink: 0, mt: 0.25 }}></Box>
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.857rem', color: T.text, mb: 0.5 }}>
+                  Lợi ích khi ở gần ga tàu điện
+                </Typography>
+                <Typography sx={{ fontSize: '0.786rem', color: T.muted, lineHeight: 1.6 }}>
+                  Tiết kiệm 30-45 phút di chuyển mỗi ngày · Tránh kẹt xe giờ cao điểm · An toàn và tiện lợi · Giá vé chỉ 8.000-15.000đ/lượt
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* ─── Nearby Amenities ──────────────────────────────────────────────── */}
+      <Box sx={{ py: 4 }}>
+        <Container maxWidth="lg" component="section" aria-labelledby="amenities-heading">
+          <SectionHeader>
+            <span id="amenities-heading">Tiện ích xung quanh</span>
+          </SectionHeader>
+          <Typography variant="body2" sx={{ color: T.muted, mb: 3, mt: -1, fontSize: '0.857rem' }}>
+            Tìm phòng theo tiện ích sinh hoạt hàng ngày · Thuận tiện cho cuộc sống
+          </Typography>
+
+          <Grid container spacing={2}>
+            {[
+              {
+                icon: '🏪',
+                title: 'Gần siêu thị',
+                desc: 'Circle K, Mini Stop, VinMart',
+                rooms: 342,
+                color: '#008234',
+                image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&q=80',
+              },
+              {
+                icon: '🏥',
+                title: 'Gần bệnh viện',
+                desc: 'Phòng khám, bệnh viện',
+                rooms: 218,
+                color: '#c8102e',
+                image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&q=80',
+              },
+              {
+                icon: '🍜',
+                title: 'Gần chợ/quán ăn',
+                desc: 'Chợ, khu ẩm thực',
+                rooms: 456,
+                color: '#f5a623',
+                image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80',
+              },
+              {
+                icon: '💪',
+                title: 'Gần gym/thể thao',
+                desc: 'Phòng gym, sân thể thao',
+                rooms: 187,
+                color: T.blue,
+                image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80',
+              },
+              {
+                icon: '🏦',
+                title: 'Gần ngân hàng',
+                desc: 'ATM, chi nhánh ngân hàng',
+                rooms: 298,
+                color: '#6a1b9a',
+                image: 'https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&q=80',
+              },
+              {
+                icon: '☕',
+                title: 'Gần cafe/coworking',
+                desc: 'Quán cafe, không gian làm việc',
+                rooms: 265,
+                color: '#5d4037',
+                image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&q=80',
+              },
+            ].map((item, i) => (
+              <Grid item xs={6} md={4} key={i}>
+                <Box
+                  onClick={() => navigate('/listings')}
+                  tabIndex={0}
+                  role="article"
+                  aria-label={`${item.title} - ${item.rooms} phòng`}
+                  onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/listings')}
+                  sx={{
+                    position: 'relative',
+                    height: { xs: 180, md: 200 },
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: `1px solid ${T.border}`,
+                    transition: `all ${T.motion} ease`,
+                    '&:hover': {
+                      boxShadow: 'rgba(26,26,26,0.24) 0px 8px 24px',
+                      transform: 'translateY(-4px)',
+                    },
+                    '&:hover .amenity-img': { transform: 'scale(1.08)' },
+                    '&:focus-visible': {
+                      outline: `2px solid ${T.blue}`,
+                      outlineOffset: '2px',
+                    },
+                  }}
+                >
+                  {/* Background Image */}
+                  <Box
+                    className="amenity-img"
+                    component="img"
+                    src={item.image}
+                    alt={item.title}
+                    loading="lazy"
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      transition: 'transform 300ms ease',
+                    }}
+                  />
+
+                  {/* Gradient Overlay */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+                    }}
+                  />
+
+                  {/* Icon Badge */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 12,
+                      left: 12,
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(255,255,255,0.95)',
+                      backdropFilter: 'blur(8px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.714rem',
+                      boxShadow: 'rgba(0,0,0,0.15) 0px 2px 8px',
+                    }}
+                  >
+                    {item.icon}
+                  </Box>
+
+                  {/* Content */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      p: '12px 14px',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: '1rem',
+                        color: T.white,
+                        mb: 0.25,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {item.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '0.786rem',
+                        color: 'rgba(255,255,255,0.85)',
+                        mb: 0.75,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {item.desc}
+                    </Typography>
+
+                    {/* Rooms Badge */}
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        px: 1.25,
+                        py: 0.5,
+                        borderRadius: '20px',
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          backgroundColor: T.white,
+                        }}
+                      />
+                      <Typography
+                        sx={{
+                          fontSize: '0.786rem',
+                          fontWeight: 600,
+                          color: T.white,
+                        }}
+                      >
+                        {item.rooms} phòng
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Info note */}
+          <Box
+            sx={{
+              mt: 3,
+              p: 2,
+              backgroundColor: '#fff9e6',
+              borderRadius: '8px',
+              border: '1px solid #febb0220',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Box sx={{ fontSize: '1.286rem', flexShrink: 0, mt: 0.25 }}></Box>
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.857rem', color: T.text, mb: 0.5 }}>
+                  Mẹo chọn phòng theo tiện ích
+                </Typography>
+                <Typography sx={{ fontSize: '0.786rem', color: T.muted, lineHeight: 1.6 }}>
+                  Ưu tiên chọn phòng gần siêu thị và chợ để mua sắm hàng ngày · Gần bệnh viện/phòng khám giúp an tâm khi cần khám chữa bệnh · Khu vực có nhiều quán ăn tiết kiệm thời gian nấu nướng · Gym và cafe phù hợp với người trẻ năng động
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
@@ -922,15 +1667,15 @@ export default function HomePage() {
         <Container maxWidth="lg" component="section">
           <Grid container spacing={2}>
             {[
-              { icon: <MapIcon sx={{ fontSize: 32, color: T.blue }} />, title: 'Xem phòng trên bản đồ',
+              { icon: '🗺️', title: 'Xem phòng trên bản đồ',
                 desc: 'Tìm phòng theo vị trí, khoảng cách đến trường, công ty, bệnh viện',
-                btn: 'Khám phá bản đồ', btnColor: T.blue, onClick: () => navigate('/listings') },
-              { icon: <PeopleIcon sx={{ fontSize: 32, color: '#008234' }} />, title: 'Tìm bạn ở ghép',
+                btn: 'Khám phá bản đồ', btnColor: '#006ce4', onClick: () => navigate('/listings') },
+              { icon: '👥', title: 'Tìm bạn ở ghép',
                 desc: 'Kết nối người có cùng sở thích, tiết kiệm chi phí, an toàn hơn',
-                btn: 'Tìm bạn ngay', btnColor: '#008234', onClick: () => navigate('/roommate') },
-              { icon: <HomeIcon sx={{ fontSize: 32, color: T.yellow }} />, title: 'Bạn là chủ nhà?',
+                btn: 'Tìm bạn ngay', btnColor: '#6a1b9a', onClick: () => navigate('/roommate') },
+              { icon: '🏠', title: 'Bạn là chủ nhà?',
                 desc: 'Đăng tin miễn phí, tiếp cận hàng nghìn người thuê đang tìm kiếm',
-                btn: 'Đăng phòng miễn phí', btnColor: T.yellow, btnTextColor: T.text,
+                btn: 'Đăng phòng miễn phí', btnColor: '#f5a623', btnTextColor: T.white,
                 onClick: () => window.location.href = 'http://localhost:3333/login' },
             ].map((item, i) => (
               <Grid item xs={12} md={4} key={i}>
@@ -940,7 +1685,7 @@ export default function HomePage() {
                   transition: `box-shadow ${T.motion} ease`,
                   '&:hover': { boxShadow: T.shadow1 },
                 }}>
-                  {item.icon}
+                  <Box sx={{ fontSize: '1.714rem' }}>{item.icon}</Box>
                   <Box sx={{ flex: 1 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 0.5 }}>{item.title}</Typography>
                     <Typography sx={{ fontSize: '0.857rem', color: T.muted, lineHeight: 1.6 }}>{item.desc}</Typography>
@@ -962,35 +1707,6 @@ export default function HomePage() {
               </Grid>
             ))}
           </Grid>
-        </Container>
-      </Box>
-
-      {/* ─── FAQ ──────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: 4 }}>
-        <Container maxWidth="lg" component="section" aria-labelledby="faq-heading">
-        <SectionHeader><span id="faq-heading">Câu hỏi thường gặp</span></SectionHeader>
-        {faqs.map((faq, i) => (
-          <Accordion
-            key={i}
-            expanded={expandedFaq === i}
-            onChange={() => setExpandedFaq(expandedFaq === i ? false : i)}
-            sx={{ mb: 1, border: `1px solid ${T.border}`, borderRadius: '4px !important',
-              '&:before': { display: 'none' }, boxShadow: 'none' }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon sx={{ color: T.blue }} />}
-              aria-controls={`faq-${i}-content`}
-              id={`faq-${i}-header`}
-              sx={{ '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
-                '& .MuiAccordionSummary-content': { my: 1.5 } }}
-            >
-              <Typography sx={{ fontWeight: 600, fontSize: '0.929rem', color: T.text }}>{faq.q}</Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={{ pt: 0 }}>
-              <Typography sx={{ fontSize: '0.857rem', color: T.muted, lineHeight: 1.6 }}>{faq.a}</Typography>
-            </AccordionDetails>
-          </Accordion>
-        ))}
         </Container>
       </Box>
 
