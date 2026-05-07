@@ -172,3 +172,135 @@ router.get('/nearby', async (req, res) => {
 });
 
 module.exports = router;
+
+
+// Get all POIs with room count
+router.get('/pois', async (req, res) => {
+  try {
+    const { type, district, line } = req.query;
+    
+    let query = `
+      SELECT 
+        p.POIID,
+        p.Name as POIName,
+        p.TypeCode as POIType,
+        p.Address,
+        p.District,
+        p.Latitude,
+        p.Longitude,
+        COUNT(DISTINCT rp.RoomID) as RoomCount,
+        AVG(r.Price) as AvgPrice
+      FROM POI p
+      LEFT JOIN ROOM_POI rp ON p.POIID = rp.POIID
+      LEFT JOIN ROOM r ON rp.RoomID = r.RoomID 
+        AND r.Status = 'available' 
+        AND r.DraftStatus = 'published'
+      WHERE p.IsActive = TRUE
+    `;
+    
+    const params = [];
+    
+    if (type) {
+      query += ' AND p.TypeCode = ?';
+      params.push(type);
+    }
+    
+    if (district) {
+      query += ' AND p.District = ?';
+      params.push(district);
+    }
+    
+    query += ' GROUP BY p.POIID ORDER BY RoomCount DESC, p.Name';
+    
+    const [pois] = await db.query(query, params);
+    
+    res.json({ success: true, data: pois });
+  } catch (error) {
+    console.error('Get POIs error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách POI' });
+  }
+});
+
+// Get POI by ID
+router.get('/pois/:poiId', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+    
+    const [pois] = await db.query(
+      `SELECT 
+        p.POIID,
+        p.Name as POIName,
+        p.TypeCode as POIType,
+        p.Address,
+        p.District,
+        p.Latitude,
+        p.Longitude,
+        COUNT(DISTINCT rp.RoomID) as RoomCount,
+        AVG(r.Price) as AvgPrice
+      FROM POI p
+      LEFT JOIN ROOM_POI rp ON p.POIID = rp.POIID
+      LEFT JOIN ROOM r ON rp.RoomID = r.RoomID 
+        AND r.Status = 'available' 
+        AND r.DraftStatus = 'published'
+      WHERE p.POIID = ? AND p.IsActive = TRUE
+      GROUP BY p.POIID`,
+      [poiId]
+    );
+    
+    if (pois.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy POI' });
+    }
+    
+    res.json({ success: true, data: pois[0] });
+  } catch (error) {
+    console.error('Get POI by ID error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy thông tin POI' });
+  }
+});
+
+// Get rooms by POI
+router.get('/pois/:poiId/rooms', async (req, res) => {
+  try {
+    const { poiId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const query = `
+      SELECT 
+        r.*,
+        loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
+        loc.Latitude, loc.Longitude,
+        b.BuildingName,
+        (SELECT ImageURL FROM ROOM_IMAGE WHERE RoomID = r.RoomID ORDER BY DisplayOrder LIMIT 1) as PrimaryImage,
+        (SELECT GROUP_CONCAT(ImageURL) FROM ROOM_IMAGE WHERE RoomID = r.RoomID ORDER BY DisplayOrder) as Images
+      FROM ROOM_POI rp
+      INNER JOIN ROOM r ON rp.RoomID = r.RoomID
+      LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
+      LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+      WHERE rp.POIID = ?
+        AND r.Status = 'available'
+        AND r.DraftStatus = 'published'
+      ORDER BY r.UpdatedAt DESC
+      LIMIT ? OFFSET ?
+    `;
+    
+    const [rooms] = await db.query(query, [poiId, parseInt(limit), parseInt(offset)]);
+    
+    // Get total count
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) as total 
+       FROM ROOM_POI rp
+       INNER JOIN ROOM r ON rp.RoomID = r.RoomID
+       WHERE rp.POIID = ? AND r.Status = 'available' AND r.DraftStatus = 'published'`,
+      [poiId]
+    );
+    
+    res.json({ 
+      success: true, 
+      data: rooms,
+      total: countResult[0].total
+    });
+  } catch (error) {
+    console.error('Get rooms by POI error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách phòng theo POI' });
+  }
+});

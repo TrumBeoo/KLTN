@@ -44,6 +44,7 @@ import {
 } from '@mui/icons-material'
 import { useNotification } from '../hooks/useNotification'
 import NotificationModal from './NotificationModal'
+import POISelector from './POISelector'
 
 export default function ExcelUploadWithImages() {
   const { notification, showSuccess, showError, hideNotification } = useNotification()
@@ -62,6 +63,9 @@ export default function ExcelUploadWithImages() {
   const [selectedBuilding, setSelectedBuilding] = useState('')
   const [filterStats, setFilterStats] = useState(null)
   const [buildingInfo, setBuildingInfo] = useState(null)
+  const [poiDialogOpen, setPoiDialogOpen] = useState(false)
+  const [selectedRoomForPOI, setSelectedRoomForPOI] = useState(null)
+  const [roomPOIs, setRoomPOIs] = useState({})
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api'
   const token = localStorage.getItem('token')
@@ -416,6 +420,43 @@ export default function ExcelUploadWithImages() {
       showError('Lỗi!', 'Không thể publish')
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleOpenPOIDialog = (room) => {
+    setSelectedRoomForPOI(room)
+    setPoiDialogOpen(true)
+  }
+
+  const handleSavePOIs = async (poiIds) => {
+    if (!selectedRoomForPOI || !selectedRoomForPOI.roomId) {
+      showError('Lỗi!', 'Vui lòng tạo phòng trước khi chọn POI')
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/poi/link-room`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          roomId: selectedRoomForPOI.roomId, 
+          poiIds 
+        })
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        showSuccess('Thành công!', `Đã liên kết ${poiIds.length} POI với phòng ${selectedRoomForPOI.roomCode}`)
+        setRoomPOIs(prev => ({ ...prev, [selectedRoomForPOI.roomCode]: poiIds }))
+        setPoiDialogOpen(false)
+      } else {
+        showError('Lỗi!', data.message)
+      }
+    } catch (error) {
+      showError('Lỗi!', 'Không thể liên kết POI')
     }
   }
 
@@ -867,14 +908,26 @@ export default function ExcelUploadWithImages() {
                           <Chip label="Đã publish" color="success" size="small" />
                         )}
                       </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
                         {room.title || 'Chưa có tiêu đề'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                         📷 {room.imageCount || 0} ảnh
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                        📍 {roomPOIs[room.roomCode]?.length || 0} POI
                       </Typography>
                       
                       <Stack spacing={1}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleOpenPOIDialog(room)}
+                          fullWidth
+                          disabled={!room.created || room.published}
+                        >
+                          Chọn POI ({roomPOIs[room.roomCode]?.length || 0})
+                        </Button>
                         <Button
                           variant="outlined"
                           size="small"
@@ -924,6 +977,23 @@ export default function ExcelUploadWithImages() {
         title={notification.title}
         message={notification.message}
       />
+
+      {/* POI Dialog */}
+      <Dialog open={poiDialogOpen} onClose={() => setPoiDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Chọn POI cho phòng {selectedRoomForPOI?.roomCode}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <POISelector
+              value={roomPOIs[selectedRoomForPOI?.roomCode] || []}
+              onChange={(poiIds) => handleSavePOIs(poiIds)}
+              district={buildingInfo?.District}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPoiDialogOpen(false)}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

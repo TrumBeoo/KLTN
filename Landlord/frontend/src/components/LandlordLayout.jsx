@@ -46,8 +46,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
 const menuItems = [
   { label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { label: 'Chung cư', icon: ApartmentIcon, path: '/manage-buildings' },
-  { label: 'Phòng', icon: DoorIcon, path: '/manage-rooms' },
-  { label: 'Tin đăng', icon: AnnouncementIcon, path: '/listings' },
+  { label: 'Phòng & Tin đăng', icon: DoorIcon, path: '/manage-rooms' },
   { label: 'Lịch xem phòng', icon: CalendarIcon, path: '/viewing-schedules' },
   { label: 'Hợp đồng', icon: ContractIcon, path: '/contracts' }
 ]
@@ -343,8 +342,7 @@ export default function LandlordLayout() {
   const pageTitles = {
     '/dashboard': 'Dashboard',
     '/manage-buildings': 'Quản lý chung cư',
-    '/manage-rooms': 'Quản lý phòng',
-    '/listings': 'Tin đăng',
+    '/manage-rooms': 'Quản lý phòng & Tin đăng',
     '/viewing-schedules': 'Lịch xem phòng',
     '/contracts': 'Hợp đồng',
     '/profile': 'Hồ sơ của tôi',

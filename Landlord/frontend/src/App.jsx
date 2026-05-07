@@ -10,7 +10,6 @@ import ManageRooms from './pages/ManageRooms'
 import ManageBuildings from './pages/ManageBuildings'
 import LandlordProfile from './pages/LandlordProfile'
 import ViewingSchedulesPage from './pages/ViewingSchedulesPage'
-import ManageListings from './pages/ManageListings'
 import ManageContracts from './pages/ManageContracts'
 import ReportsPage from './pages/ReportsPage'
 
@@ -26,7 +25,6 @@ function App() {
           <Route path="/dashboard" element={<LandlordDashboard />} />
           <Route path="/manage-buildings" element={<ManageBuildings />} />
           <Route path="/manage-rooms" element={<ManageRooms />} />
-          <Route path="/listings" element={<ManageListings />} />
           <Route path="/viewing-schedules" element={<ViewingSchedulesPage />} />
           <Route path="/contracts" element={<ManageContracts />} />
           <Route path="/reports" element={<ReportsPage />} />

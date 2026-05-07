@@ -121,9 +121,9 @@ class RoomService {
     return images;
   }
 
-  async getAllRooms(limit = 20, offset = 0) {
-    const [rooms] = await db.query(
-      `SELECT r.*, 
+  async getAllRooms(limit = 20, offset = 0, poiId = null, district = null) {
+    let query = `
+      SELECT r.*, 
               l.Name as LandlordName, 
               b.BuildingName, b.Address as BuildingAddress,
               loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
@@ -132,12 +132,36 @@ class RoomService {
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
-       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
-       WHERE r.Status IN ('available', 'viewing') OR r.Status = 'rented'
+       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID`;
+    
+    const params = [];
+    const conditions = [];
+    
+    if (poiId) {
+      query += `
+       INNER JOIN ROOM_POI rp ON r.RoomID = rp.RoomID`;
+      conditions.push('rp.POIID = ?');
+      params.push(poiId);
+    }
+    
+    conditions.push("(r.Status IN ('available', 'viewing') OR r.Status = 'rented')");
+    
+    if (district) {
+      conditions.push('loc.District = ?');
+      params.push(district);
+    }
+    
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+    
+    query += `
        ORDER BY r.UpdatedAt DESC
-       LIMIT ? OFFSET ?`,
-      [limit, offset]
-    );
+       LIMIT ? OFFSET ?`;
+    
+    params.push(limit, offset);
+    
+    const [rooms] = await db.query(query, params);
     
     // Trả về danh sách phòng với DisplayStatus = Status thực
     return rooms.map(room => {

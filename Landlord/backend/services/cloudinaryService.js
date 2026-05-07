@@ -51,23 +51,37 @@ async function uploadImage(fileBuffer, folder = 'rooms/images', options = {}) {
  */
 async function uploadDocument(fileBuffer, documentType = 'documents', options = {}) {
   return new Promise((resolve, reject) => {
+    // Xác định resource_type dựa trên file type
+    const resourceType = options.resource_type || 'raw'; // PDF, DOCX = raw, images = image
+    
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: `rooms/${documentType}`,
-        resource_type: 'auto',
+        folder: `documents/${documentType}`,
+        resource_type: resourceType,
         overwrite: false,
+        // Thêm các options quan trọng cho documents
+        access_mode: 'public', // Đảm bảo file có thể truy cập công khai
         ...options
       },
       (error, result) => {
         if (error) {
+          console.error('Cloudinary upload error:', error);
           reject(new Error(`Cloudinary upload failed: ${error.message}`));
         } else {
+          console.log('Cloudinary upload success:', {
+            public_id: result.public_id,
+            secure_url: result.secure_url,
+            resource_type: result.resource_type,
+            format: result.format,
+            bytes: result.bytes
+          });
           resolve({
             secure_url: result.secure_url,
             public_id: result.public_id,
             url: result.secure_url,
             bytes: result.bytes,
-            format: result.format
+            format: result.format,
+            resource_type: result.resource_type
           });
         }
       }

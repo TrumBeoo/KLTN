@@ -32,6 +32,9 @@ import {
   NavigateNext as NavNextIcon,
   Info as InfoIcon,
   Hotel as HotelIcon,
+  Description as DocumentIcon,
+  Download as DownloadIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
@@ -99,6 +102,9 @@ export default function RoomDetailPage() {
   const [openSchedule, setOpenSchedule]   = useState(false)
   const [openLoginModal, setOpenLoginModal] = useState(false)
   const [openCancelModal, setOpenCancelModal] = useState(false)
+  const [openDocuments, setOpenDocuments] = useState(false)
+  const [documents, setDocuments] = useState([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
   const [userSchedule, setUserSchedule]   = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [scheduleData, setScheduleData]   = useState({ date: '', time: '', name: '', phone: '' })
@@ -112,6 +118,24 @@ export default function RoomDetailPage() {
 
   useEffect(() => { if (roomId) { fetchRoom(); fetchUserSchedule() } }, [roomId])
   useEffect(() => { if (roomId) fetchUserSchedule() }, [auth.user])
+
+  const fetchDocuments = async () => {
+    setLoadingDocs(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API}/documents/room/${roomId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDocuments(data.data || [])
+      }
+    } catch (err) {
+      console.error('Fetch documents error:', err)
+    } finally {
+      setLoadingDocs(false)
+    }
+  }
 
   const fetchRoom = async () => {
     try {
@@ -502,19 +526,33 @@ export default function RoomDetailPage() {
                     )}
                   </Box>
                 ) : canSchedule ? (
-                  <Button
-                    fullWidth variant="contained"
-                    onClick={() => auth.user ? setOpenSchedule(true) : setOpenLoginModal(true)}
-                    sx={{
-                      backgroundColor: T.yellow, color: T.text, borderRadius: '4px',
-                      fontWeight: 700, fontSize: '1rem', py: 1.5, mb: 1.5,
-                      '&:hover': { backgroundColor: '#f5aa00' },
-                      '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
-                    }}
-                  >
-                    <CalendarIcon sx={{ mr: 1, fontSize: 20 }} />
-                    Đặt lịch xem phòng
-                  </Button>
+                  <>
+                    <Button
+                      fullWidth variant="contained"
+                      onClick={() => auth.user ? setOpenSchedule(true) : setOpenLoginModal(true)}
+                      sx={{
+                        backgroundColor: T.yellow, color: T.text, borderRadius: '4px',
+                        fontWeight: 700, fontSize: '1rem', py: 1.5, mb: 1.5,
+                        '&:hover': { backgroundColor: '#f5aa00' },
+                        '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                      }}
+                    >
+                      <CalendarIcon sx={{ mr: 1, fontSize: 20 }} />
+                      Đặt lịch xem phòng
+                    </Button>
+                    <Button
+                      fullWidth variant="outlined"
+                      onClick={() => { setOpenDocuments(true); fetchDocuments() }}
+                      sx={{
+                        borderColor: T.blue, borderWidth: '2px', color: T.blue, borderRadius: '4px',
+                        fontWeight: 700, fontSize: '0.929rem', py: 1.25, mb: 1.5,
+                        '&:hover': { borderWidth: '2px', backgroundColor: T.blueLt },
+                      }}
+                    >
+                      <DocumentIcon sx={{ mr: 1, fontSize: 18 }} />
+                      Xem trước hợp đồng
+                    </Button>
+                  </>
                 ) : (
                   <Box sx={{ backgroundColor: '#fde8eb', borderRadius: '4px', p: 1.5, mb: 1.5 }}>
                     <Typography sx={{ fontWeight: 700, color: '#8b0d1f', fontSize: '0.929rem' }}>Không thể đặt lịch</Typography>
@@ -667,6 +705,96 @@ export default function RoomDetailPage() {
       </Dialog>
 
       <NotificationModal open={notification.open} onClose={hideNotification} type={notification.type} title={notification.title} message={notification.message} />
+
+      {/* Documents modal */}
+      <Dialog open={openDocuments} onClose={() => setOpenDocuments(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '8px' } }}>
+        <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text }}>Tài liệu phòng</Typography>
+          <IconButton size="small" onClick={() => setOpenDocuments(false)} aria-label="Đóng"><CloseIcon /></IconButton>
+        </Box>
+        <Box sx={{ p: 3 }}>
+          {loadingDocs ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={32} sx={{ color: T.blue }} />
+            </Box>
+          ) : documents.length > 0 ? (
+            <Stack spacing={1.5}>
+              {documents.map(doc => (
+                <Box
+                  key={doc.DocumentID}
+                  sx={{
+                    p: 2, borderRadius: '8px', border: `1px solid ${T.border}`,
+                    backgroundColor: T.white,
+                    '&:hover': { backgroundColor: T.bg, borderColor: T.blue },
+                    transition: 'all 120ms ease',
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <DocumentIcon sx={{ fontSize: 24, color: T.blue }} />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '0.929rem', color: T.text }}>
+                        {doc.Title}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>
+                        {doc.Type === 'contract' ? 'Hợp đồng' : doc.Type === 'rule' ? 'Nội quy' : 'Tài liệu'}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={0.75}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          const isPdf = doc.FileType === 'pdf' || doc.FileURL?.toLowerCase().includes('.pdf')
+                          const url = isPdf
+                            ? `https://docs.google.com/viewer?url=${encodeURIComponent(doc.FileURL)}&embedded=true`
+                            : doc.FileURL
+                          window.open(url, '_blank')
+                        }}
+                        sx={{
+                          borderColor: T.blue, color: T.blue, borderRadius: '4px',
+                          fontSize: '0.786rem', fontWeight: 600, px: 1.5, minWidth: 0,
+                          '&:hover': { backgroundColor: T.blueLt },
+                        }}
+                      >
+                        Xem
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(doc.FileURL)
+                            const blob = await res.blob()
+                            const ext = doc.FileType || doc.FileURL.split('.').pop().split('?')[0] || 'pdf'
+                            const url = URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `${doc.Title}.${ext}`
+                            a.click()
+                            URL.revokeObjectURL(url)
+                          } catch { window.open(doc.FileURL, '_blank') }
+                        }}
+                        sx={{
+                          backgroundColor: T.blue, borderRadius: '4px',
+                          fontSize: '0.786rem', fontWeight: 600, px: 1.5, minWidth: 0,
+                          '&:hover': { backgroundColor: T.blueDk },
+                        }}
+                      >
+                        Tải
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <DocumentIcon sx={{ fontSize: 48, color: T.border, mb: 1 }} />
+              <Typography sx={{ fontSize: '0.929rem', color: T.muted }}>Chưa có tài liệu nào</Typography>
+            </Box>
+          )}
+        </Box>
+      </Dialog>
     </Box>
   )
 }

@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import SecondaryMenu from '../components/SecondaryMenu'
 import RoomMap from '../components/RoomMap'
@@ -124,6 +124,7 @@ function SkeletonCard() {
 export default function ListingPage() {
   useScrollToTop()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [favorites, setFavorites] = useState({})
   const [listings, setListings]   = useState([])
@@ -131,16 +132,53 @@ export default function ListingPage() {
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
   const [page, setPage]           = useState(1)
+  const [poiName, setPoiName]     = useState('')
   const PER_PAGE = 8
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-  useEffect(() => { fetchRooms() }, [])
+  const poiId = searchParams.get('poi')
+  const poiType = searchParams.get('type')
+  const district = searchParams.get('district')
+
+  useEffect(() => { fetchRooms() }, [poiId, poiType, district])
+  
+  useEffect(() => {
+    if (poiId) {
+      fetchPOIName()
+    }
+  }, [poiId])
+  
+  const fetchPOIName = async () => {
+    try {
+      const res = await fetch(`${API_URL}/locations/pois/${poiId}`)
+      const data = await res.json()
+      if (data.success && data.data) {
+        setPoiName(data.data.POIName)
+      }
+    } catch (error) {
+      console.error('Fetch POI name error:', error)
+    }
+  }
 
   const fetchRooms = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API_URL}/rooms`)
+      let url = `${API_URL}/rooms`
+      const params = new URLSearchParams()
+      
+      if (poiId) {
+        params.append('poi', poiId)
+      }
+      if (district) {
+        params.append('district', district)
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`
+      }
+      
+      const res = await fetch(url)
       const data = await res.json()
       if (data.success) {
         const formatted = data.data.map(room => {
@@ -199,7 +237,7 @@ export default function ListingPage() {
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1.5 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text }}>
               <Box component="span" sx={{ color: T.blue }}>{listings.length}</Box>
-              &nbsp;phòng tại Hà Nội
+              &nbsp;phòng{poiId && poiName ? ` gần ${poiName}` : district ? ` tại ${district}` : ' tại Hà Nội'}
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button
@@ -396,7 +434,7 @@ export default function ListingPage() {
 
             {/* ─── Right sidebar ───────────────────────────────────────────── */}
             <Grid item xs={12} lg={4}>
-              <Box sx={{ position: 'sticky', top: 76, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ position: 'sticky', top: 92, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {/* Map */}
                 <Box sx={{
                   borderRadius: '8px', overflow: 'hidden', height: 320,

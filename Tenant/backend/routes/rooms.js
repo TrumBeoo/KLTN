@@ -52,9 +52,9 @@ router.get('/rooms/:roomId', async (req, res) => {
 // Get all available rooms
 router.get('/rooms', async (req, res) => {
   try {
-    const { limit = 20, offset = 0 } = req.query;
+    const { limit = 20, offset = 0, poi, district } = req.query;
 
-    const rooms = await roomService.getAllRooms(parseInt(limit), parseInt(offset));
+    const rooms = await roomService.getAllRooms(parseInt(limit), parseInt(offset), poi, district);
 
     res.json({
       success: true,

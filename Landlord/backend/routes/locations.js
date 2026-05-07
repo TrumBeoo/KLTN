@@ -83,3 +83,49 @@ router.post('/find-or-create', async (req, res) => {
 });
 
 module.exports = router;
+
+
+// Get all POIs with room count (for POISelector)
+router.get('/pois', async (req, res) => {
+  try {
+    const { type, district } = req.query;
+    
+    let query = `
+      SELECT 
+        p.POIID,
+        p.Name as POIName,
+        p.TypeCode as POIType,
+        p.Address,
+        p.District,
+        p.Latitude,
+        p.Longitude,
+        COUNT(DISTINCT rp.RoomID) as RoomCount,
+        AVG(r.Price) as AvgPrice
+      FROM POI p
+      LEFT JOIN ROOM_POI rp ON p.POIID = rp.POIID
+      LEFT JOIN ROOM r ON rp.RoomID = r.RoomID
+      WHERE p.IsActive = TRUE
+    `;
+    
+    const params = [];
+    
+    if (type) {
+      query += ' AND p.TypeCode = ?';
+      params.push(type);
+    }
+    
+    if (district) {
+      query += ' AND p.District = ?';
+      params.push(district);
+    }
+    
+    query += ' GROUP BY p.POIID ORDER BY RoomCount DESC, p.Name';
+    
+    const [pois] = await db.query(query, params);
+    
+    res.json({ success: true, data: pois });
+  } catch (error) {
+    console.error('Get POIs with room count error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách POI' });
+  }
+});

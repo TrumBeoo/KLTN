@@ -27,24 +27,14 @@ import {
   Chip,
   Typography,
   Paper,
-  Tabs,
-  Tab,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
   Divider,
   LinearProgress
 } from '@mui/material'
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
   CloudUpload as UploadIcon,
   Description as FileIcon,
-  Download as DownloadIcon,
-  Visibility as ViewIcon,
   Close as CloseIcon,
   InsertDriveFile as DocIcon,
   PictureAsPdf as PdfIcon,
@@ -102,7 +92,7 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0]
     if (selectedFile) {
-      const maxSize = 10 * 1024 * 1024 // 10MB
+      const maxSize = 10 * 1024 * 1024
       if (selectedFile.size > maxSize) {
         showError('Lỗi!', 'File không được vượt quá 10MB')
         return
@@ -112,14 +102,8 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
   }
 
   const handleSubmit = async () => {
-    if (!file) {
-      showError('Lỗi!', 'Vui lòng chọn file')
-      return
-    }
-    if (!formData.title) {
-      showError('Lỗi!', 'Vui lòng nhập tiêu đề')
-      return
-    }
+    if (!file) { showError('Lỗi!', 'Vui lòng chọn file'); return }
+    if (!formData.title) { showError('Lỗi!', 'Vui lòng nhập tiêu đề'); return }
 
     setUploading(true)
     try {
@@ -128,16 +112,13 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
       formDataUpload.append('type', formData.type)
       formDataUpload.append('title', formData.title)
       formDataUpload.append('isPrivate', formData.isPrivate)
-      if (formData.roomId) {
-        formDataUpload.append('roomId', formData.roomId)
-      }
+      if (formData.roomId) formDataUpload.append('roomId', formData.roomId)
 
       const response = await fetch(`${API_URL}/documents/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formDataUpload
       })
-
       const data = await response.json()
       if (data.success) {
         showSuccess('Thành công!', 'Upload tài liệu thành công')
@@ -148,8 +129,7 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
       } else {
         showError('Lỗi!', data.message)
       }
-    } catch (error) {
-      console.error('Upload error:', error)
+    } catch {
       showError('Lỗi!', 'Không thể upload tài liệu')
     } finally {
       setUploading(false)
@@ -161,19 +141,13 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Upload tài liệu</Typography>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
+          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ pt: 2 }}>
           <Stack spacing={2.5}>
             <FormControl fullWidth>
               <FormLabel>Loại tài liệu *</FormLabel>
-              <Select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                size="small"
-              >
+              <Select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} size="small">
                 {Object.entries(DocumentTypeConfig).map(([key, config]) => {
                   const Icon = config.icon
                   return (
@@ -199,12 +173,9 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
 
             <FormControl fullWidth>
               <FormLabel>Phòng (tùy chọn)</FormLabel>
-              <Select
-                value={formData.roomId}
-                onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
-                size="small"
-              >
-                <MenuItem value="">Không gắn phòng</MenuItem>
+              <Select value={formData.roomId} onChange={(e) => setFormData({ ...formData, roomId: e.target.value })} size="small">
+                <MenuItem value="">Không gắn phòng (dùng chung)</MenuItem>
+                <MenuItem value="all" sx={{ color: 'primary.main', fontWeight: 600 }}>Tất cả phòng</MenuItem>
                 {rooms.map(room => (
                   <MenuItem key={room.RoomID} value={room.RoomID}>
                     {room.RoomCode} - {room.BuildingName}
@@ -215,11 +186,7 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
 
             <FormControl fullWidth>
               <FormLabel>Quyền truy cập</FormLabel>
-              <Select
-                value={formData.isPrivate}
-                onChange={(e) => setFormData({ ...formData, isPrivate: e.target.value })}
-                size="small"
-              >
+              <Select value={formData.isPrivate} onChange={(e) => setFormData({ ...formData, isPrivate: e.target.value })} size="small">
                 <MenuItem value={true}>Riêng tư (Chỉ chủ nhà)</MenuItem>
                 <MenuItem value={false}>Công khai (Người thuê có thể xem)</MenuItem>
               </Select>
@@ -227,20 +194,9 @@ const UploadDocumentDialog = ({ open, onClose, rooms, onUpload }) => {
 
             <Box>
               <FormLabel sx={{ mb: 1, display: 'block' }}>File tài liệu *</FormLabel>
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<UploadIcon />}
-                fullWidth
-                sx={{ py: 1.5, borderStyle: 'dashed' }}
-              >
+              <Button variant="outlined" component="label" startIcon={<UploadIcon />} fullWidth sx={{ py: 1.5, borderStyle: 'dashed' }}>
                 {file ? file.name : 'Chọn file (PDF, DOCX, JPG, PNG - Max 10MB)'}
-                <input
-                  type="file"
-                  hidden
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                />
+                <input type="file" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFileChange} />
               </Button>
               {file && (
                 <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
@@ -275,9 +231,10 @@ export default function ManageContracts() {
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
   const [openUpload, setOpenUpload] = useState(false)
+  const [editDialog, setEditDialog] = useState({ open: false, doc: null })
+  const [editForm, setEditForm] = useState({ title: '', type: 'contract', roomId: '', isPrivate: true })
   const [selectedType, setSelectedType] = useState('all')
   const [selectedRoom, setSelectedRoom] = useState('')
-  const [previewDialog, setPreviewDialog] = useState({ open: false, url: '', title: '', type: '' })
   const token = localStorage.getItem('token')
 
   useEffect(() => {
@@ -291,14 +248,11 @@ export default function ManageContracts() {
       const params = new URLSearchParams()
       if (selectedType !== 'all') params.append('type', selectedType)
       if (selectedRoom) params.append('roomId', selectedRoom)
-
       const response = await fetch(`${API_URL}/documents?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
-      if (data.success) {
-        setDocuments(data.data || [])
-      }
+      if (data.success) setDocuments(data.data || [])
     } catch (error) {
       console.error('Fetch documents error:', error)
     } finally {
@@ -308,13 +262,9 @@ export default function ManageContracts() {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch(`${API_URL}/rooms`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await fetch(`${API_URL}/rooms`, { headers: { 'Authorization': `Bearer ${token}` } })
       const data = await response.json()
-      if (data.success) {
-        setRooms(data.data || [])
-      }
+      if (data.success) setRooms(data.data || [])
     } catch (error) {
       console.error('Fetch rooms error:', error)
     }
@@ -334,46 +284,64 @@ export default function ManageContracts() {
         } else {
           showError('Lỗi!', data.message)
         }
-      } catch (error) {
-        console.error('Delete error:', error)
+      } catch {
         showError('Lỗi!', 'Không thể xóa tài liệu')
       }
     })
   }
 
+  const handleOpenEdit = (doc) => {
+    setEditForm({
+      title: doc.Title,
+      type: doc.Type,
+      roomId: doc.IsAllRooms ? 'all' : (doc.RoomID || ''),
+      isPrivate: !!doc.IsPrivate
+    })
+    setEditDialog({ open: true, doc })
+  }
+
+  const handleSaveEdit = async () => {
+    try {
+      const res = await fetch(`${API_URL}/documents/${editDialog.doc.DocumentID}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+      const data = await res.json()
+      if (data.success) {
+        showSuccess('Thành công!', 'Đã cập nhật tài liệu')
+        setEditDialog({ open: false, doc: null })
+        fetchDocuments()
+      } else {
+        showError('Lỗi!', data.message)
+      }
+    } catch {
+      showError('Lỗi!', 'Không thể cập nhật tài liệu')
+    }
+  }
+
   const handleDownload = async (fileUrl, title, fileType) => {
     try {
-      // Tải file về máy thay vì mở trong tab mới
-      const response = await fetch(fileUrl)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      
-      // Tạo tên file từ title và fileType
-      const extension = fileType || 'pdf'
-      const fileName = `${title}.${extension}`
-      link.download = fileName
-      
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      
-      showSuccess('Thành công!', 'Đang tải file xuống...')
-    } catch (error) {
-      console.error('Download error:', error)
-      // Fallback: mở trong tab mới nếu download thất bại
+      const ext = fileType || fileUrl.split('.').pop().split('?')[0] || 'pdf'
+      const res = await fetch(fileUrl)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${title}.${ext}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
       window.open(fileUrl, '_blank')
     }
   }
 
-  const handlePreview = (fileUrl, title, fileType) => {
-    setPreviewDialog({ open: true, url: fileUrl, title, type: fileType })
-  }
-
-  const isImageFile = (fileType) => {
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType?.toLowerCase())
+  const handlePreview = (fileUrl, fileType) => {
+    const isPdf = fileType === 'pdf' || fileUrl?.toLowerCase().includes('.pdf')
+    const url = isPdf
+      ? `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
+      : fileUrl
+    window.open(url, '_blank')
   }
 
   const formatFileSize = (bytes) => {
@@ -383,11 +351,8 @@ export default function ManageContracts() {
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
     })
   }
 
@@ -396,8 +361,6 @@ export default function ManageContracts() {
     if (fileType?.includes('doc')) return <DocIcon sx={{ color: '#0078D4' }} />
     return <FileIcon sx={{ color: '#8A8F98' }} />
   }
-
-  const filteredDocuments = documents
 
   const documentStats = {
     all: documents.length,
@@ -418,25 +381,19 @@ export default function ManageContracts() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#5E6AD2', color: 'white' }}>
             <Typography variant="caption">Tổng tài liệu</Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5 }}>
-              {documentStats.all}
-            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5 }}>{documentStats.all}</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>Hợp đồng</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5 }}>
-              {documentStats.contract}
-            </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5 }}>{documentStats.contract}</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>Biên bản</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5 }}>
-              {documentStats.handover + documentStats.deposit}
-            </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5 }}>{documentStats.handover + documentStats.deposit}</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -456,44 +413,27 @@ export default function ManageContracts() {
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <FormLabel>Loại tài liệu</FormLabel>
-                <Select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                >
+                <Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
                   <MenuItem value="all">Tất cả ({documentStats.all})</MenuItem>
                   {Object.entries(DocumentTypeConfig).map(([key, config]) => (
-                    <MenuItem key={key} value={key}>
-                      {config.label} ({documentStats[key]})
-                    </MenuItem>
+                    <MenuItem key={key} value={key}>{config.label} ({documentStats[key]})</MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <FormLabel>Phòng</FormLabel>
-                <Select
-                  value={selectedRoom}
-                  onChange={(e) => setSelectedRoom(e.target.value)}
-                >
+                <Select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)}>
                   <MenuItem value="">Tất cả phòng</MenuItem>
                   {rooms.map(room => (
-                    <MenuItem key={room.RoomID} value={room.RoomID}>
-                      {room.RoomCode} - {room.BuildingName}
-                    </MenuItem>
+                    <MenuItem key={room.RoomID} value={room.RoomID}>{room.RoomCode} - {room.BuildingName}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12} sm={12} md={4}>
-              <Button
-                variant="contained"
-                startIcon={<UploadIcon />}
-                fullWidth
-                onClick={() => setOpenUpload(true)}
-              >
+              <Button variant="contained" startIcon={<UploadIcon />} fullWidth onClick={() => setOpenUpload(true)}>
                 Upload tài liệu
               </Button>
             </Grid>
@@ -505,7 +445,7 @@ export default function ManageContracts() {
       <Card>
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Danh sách tài liệu ({filteredDocuments.length})
+            Danh sách tài liệu ({documents.length})
           </Typography>
         </Box>
 
@@ -525,41 +465,29 @@ export default function ManageContracts() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {!loading && filteredDocuments.length === 0 ? (
+              {!loading && documents.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography color="text.secondary">Chưa có tài liệu nào</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredDocuments.map((doc) => (
+                documents.map((doc) => (
                   <TableRow key={doc.DocumentID} hover>
                     <TableCell>
                       <Stack direction="row" spacing={1.5} alignItems="center">
                         {getFileIcon(doc.FileType)}
                         <Box>
-                          <Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                            {doc.Title}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            {doc.FileType?.toUpperCase()}
-                          </Typography>
+                          <Typography sx={{ fontWeight: 600, fontSize: '0.875rem' }}>{doc.Title}</Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{doc.FileType?.toUpperCase()}</Typography>
                         </Box>
                       </Stack>
                     </TableCell>
+                    <TableCell><DocumentTypeChip type={doc.Type} /></TableCell>
                     <TableCell>
-                      <DocumentTypeChip type={doc.Type} />
-                    </TableCell>
-                    <TableCell>
-                      {doc.RoomCode ? (
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {doc.RoomCode}
-                        </Typography>
-                      ) : (
-                        <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                          Chung
-                        </Typography>
-                      )}
+                      <Typography sx={{ fontSize: '0.875rem', color: doc.RoomCode ? 'text.primary' : 'text.secondary' }}>
+                        {doc.IsAllRooms ? 'Tất cả' : (doc.RoomCode || 'Dùng chung')}
+                      </Typography>
                     </TableCell>
                     <TableCell>{formatFileSize(doc.FileSize)}</TableCell>
                     <TableCell>
@@ -573,24 +501,18 @@ export default function ManageContracts() {
                     <TableCell>{formatDate(doc.CreatedAt)}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5}>
-                        <IconButton
-                          size="small"
-                          title="Xem"
-                          onClick={() => handlePreview(doc.FileURL, doc.Title, doc.FileType)}
-                        >
-                          <ViewIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          title="Tải xuống"
+                        <Button size="small" variant="outlined"
+                          onClick={() => handlePreview(doc.FileURL, doc.FileType)}
+                          sx={{ fontSize: '0.75rem', px: 1.5, minWidth: 0 }}
+                        >Xem</Button>
+                        <Button size="small" variant="contained"
                           onClick={() => handleDownload(doc.FileURL, doc.Title, doc.FileType)}
-                        >
-                          <DownloadIcon fontSize="small" />
+                          sx={{ fontSize: '0.75rem', px: 1.5, minWidth: 0 }}
+                        >Tải</Button>
+                        <IconButton size="small" onClick={() => handleOpenEdit(doc)}>
+                          <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton
-                          size="small"
-                          sx={{ color: 'error.main' }}
-                          title="Xóa"
+                        <IconButton size="small" sx={{ color: 'error.main' }}
                           onClick={() => handleDelete(doc.DocumentID)}
                         >
                           <DeleteIcon fontSize="small" />
@@ -605,91 +527,69 @@ export default function ManageContracts() {
         </TableContainer>
       </Card>
 
+      {/* Edit Dialog */}
+      <Dialog open={editDialog.open} onClose={() => setEditDialog({ open: false, doc: null })} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Sửa tài liệu</Typography>
+          <IconButton size="small" onClick={() => setEditDialog({ open: false, doc: null })}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 2 }}>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Tiêu đề *"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              size="small" fullWidth
+            />
+            <FormControl fullWidth>
+              <FormLabel>Loại tài liệu</FormLabel>
+              <Select value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })} size="small">
+                {Object.entries(DocumentTypeConfig).map(([key, config]) => {
+                  const Icon = config.icon
+                  return (
+                    <MenuItem key={key} value={key}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Icon sx={{ fontSize: '1.1rem', color: config.color }} />
+                        <span>{config.label}</span>
+                      </Stack>
+                    </MenuItem>
+                  )
+                })}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <FormLabel>Phòng</FormLabel>
+              <Select value={editForm.roomId} onChange={(e) => setEditForm({ ...editForm, roomId: e.target.value })} size="small">
+                <MenuItem value="">Không gắn phòng (dùng chung)</MenuItem>
+                <MenuItem value="all" sx={{ color: 'primary.main', fontWeight: 600 }}>Tất cả phòng</MenuItem>
+                {rooms.map(room => (
+                  <MenuItem key={room.RoomID} value={room.RoomID}>
+                    {room.RoomCode} - {room.BuildingName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <FormLabel>Quyền truy cập</FormLabel>
+              <Select value={editForm.isPrivate} onChange={(e) => setEditForm({ ...editForm, isPrivate: e.target.value })} size="small">
+                <MenuItem value={true}>Riêng tư (Chỉ chủ nhà)</MenuItem>
+                <MenuItem value={false}>Công khai (Người thuê có thể xem)</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialog({ open: false, doc: null })}>Hủy</Button>
+          <Button onClick={handleSaveEdit} variant="contained">Lưu</Button>
+        </DialogActions>
+      </Dialog>
+
       <UploadDocumentDialog
         open={openUpload}
         onClose={() => setOpenUpload(false)}
         rooms={rooms}
         onUpload={fetchDocuments}
       />
-
-      {/* Preview Dialog */}
-      <Dialog
-        open={previewDialog.open}
-        onClose={() => setPreviewDialog({ open: false, url: '', title: '', type: '' })}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">{previewDialog.title}</Typography>
-          <Stack direction="row" spacing={1}>
-            <IconButton
-              size="small"
-              onClick={() => handleDownload(previewDialog.url, previewDialog.title, previewDialog.type)}
-              title="Tải xuống"
-            >
-              <DownloadIcon />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => setPreviewDialog({ open: false, url: '', title: '', type: '' })}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0, minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {isImageFile(previewDialog.type) ? (
-            <Box
-              component="img"
-              src={previewDialog.url}
-              alt={previewDialog.title}
-              sx={{
-                maxWidth: '100%',
-                maxHeight: '70vh',
-                objectFit: 'contain'
-              }}
-            />
-          ) : previewDialog.type?.includes('pdf') ? (
-            <Box sx={{ width: '100%', height: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-              <PdfIcon sx={{ fontSize: 80, color: '#E5484D' }} />
-              <Typography variant="h6" color="text.secondary">
-                Xem trước PDF
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Trình duyệt không hỗ trợ xem trước PDF trực tiếp. Vui lòng tải xuống để xem.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<DownloadIcon />}
-                onClick={() => handleDownload(previewDialog.url, previewDialog.title, previewDialog.type)}
-              >
-                Tải xuống PDF
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => window.open(previewDialog.url, '_blank')}
-                sx={{ mt: 1 }}
-              >
-                Mở trong tab mới
-              </Button>
-            </Box>
-          ) : (
-            <Box sx={{ textAlign: 'center', p: 4 }}>
-              <DocIcon sx={{ fontSize: 80, color: '#0078D4', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                Không thể xem trước file này
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<DownloadIcon />}
-                onClick={() => handleDownload(previewDialog.url, previewDialog.title, previewDialog.type)}
-              >
-                Tải xuống
-              </Button>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <NotificationModal
         open={notification.open}

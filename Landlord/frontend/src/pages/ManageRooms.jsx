@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNotification } from '../hooks/useNotification'
 import NotificationModal from '../components/NotificationModal'
+import POISelector from '../components/POISelector'
+import ManageListings from './ManageListings'
 import {
   Box,
   Card,
@@ -33,7 +35,9 @@ import {
   Paper,
   ImageList,
   ImageListItem,
-  ImageListItemBar
+  ImageListItemBar,
+  Tabs,
+  Tab
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -167,11 +171,13 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     service: '',
     rules: '',
     floorType: '',
-    description: ''
+    description: '',
+    poiIds: []
   })
   const [loading, setLoading] = useState(false)
   const [images, setImages] = useState([])
   const [imageFiles, setImageFiles] = useState([])
+  const [selectedBuilding, setSelectedBuilding] = useState(null)
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
   const token = localStorage.getItem('token')
 
@@ -211,8 +217,16 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         service: room.Service || '',
         rules: room.Rules || '',
         floorType: room.FloorType || '',
-        description: room.Description || ''
+        description: room.Description || '',
+        poiIds: []
       })
+      // Load building info
+      const building = buildings.find(b => b.BuildingID === room.BuildingID)
+      setSelectedBuilding(building || null)
+      // Load existing POIs
+      if (room.RoomID) {
+        fetchRoomPOIs(room.RoomID)
+      }
       // Load existing images from Cloudinary URLs
       if (room.Images) {
         const imageUrls = room.Images.split(',').map(url => ({
@@ -236,16 +250,38 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         service: '',
         rules: '',
         floorType: '',
-        description: ''
+        description: '',
+        poiIds: []
       })
+      setSelectedBuilding(null)
       setImages([])
     }
     setImageFiles([])
-  }, [room, open])
+  }, [room, open, buildings])
+
+  const fetchRoomPOIs = async (roomId) => {
+    try {
+      const response = await fetch(`${API_URL}/poi/room/${roomId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setFormData(prev => ({ ...prev, poiIds: data.data.map(p => p.POIID) }))
+      }
+    } catch (error) {
+      console.error('Fetch room POIs error:', error)
+    }
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    
+    // Update selected building when buildingId changes
+    if (name === 'buildingId') {
+      const building = buildings.find(b => b.BuildingID === value)
+      setSelectedBuilding(building || null)
+    }
   }
 
   const handleAmenityChange = (amenity) => {
@@ -284,6 +320,26 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     setLoading(true)
     try {
       const roomId = await onSubmit(formData)
+      
+      // Link POIs if any selected
+      if (formData.poiIds.length > 0 && roomId) {
+        try {
+          const poiResponse = await fetch(`${API_URL}/poi/link-room`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ roomId, poiIds: formData.poiIds })
+          })
+          const poiData = await poiResponse.json()
+          if (!poiData.success) {
+            console.error('Link POI error:', poiData.message)
+          }
+        } catch (error) {
+          console.error('Link POI error:', error)
+        }
+      }
       
       // Upload images if any
       if (imageFiles.length > 0 && roomId) {
@@ -487,6 +543,12 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
             fullWidth
           />
 
+          <POISelector
+            value={formData.poiIds}
+            onChange={(poiIds) => setFormData(prev => ({ ...prev, poiIds }))}
+            district={selectedBuilding?.District}
+          />
+
           <Box>
             <FormLabel sx={{ mb: 1, display: 'block' }}>Hình ảnh phòng</FormLabel>
             <Button
@@ -543,6 +605,7 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
 
 export default function ManageRooms() {
   const { notification, showSuccess, showError, showConfirm, hideNotification } = useNotification()
+  const [activeTab, setActiveTab] = useState(0)
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [rooms, setRooms] = useState([])
@@ -728,6 +791,18 @@ export default function ManageRooms() {
 
   return (
     <Box>
+      {/* Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+          <Tab label="Quản lý phòng" />
+          <Tab label="Tin đăng" />
+        </Tabs>
+      </Paper>
+
+      {activeTab === 1 ? (
+        <ManageListings />
+      ) : (
+        <>
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
@@ -931,6 +1006,8 @@ export default function ManageRooms() {
         message={notification.message}
         onConfirm={notification.onConfirm}
       />
+        </>
+      )}
     </Box>
   )
 }

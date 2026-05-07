@@ -13,18 +13,6 @@ router.get('/', authMiddleware, async (req, res) => {
     const { type, roomId } = req.query;
     const accountId = req.user.accountId;
 
-    // Get landlord ID
-    const [landlord] = await pool.query(
-      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
-      [accountId]
-    );
-
-    if (!landlord.length) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' });
-    }
-
-    const landlordId = landlord[0].LandlordID;
-
     let query = `
       SELECT d.*, r.RoomCode, r.BuildingID, b.BuildingName
       FROM DOCUMENT d
@@ -47,144 +35,162 @@ router.get('/', authMiddleware, async (req, res) => {
     query += ' ORDER BY d.CreatedAt DESC';
 
     const [documents] = await pool.query(query, params);
-
-    res.json({
-      success: true,
-      data: documents
-    });
+    res.json({ success: true, data: documents });
   } catch (error) {
     console.error('Get documents error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi server: ' + error.message
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
   }
 });
 
 // Upload document
 router.post('/upload', authMiddleware, upload.single('document'), async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng chọn file'
-      });
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn file' });
     }
 
     const { type, title, roomId, isPrivate } = req.body;
     const accountId = req.user.accountId;
 
     if (!type || !title) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng nhập đầy đủ thông tin'
-      });
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin' });
     }
 
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 
+    const allowedTypes = ['application/pdf', 'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'image/jpeg', 'image/png', 'image/jpg'];
-    
+
     if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Chỉ chấp nhận file PDF, DOCX, JPG, PNG'
-      });
+      return res.status(400).json({ success: false, message: 'Chỉ chấp nhận file PDF, DOCX, JPG, PNG' });
     }
 
-    // Upload to Cloudinary
-    const uploadResult = await cloudinaryService.uploadDocument(
-      req.file.buffer,
-      type
-    );
+    const fileType = req.file.mimetype.split('/')[1];
+    const isImage = ['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(fileType);
+    const resourceType = isImage ? 'image' : 'raw';
 
-    // Generate document ID
-    const [lastDoc] = await pool.query(
-      'SELECT DocumentID FROM DOCUMENT ORDER BY DocumentID DESC LIMIT 1'
-    );
+    const uploadResult = await cloudinaryService.uploadDocument(req.file.buffer, type, { resource_type: resourceType });
+
+    const [lastDoc] = await connection.query('SELECT DocumentID FROM DOCUMENT ORDER BY DocumentID DESC LIMIT 1');
     let documentId = 'DOC00001';
     if (lastDoc.length > 0) {
       const lastId = parseInt(lastDoc[0].DocumentID.substring(3));
       documentId = 'DOC' + String(lastId + 1).padStart(5, '0');
     }
 
-    // Get file extension and resource type
-    const fileType = req.file.mimetype.split('/')[1];
-    const resourceType = ['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(fileType) ? 'image' : 'raw';
+    await connection.beginTransaction();
 
-    // Insert to database
-    await pool.query(
-      `INSERT INTO DOCUMENT 
-      (DocumentID, RoomID, Type, Title, FileURL, PublicID, FileType, FileSize, ResourceType, UploadedBy, IsPrivate, CreatedAt, UpdatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        documentId,
-        roomId || null,
-        type,
-        title,
-        uploadResult.secure_url,
-        uploadResult.public_id,
-        fileType,
-        req.file.size,
-        resourceType,
-        accountId,
-        isPrivate === 'true' || isPrivate === true ? 1 : 0
-      ]
+    const isAllRooms = roomId === 'all' ? 1 : 0;
+    const finalRoomId = (roomId === 'all' || !roomId) ? null : roomId;
+    const isPrivateVal = isPrivate === 'true' || isPrivate === true ? 1 : 0;
+
+    await connection.query(
+      `INSERT INTO DOCUMENT (DocumentID, RoomID, Type, Title, FileURL, PublicID, FileType, FileSize, ResourceType, UploadedBy, IsPrivate, IsAllRooms, CreatedAt, UpdatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [documentId, finalRoomId, type, title, uploadResult.secure_url, uploadResult.public_id,
+       fileType, req.file.size, resourceType, accountId, isPrivateVal, isAllRooms]
     );
 
-    res.json({
-      success: true,
-      message: 'Upload tài liệu thành công',
-      documentId
-    });
+    await connection.commit();
+
+    const [verifyDoc] = await connection.query('SELECT * FROM DOCUMENT WHERE DocumentID = ?', [documentId]);
+    res.json({ success: true, message: 'Upload tài liệu thành công', documentId, data: verifyDoc[0] });
   } catch (error) {
+    await connection.rollback();
     console.error('Upload document error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi server: ' + error.message
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get documents by room ID (for tenants) - includes IsAllRooms docs
+router.get('/room/:roomId', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const [documents] = await pool.query(
+      `SELECT d.*, r.RoomCode, b.BuildingName
+       FROM DOCUMENT d
+       LEFT JOIN ROOM r ON d.RoomID = r.RoomID
+       LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+       WHERE (d.RoomID = ? OR d.IsAllRooms = 1) AND d.IsPrivate = 0
+       ORDER BY d.CreatedAt DESC`,
+      [roomId]
+    );
+
+    res.json({ success: true, data: documents });
+  } catch (error) {
+    console.error('Get room documents error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+  }
+});
+
+// Update document
+router.put('/:documentId', authMiddleware, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { title, type, roomId, isPrivate } = req.body;
+    const accountId = req.user.accountId;
+
+    const [doc] = await pool.query(
+      'SELECT * FROM DOCUMENT WHERE DocumentID = ? AND UploadedBy = ?',
+      [documentId, accountId]
+    );
+    if (!doc.length) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu' });
+    }
+
+    const isAllRooms = roomId === 'all' ? 1 : 0;
+    const finalRoomId = (roomId === 'all' || !roomId) ? null : roomId;
+
+    await pool.query(
+      'UPDATE DOCUMENT SET Title=?, Type=?, RoomID=?, IsPrivate=?, IsAllRooms=?, UpdatedAt=NOW() WHERE DocumentID=?',
+      [title, type, finalRoomId, isPrivate ? 1 : 0, isAllRooms, documentId]
+    );
+
+    res.json({ success: true, message: 'Cập nhật tài liệu thành công' });
+  } catch (error) {
+    console.error('Update document error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
   }
 });
 
 // Delete document
 router.delete('/:documentId', authMiddleware, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const { documentId } = req.params;
     const accountId = req.user.accountId;
 
-    // Get document info
-    const [document] = await pool.query(
+    const [document] = await connection.query(
       'SELECT * FROM DOCUMENT WHERE DocumentID = ? AND UploadedBy = ?',
       [documentId, accountId]
     );
 
     if (!document.length) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy tài liệu'
-      });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu' });
     }
 
-    // Delete from Cloudinary
+    await connection.beginTransaction();
+    await connection.query('DELETE FROM DOCUMENT WHERE DocumentID = ?', [documentId]);
+    await connection.commit();
+
     if (document[0].PublicID) {
-      const resourceType = document[0].ResourceType || 'raw';
-      await cloudinaryService.deleteFile(document[0].PublicID, resourceType);
+      try {
+        await cloudinaryService.deleteFile(document[0].PublicID, document[0].ResourceType || 'raw');
+      } catch (cloudError) {
+        console.error('Cloudinary delete error (non-critical):', cloudError);
+      }
     }
 
-    // Delete from database
-    await pool.query('DELETE FROM DOCUMENT WHERE DocumentID = ?', [documentId]);
-
-    res.json({
-      success: true,
-      message: 'Xóa tài liệu thành công'
-    });
+    res.json({ success: true, message: 'Xóa tài liệu thành công' });
   } catch (error) {
+    await connection.rollback();
     console.error('Delete document error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi server: ' + error.message
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+  } finally {
+    connection.release();
   }
 });
 
@@ -204,22 +210,13 @@ router.get('/:documentId', authMiddleware, async (req, res) => {
     );
 
     if (!document.length) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy tài liệu'
-      });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu' });
     }
 
-    res.json({
-      success: true,
-      data: document[0]
-    });
+    res.json({ success: true, data: document[0] });
   } catch (error) {
     console.error('Get document error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi server: ' + error.message
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
   }
 });
 

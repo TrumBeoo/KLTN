@@ -37,11 +37,16 @@ export default function FilterModal({ open, onClose, onApply }) {
   const [districts, setDistricts] = useState([])
   const [priceRange, setPriceRange] = useState([2, 10])
   const [areaRange, setAreaRange]   = useState([20, 50])
+  const [selectedPOIs, setSelectedPOIs] = useState([])
+  const [pois, setPois] = useState([])
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
   useEffect(() => {
-    if (open) fetchDistricts()
+    if (open) {
+      fetchDistricts()
+      fetchPOIs()
+    }
   }, [open])
 
   const fetchDistricts = async () => {
@@ -49,6 +54,38 @@ export default function FilterModal({ open, onClose, onApply }) {
       const res = await fetch(`${API_URL}/locations/districts`)
       const data = await res.json()
       if (data.success) setDistricts(data.data || [])
+    } catch {}
+  }
+
+  const fetchPOIs = async () => {
+    try {
+      const types = ['park', 'supermarket', 'hospital', 'market', 'gym', 'bank', 'cafe', 'mall', 'school', 'university']
+      const promises = types.map(type => 
+        fetch(`${API_URL}/locations/pois?type=${type}`).then(res => res.json())
+      )
+      const results = await Promise.all(promises)
+      const allPOIs = results.flatMap(data => data.success && data.data ? data.data : [])
+      
+      // Thêm label tiếng Việt cho mỗi POI
+      const poiLabels = {
+        'park': 'Công viên',
+        'supermarket': 'Siêu thị',
+        'hospital': 'Bệnh viện',
+        'market': 'Chợ/Quán ăn',
+        'gym': 'Gym/Thể thao',
+        'bank': 'Ngân hàng',
+        'cafe': 'Cafe/Coworking',
+        'mall': 'Trung tâm thương mại',
+        'school': 'Trường học',
+        'university': 'Đại học',
+      }
+      
+      const mappedPOIs = allPOIs.map(poi => ({
+        ...poi,
+        TypeLabel: poiLabels[poi.POIType?.toLowerCase()] || poi.POIType
+      }))
+      
+      setPois(mappedPOIs.filter(p => p.RoomCount > 0).slice(0, 20))
     } catch {}
   }
 
@@ -168,6 +205,48 @@ export default function FilterModal({ open, onClose, onApply }) {
               />
             ))}
           </Box>
+        </Section>
+
+        {/* Nearby Amenities */}
+        <Section title="Tiện ích xung quanh">
+          {pois.length > 0 ? (
+            <FormGroup>
+              {pois.slice(0, 10).map(poi => (
+                <FormControlLabel
+                  key={poi.POIID}
+                  control={
+                    <Checkbox 
+                      size="small" 
+                      checked={selectedPOIs.includes(poi.POIID)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedPOIs([...selectedPOIs, poi.POIID])
+                        } else {
+                          setSelectedPOIs(selectedPOIs.filter(id => id !== poi.POIID))
+                        }
+                      }}
+                      sx={{ color: T.border, '&.Mui-checked': { color: T.blue } }} 
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography sx={{ fontSize: '0.929rem', color: T.text }}>
+                        {poi.TypeLabel} - {poi.POIName}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.714rem', color: T.muted }}>
+                        {poi.RoomCount} phòng
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ mb: 0.5, ml: 0, alignItems: 'flex-start' }}
+                />
+              ))}
+            </FormGroup>
+          ) : (
+            <Typography sx={{ fontSize: '0.857rem', color: T.muted, fontStyle: 'italic' }}>
+              Đang tải tiện ích...
+            </Typography>
+          )}
         </Section>
 
         {/* Status */}

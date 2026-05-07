@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import { Box, Button, Menu, MenuItem, Stack, Typography } from '@mui/material'
+import { Box, Button, Menu, MenuItem, Stack, Typography, Container } from '@mui/material'
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
@@ -101,14 +101,14 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
 
   return (
     <Strip role="navigation" aria-label="Bộ lọc phân loại">
-      <Stack
-        direction="row"
-        sx={{
-          px: { xs: 2, md: 3 },
-          alignItems: 'stretch',
-          minWidth: 'max-content',
-        }}
-      >
+      <Container maxWidth="lg">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: 'stretch',
+            minWidth: 'max-content',
+          }}
+        >
         {categories.map(cat => (
           <CatBtn
             key={cat.id}
@@ -121,11 +121,8 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
           </CatBtn>
         ))}
 
-        {/* Separator */}
-        <Box sx={{ width: 1, my: 1, backgroundColor: T.border, mx: 1, flexShrink: 0 }} />
-
         {/* District dropdown */}
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
           <DistrictBtn
             endIcon={<ExpandMoreIcon sx={{
               fontSize: 16,
@@ -187,6 +184,7 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
           ))}
         </Menu>
       </Stack>
+      </Container>
     </Strip>
   )
 }

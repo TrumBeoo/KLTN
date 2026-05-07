@@ -49,7 +49,8 @@ const StyledAppBar = styled(AppBar)({
   backgroundColor: BLUE,
   color: WHITE,
   boxShadow: 'none',
-  position: 'relative',
+  position: 'sticky',
+  top: 0,
   zIndex: 1100,
 })
 

@@ -15,6 +15,7 @@ const documentRoutes = require('./routes/documents');
 const locationRoutes = require('./routes/locations');
 const profileRoutes = require('./routes/profile');
 const roomAttributeRoutes = require('./routes/roomAttributes');
+const poiRoutes = require('./routes/poi');
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/room-attributes', roomAttributeRoutes);
+app.use('/api/poi', poiRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 

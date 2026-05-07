@@ -474,7 +474,7 @@ export default function ManageListings() {
       {/* Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
-          <Tab label="Tạo tin đăng" />
+          <Tab label="Tổng quan" />
           <Tab label="Tải lên Excel" />
         </Tabs>
       </Paper>
