@@ -91,14 +91,6 @@ export default function NearbyAmenities() {
   const fetchAmenitiesData = async () => {
     try {
       setLoading(true)
-      // Lấy nhiều loại POI cùng lúc
-      const types = ['park', 'supermarket', 'hospital', 'market', 'gym', 'bank', 'cafe', 'mall', 'school', 'university']
-      const promises = types.map(type => 
-        fetch(`${API_URL}/locations/pois?type=${type}`).then(res => res.json())
-      )
-      
-      const results = await Promise.all(promises)
-      const allPOIs = results.flatMap(data => data.success && data.data ? data.data : [])
       
       const amenityMap = {
         'park': { icon: '🌳', title: 'Gần công viên', desc: 'Công viên, khu vui chơi', color: '#2e7d32', image: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400&q=80' },
@@ -109,9 +101,28 @@ export default function NearbyAmenities() {
         'bank': { icon: '🏦', title: 'Gần ngân hàng', desc: 'ATM, chi nhánh ngân hàng', color: '#6a1b9a', image: 'https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&q=80' },
         'cafe': { icon: '☕', title: 'Gần cafe/coworking', desc: 'Quán cafe, không gian làm việc', color: '#5d4037', image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&q=80' },
         'mall': { icon: '🛍️', title: 'Gần trung tâm thương mại', desc: 'TTTM, siêu thị lớn', color: '#e91e63', image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&q=80' },
-        'school': { icon: '🏫', title: 'Gần trường học', desc: 'Trường tiểu học, THCS, THPT', color: '#ff6f00', image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400&q=80' },
         'university': { icon: '🎓', title: 'Gần trường đại học', desc: 'Đại học, cao đẳng', color: '#1976d2', image: 'https://images.unsplash.com/photo-1562774053-701939374585?w=400&q=80' },
+        'metro': { icon: '🚇', title: 'Gần ga tàu điện', desc: 'Ga metro, tàu điện ngầm', color: '#ff9800', image: 'https://images.unsplash.com/photo-1581262177000-8c2b2b2b2b2b?w=400&q=80' },
+        'cinema': { icon: '🎥', title: 'Gần rạp phim', desc: 'Rạp chiếu phim, CGV, Lotte', color: '#9c27b0', image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&q=80' },
+        'entertainment': { icon: '🎪', title: 'Gần khu vui chơi', desc: 'Khu giải trí, vui chơi', color: '#ff5722', image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=400&q=80' },
+        'landmark': { icon: '🏛️', title: 'Gần địa điểm nổi bật', desc: 'Di tích, địa điểm nổi tiếng', color: '#795548', image: 'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=400&q=80' },
+        'museum': { icon: '🏛️', title: 'Gần bảo tàng', desc: 'Bảo tàng, triển lãm', color: '#607d8b', image: 'https://images.unsplash.com/photo-1565173586116-48d4b8b4e9c9?w=400&q=80' },
+        'restaurant': { icon: '🍴', title: 'Gần nhà hàng', desc: 'Nhà hàng, quán ăn', color: '#ff6f00', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80' },
+        'bus_station': { icon: '🚌', title: 'Gần bến xe', desc: 'Bến xe buýt, trạm xe', color: '#00897b', image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=80' },
+        'stadium': { icon: '🏟️', title: 'Gần sân vận động', desc: 'Sân bóng, sân thể thao', color: '#43a047', image: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&q=80' },
+        'theater': { icon: '🎭', title: 'Gần nhà hát', desc: 'Nhà hát, sân khấu', color: '#d32f2f', image: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=400&q=80' },
+        'library': { icon: '📚', title: 'Gần thư viện', desc: 'Thư viện công cộng', color: '#5e35b1', image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400&q=80' },
+        'coworking': { icon: '💼', title: 'Gần không gian làm việc', desc: 'Coworking space, văn phòng', color: '#1565c0', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80' },
       }
+
+      // Lấy tất cả POI types
+      const types = Object.keys(amenityMap)
+      const promises = types.map(type => 
+        fetch(`${API_URL}/locations/pois?type=${type}`).then(res => res.json())
+      )
+      
+      const results = await Promise.all(promises)
+      const allPOIs = results.flatMap(data => data.success && data.data ? data.data : [])
 
       // Nhóm POI theo type và lấy POI có nhiều phòng nhất của mỗi type
       const groupedByType = {}
@@ -137,18 +148,14 @@ export default function NearbyAmenities() {
           }
         })
         .sort((a, b) => b.rooms - a.rooms)
-        .slice(0, 6)
       
-      // Nếu có dữ liệu thực, dùng dữ liệu thực, nếu không dùng mặc định
       if (mappedData.length > 0) {
         setAmenities(mappedData)
       } else {
-        // Hiển thị các tiện ích mặc định với rooms = 0 để user biết có các loại này
         setAmenities(defaultAmenities)
       }
     } catch (error) {
       console.error('Error fetching amenities:', error)
-      // Nếu lỗi, hiển thị mặc định
       setAmenities(defaultAmenities)
     } finally {
       setLoading(false)

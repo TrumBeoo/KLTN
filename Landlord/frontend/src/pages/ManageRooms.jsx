@@ -178,22 +178,17 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
   const [images, setImages] = useState([])
   const [imageFiles, setImageFiles] = useState([])
   const [selectedBuilding, setSelectedBuilding] = useState(null)
+  const [roomTypes, setRoomTypes] = useState([])
+  const [amenitiesList, setAmenitiesList] = useState([])
+  const [customAmenities, setCustomAmenities] = useState('')
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
   const token = localStorage.getItem('token')
 
-  const amenitiesList = [
-    { value: 'wifi', label: 'Wifi' },
-    { value: 'ac', label: 'Điều hòa' },
-    { value: 'heater', label: 'Nóng lạnh' },
-    { value: 'washer', label: 'Máy giặt' },
-    { value: 'fridge', label: 'Tủ lạnh' },
-    { value: 'tv', label: 'Ti vi' },
-    { value: 'balcony', label: 'Ban công' },
-    { value: 'parking', label: 'Bãi xe' },
-    { value: 'security', label: 'Bảo vệ 24/7' }
-  ]
-
   useEffect(() => {
+    if (open) {
+      fetchRoomTypes()
+      fetchAmenities()
+    }
     if (room) {
       setFormData({
         buildingId: room.BuildingID || '',
@@ -202,17 +197,7 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         area: room.Area || '',
         price: room.Price || '',
         maxPeople: room.MaxPeople || '',
-        amenities: (() => {
-          if (!room.Amenities) return [];
-          if (typeof room.Amenities === 'string') {
-            try {
-              return JSON.parse(room.Amenities);
-            } catch {
-              return room.Amenities.split(',').map(a => a.trim());
-            }
-          }
-          return Array.isArray(room.Amenities) ? room.Amenities : [];
-        })(),
+        amenities: [],
         furniture: room.Furniture || '',
         service: room.Service || '',
         rules: room.Rules || '',
@@ -220,6 +205,10 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         description: room.Description || '',
         poiIds: []
       })
+      if (room.RoomID) {
+        fetchRoomAmenities(room.RoomID)
+      }
+      setCustomAmenities('')
       // Load building info
       const building = buildings.find(b => b.BuildingID === room.BuildingID)
       setSelectedBuilding(building || null)
@@ -255,9 +244,48 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
       })
       setSelectedBuilding(null)
       setImages([])
+      setCustomAmenities('')
     }
     setImageFiles([])
   }, [room, open, buildings])
+
+  const fetchRoomTypes = async () => {
+    try {
+      const response = await fetch(`${API_URL}/room-attributes/room-types`)
+      const data = await response.json()
+      if (data.success) {
+        setRoomTypes(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch room types error:', error)
+    }
+  }
+
+  const fetchAmenities = async () => {
+    try {
+      const response = await fetch(`${API_URL}/room-attributes/amenities`)
+      const data = await response.json()
+      if (data.success) {
+        setAmenitiesList(data.data || [])
+      }
+    } catch (error) {
+      console.error('Fetch amenities error:', error)
+    }
+  }
+
+  const fetchRoomAmenities = async (roomId) => {
+    try {
+      const response = await fetch(`${API_URL}/rooms/${roomId}/amenities`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setFormData(prev => ({ ...prev, amenities: data.data.map(a => a.AmenityID) }))
+      }
+    } catch (error) {
+      console.error('Fetch room amenities error:', error)
+    }
+  }
 
   const fetchRoomPOIs = async (roomId) => {
     try {
@@ -319,7 +347,30 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
     }
     setLoading(true)
     try {
-      const roomId = await onSubmit(formData)
+      const amenityIds = [...formData.amenities]
+      
+      const customItems = customAmenities.split(',').map(a => a.trim()).filter(a => a)
+      for (const amenityName of customItems) {
+        try {
+          const response = await fetch(`${API_URL}/room-attributes/amenities`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name: amenityName })
+          })
+          const data = await response.json()
+          if (data.success && data.amenityId) {
+            amenityIds.push(data.amenityId)
+          }
+        } catch (error) {
+          console.error('Create custom amenity error:', error)
+        }
+      }
+      
+      const roomData = { ...formData, amenities: amenityIds }
+      const roomId = await onSubmit(roomData)
       
       // Link POIs if any selected
       if (formData.poiIds.length > 0 && roomId) {
@@ -420,10 +471,11 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
               size="small"
             >
               <MenuItem value="">Chọn loại phòng</MenuItem>
-              <MenuItem value="studio">Studio</MenuItem>
-              <MenuItem value="1bed">1 phòng ngủ</MenuItem>
-              <MenuItem value="2bed">2 phòng ngủ</MenuItem>
-              <MenuItem value="duplex">Duplex</MenuItem>
+              {roomTypes.map(type => (
+                <MenuItem key={type.RoomTypeID} value={type.Name}>
+                  {type.Name}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -517,20 +569,31 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
             <FormGroup>
               <Grid container>
                 {amenitiesList.map(amenity => (
-                  <Grid item xs={6} key={amenity.value}>
+                  <Grid item xs={6} key={amenity.AmenityID}>
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={formData.amenities.includes(amenity.value)}
-                          onChange={() => handleAmenityChange(amenity.value)}
+                          checked={formData.amenities.includes(amenity.AmenityID)}
+                          onChange={() => handleAmenityChange(amenity.AmenityID)}
                         />
                       }
-                      label={amenity.label}
+                      label={amenity.Name}
                     />
                   </Grid>
                 ))}
               </Grid>
             </FormGroup>
+            <TextField
+              label="Tiện nghi khác"
+              value={customAmenities}
+              onChange={(e) => setCustomAmenities(e.target.value)}
+              placeholder="VD: Bếp ga, Bàn làm việc, Tủ quần áo"
+              helperText="Nhập các tiện nghi khác, cách nhau bằng dấu phẩy"
+              multiline
+              rows={2}
+              fullWidth
+              sx={{ mt: 2 }}
+            />
           </Box>
 
           <TextField

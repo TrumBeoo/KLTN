@@ -114,6 +114,20 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
+    // Check duplicate building
+    const [duplicate] = await connection.query(
+      'SELECT BuildingID FROM BUILDING WHERE LandlordID = ? AND BuildingName = ? AND Address = ?',
+      [landlordId, buildingName, address]
+    );
+
+    if (duplicate.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Tòa nhà với tên và địa chỉ này đã tồn tại'
+      });
+    }
+
     // Find or create location
     let finalLocationId = locationId;
     if (!finalLocationId && district && ward) {
@@ -212,6 +226,20 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy tòa nhà'
+      });
+    }
+
+    // Check duplicate building (exclude current building)
+    const [duplicate] = await connection.query(
+      'SELECT BuildingID FROM BUILDING WHERE LandlordID = ? AND BuildingName = ? AND Address = ? AND BuildingID != ?',
+      [landlordId, buildingName, address, req.params.id]
+    );
+
+    if (duplicate.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Tòa nhà với tên và địa chỉ này đã tồn tại'
       });
     }
 

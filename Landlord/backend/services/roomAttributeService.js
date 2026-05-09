@@ -26,6 +26,49 @@ class RoomAttributeService {
   }
 
   /**
+   * Lấy tất cả room types
+   */
+  async getAllRoomTypes() {
+    const [roomTypes] = await db.query('SELECT * FROM ROOM_TYPE ORDER BY Name');
+    return roomTypes;
+  }
+
+  /**
+   * Lấy tất cả amenities
+   */
+  async getAllAmenities() {
+    const [amenities] = await db.query('SELECT * FROM AMENITY ORDER BY Name');
+    return amenities;
+  }
+
+  /**
+   * Tạo amenity mới
+   */
+  async createAmenity(name, description = '') {
+    // Kiểm tra trùng lặp
+    const [existing] = await db.query('SELECT AmenityID FROM AMENITY WHERE Name = ?', [name]);
+    if (existing.length > 0) {
+      return existing[0].AmenityID;
+    }
+
+    // Tạo ID mới
+    const [lastAmenity] = await db.query('SELECT AmenityID FROM AMENITY ORDER BY AmenityID DESC LIMIT 1');
+    let amenityId;
+    if (lastAmenity.length > 0) {
+      const lastId = parseInt(lastAmenity[0].AmenityID.substring(2));
+      amenityId = 'AM' + String(lastId + 1).padStart(3, '0');
+    } else {
+      amenityId = 'AM001';
+    }
+
+    await db.query(
+      'INSERT INTO AMENITY (AmenityID, Name, Description) VALUES (?, ?, ?)',
+      [amenityId, name, description]
+    );
+    return amenityId;
+  }
+
+  /**
    * Thêm services cho phòng
    * @param {string} roomId 
    * @param {string[]} serviceIds - Mảng ServiceID

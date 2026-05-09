@@ -34,7 +34,7 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
   const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [formData, setFormData] = useState({
     buildingName: '',
-    address: '',
+    address: 'Hà Nội',
     district: '',
     ward: '',
     floors: '',
@@ -64,7 +64,7 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
     } else {
       setFormData({
         buildingName: '',
-        address: '',
+        address: 'Hà Nội',
         district: '',
         ward: '',
         floors: '',
@@ -120,7 +120,11 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
       await onSubmit(formData)
       onClose()
     } catch (error) {
-      console.error('Submit error:', error)
+      if (error.message.includes('tồn tại')) {
+        showError('Lỗi!', 'Tòa nhà với tên và địa chỉ này đã tồn tại')
+      } else {
+        showError('Lỗi!', error.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -151,24 +155,29 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
             name="address"
             value={formData.address}
             onChange={handleChange}
-            placeholder="VD: 123 Đường ABC"
+            placeholder="VD: 123 Đường ABC, Hà Nội"
             size="small"
             fullWidth
+            helperText="Địa chỉ mặc định tại Hà Nội"
           />
 
           <Grid container spacing={1}>
             <Grid item xs={6}>
               <TextField
                 select
-                label="Quận/Huyện"
                 name="district"
                 value={formData.district}
                 onChange={handleChange}
                 size="small"
                 fullWidth
-                SelectProps={{ native: true }}
+                SelectProps={{ 
+                  native: true,
+                  displayEmpty: true
+                }}
+                InputLabelProps={{ shrink: true }}
+                placeholder="Chọn quận/huyện"
               >
-                <option value="">Chọn quận/huyện</option>
+                <option value="" disabled>Chọn quận/huyện</option>
                 {districts.map(district => (
                   <option key={district} value={district}>{district}</option>
                 ))}
@@ -177,16 +186,20 @@ const BuildingForm = ({ open, onClose, building = null, onSubmit }) => {
             <Grid item xs={6}>
               <TextField
                 select
-                label="Phường/Xã"
                 name="ward"
                 value={formData.ward}
                 onChange={handleChange}
                 size="small"
                 fullWidth
                 disabled={!formData.district}
-                SelectProps={{ native: true }}
+                SelectProps={{ 
+                  native: true,
+                  displayEmpty: true
+                }}
+                InputLabelProps={{ shrink: true }}
+                placeholder="Chọn phường/xã"
               >
-                <option value="">Chọn phường/xã</option>
+                <option value="" disabled>Chọn phường/xã</option>
                 {wards.map(ward => (
                   <option key={ward} value={ward}>{ward}</option>
                 ))}
@@ -288,10 +301,11 @@ export default function ManageBuildings() {
         fetchBuildings()
       } else {
         showError('Lỗi!', data.message)
+        throw new Error(data.message)
       }
     } catch (error) {
       console.error('Submit building error:', error)
-      showError('Lỗi!', error.message)
+      throw error
     }
   }
 

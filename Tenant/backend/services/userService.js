@@ -102,14 +102,14 @@ class UserService {
       if (role === 'Tenant') {
         const tenantId = await this.generateTenantId();
         await connection.query(
-          'INSERT INTO TENANT (TenantID, AccountID, Name, Email, Phone, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [tenantId, accountId, name, email, phone, now, now]
+          'INSERT INTO TENANT (TenantID, AccountID, Username, Name, Email, Phone, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [tenantId, accountId, username, name, email, phone, now, now]
         );
       } else {
         const landlordId = await this.generateLandlordId();
         await connection.query(
-          'INSERT INTO LANDLORD (LandlordID, AccountID, Name, Email, Phone, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [landlordId, accountId, name, email, phone, now, now]
+          'INSERT INTO LANDLORD (LandlordID, AccountID, Username, Name, Email, Phone, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [landlordId, accountId, username, name, email, phone, now, now]
         );
       }
 

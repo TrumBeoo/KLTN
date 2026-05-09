@@ -231,6 +231,15 @@ router.post('/', authMiddleware, async (req, res) => {
       ]
     );
 
+    // Insert amenities into ROOM_AMENITY table
+    if (amenities && Array.isArray(amenities) && amenities.length > 0) {
+      const amenityValues = amenities.map(amenityId => [roomId, amenityId]);
+      await connection.query(
+        'INSERT INTO ROOM_AMENITY (RoomID, AmenityID) VALUES ?',
+        [amenityValues]
+      );
+    }
+
     await connection.commit();
 
     res.status(201).json({
@@ -341,6 +350,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
         req.params.id
       ]
     );
+
+    // Update amenities in ROOM_AMENITY table
+    await connection.query('DELETE FROM ROOM_AMENITY WHERE RoomID = ?', [req.params.id]);
+    if (amenities && Array.isArray(amenities) && amenities.length > 0) {
+      const amenityValues = amenities.map(amenityId => [req.params.id, amenityId]);
+      await connection.query(
+        'INSERT INTO ROOM_AMENITY (RoomID, AmenityID) VALUES ?',
+        [amenityValues]
+      );
+    }
 
     await connection.commit();
 
@@ -698,6 +717,30 @@ router.get('/buildings/list', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Get buildings error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server: ' + error.message
+    });
+  }
+});
+
+// Get room amenities
+router.get('/:id/amenities', authMiddleware, async (req, res) => {
+  try {
+    const [amenities] = await db.query(
+      `SELECT a.* FROM AMENITY a
+       INNER JOIN ROOM_AMENITY ra ON a.AmenityID = ra.AmenityID
+       WHERE ra.RoomID = ?
+       ORDER BY a.Name`,
+      [req.params.id]
+    );
+
+    res.json({
+      success: true,
+      data: amenities
+    });
+  } catch (error) {
+    console.error('Get room amenities error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Lỗi server: ' + error.message

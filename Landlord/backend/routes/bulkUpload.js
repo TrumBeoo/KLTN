@@ -1013,6 +1013,35 @@ router.post('/bulk-create/:jobId', async (req, res) => {
           }
         }
 
+        // 4. Amenities
+        if (detail.Amenities) {
+          const amenityItems = detail.Amenities.split(',').map(a => a.trim()).filter(a => a);
+          for (const item of amenityItems) {
+            const amenityName = item.length > 50 ? item.substring(0, 47) + '...' : item;
+            const [existingAmenity] = await connection.query(
+              'SELECT AmenityID FROM AMENITY WHERE Name = ?', [amenityName]
+            );
+            let amenityId;
+            if (existingAmenity.length > 0) {
+              amenityId = existingAmenity[0].AmenityID;
+            } else {
+              const [lastAmenity] = await connection.query(
+                'SELECT AmenityID FROM AMENITY ORDER BY AmenityID DESC LIMIT 1'
+              );
+              const lastId = lastAmenity.length > 0 ? parseInt(lastAmenity[0].AmenityID.substring(2)) : 0;
+              amenityId = 'AM' + String(lastId + 1).padStart(3, '0');
+              await connection.query(
+                'INSERT INTO AMENITY (AmenityID, Name) VALUES (?, ?)',
+                [amenityId, amenityName]
+              );
+            }
+            await connection.query(
+              'INSERT IGNORE INTO ROOM_AMENITY (RoomID, AmenityID) VALUES (?, ?)',
+              [roomId, amenityId]
+            );
+          }
+        }
+
         await connection.query(
           'UPDATE UPLOAD_DETAIL SET Status = "success", RoomID = ? WHERE UploadDetailID = ?',
           [roomId, detail.UploadDetailID]
