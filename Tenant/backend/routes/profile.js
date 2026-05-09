@@ -12,17 +12,32 @@ router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const [tenants] = await db.query(`
       SELECT 
-        t.TenantID, t.Name, t.Age, t.Budget, t.Habit, t.Preference,
-        t.Phone, t.Email,
-        a.Username, a.AvatarURL, a.Status, a.CreatedAt
+        t.TenantID, t.Name, t.Phone, t.Email, t.Gender, t.Birthday,
+        YEAR(CURDATE()) - YEAR(t.Birthday) as Age,
+        a.Username, a.AvatarURL, a.Status, a.CreatedAt,
+        tp.BudgetMin, tp.BudgetMax,
+        CONCAT(COALESCE(tp.BudgetMin, 0), ' - ', COALESCE(tp.BudgetMax, 0)) as Budget,
+        tp.PreferredAmenities as Preference
       FROM TENANT t
       JOIN ACCOUNT a ON t.AccountID = a.AccountID
+      LEFT JOIN TENANT_PREFERENCE tp ON t.TenantID = tp.TenantID
       WHERE t.AccountID = ?
     `, [req.user.accountId]);
 
     if (tenants.length === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin người thuê' });
     }
+
+    // Lấy lifestyle (habits)
+    const [lifestyles] = await db.query(`
+      SELECT lm.LifestyleID, lm.Name, lm.Category, lm.Icon
+      FROM TENANT_LIFESTYLE tl
+      JOIN LIFESTYLE_MASTER lm ON tl.LifestyleID = lm.LifestyleID
+      WHERE tl.TenantID = ?
+    `, [tenants[0].TenantID]);
+
+    tenants[0].Lifestyles = lifestyles;
+    tenants[0].Habit = lifestyles.map(l => l.Name).join(', ');
 
     res.json({ success: true, data: tenants[0] });
   } catch (error) {
@@ -33,19 +48,27 @@ router.get('/profile', authMiddleware, async (req, res) => {
 
 // Update tenant profile
 router.put('/profile', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
   try {
-    const { name, age, phone, email, budget, habit, preference } = req.body;
+    await connection.beginTransaction();
 
-    await db.query(`
+    const { name, age, phone, email, gender, birthday, university, job, bio } = req.body;
+
+    // Cập nhật thông tin cơ bản trong TENANT
+    await connection.query(`
       UPDATE TENANT 
-      SET Name = ?, Age = ?, Phone = ?, Email = ?, Budget = ?, Habit = ?, Preference = ?
+      SET Name = ?, Phone = ?, Email = ?, Gender = ?, Birthday = ?, University = ?, Job = ?, Bio = ?
       WHERE AccountID = ?
-    `, [name, age, phone, email, budget, habit, preference, req.user.accountId]);
+    `, [name, phone, email, gender, birthday, university, job, bio, req.user.accountId]);
 
+    await connection.commit();
     res.json({ success: true, message: 'Cập nhật thông tin thành công' });
   } catch (error) {
+    await connection.rollback();
     console.error('Update profile error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server' });
+    res.status(500).json({ success: false, message: error.message || 'Lỗi server' });
+  } finally {
+    connection.release();
   }
 });
 
@@ -279,6 +302,19 @@ router.put('/favorites/:roomId/rating', authMiddleware, async (req, res) => {
     res.json({ success: true, message: 'Cập nhật đánh giá thành công' });
   } catch (error) {
     console.error('Update rating error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+});
+
+// Get all lifestyles
+router.get('/lifestyles', async (req, res) => {
+  try {
+    const [lifestyles] = await db.query(
+      'SELECT LifestyleID, Name, Category, Icon FROM LIFESTYLE_MASTER ORDER BY Category, Name'
+    );
+    res.json({ success: true, data: lifestyles });
+  } catch (error) {
+    console.error('Get lifestyles error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 });

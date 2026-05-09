@@ -13,18 +13,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  AppBar, Toolbar, Box, TextField, Button, IconButton,
+  AppBar, Toolbar, Box, Button, IconButton,
   Menu, MenuItem, Avatar, Badge, Drawer, List, ListItem,
-  ListItemText, Divider, InputAdornment, CircularProgress,
-  Typography, Tooltip, Chip, Stack,
+  ListItemText, Divider, CircularProgress,
+  Typography, Tooltip, Chip, Container,
 } from '@mui/material'
 import {
-  Search as SearchIcon,
   Notifications as NotificationsIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
   Tune as TuneIcon,
-  AccountCircle as AccountCircleIcon,
   KeyboardArrowDown as ArrowDownIcon,
   Home as HomeIcon,
   Apartment as ApartmentIcon,
@@ -49,24 +47,8 @@ const StyledAppBar = styled(AppBar)({
   backgroundColor: BLUE,
   color: WHITE,
   boxShadow: 'none',
-  position: 'sticky',
-  top: 0,
+  position: 'relative',
   zIndex: 1100,
-})
-
-/** Search input — white pill inside blue bar */
-const SearchInput = styled(TextField)({
-  '& .MuiOutlinedInput-root': {
-    backgroundColor: WHITE,
-    borderRadius: '4px',
-    height: '36px',
-    fontSize: '0.857rem',
-    color: '#1a1a1a',
-    '& fieldset': { borderColor: 'transparent', borderWidth: 0 },
-    '&:hover fieldset': { borderColor: 'transparent' },
-    '&.Mui-focused fieldset': { borderColor: BLUE_DARK, borderWidth: '2px' },
-    '& .MuiOutlinedInput-input': { padding: '0 8px', height: '36px' },
-  },
 })
 
 /** Ghost nav button — white text on blue */
@@ -124,7 +106,6 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount]      = useState(0)
   const [notifications, setNotifications]  = useState([])
   const [loadingNotif, setLoadingNotif]    = useState(false)
-  const [search, setSearch]                = useState('')
 
   useEffect(() => { if (user) fetchUnreadCount() }, [user])
 
@@ -153,14 +134,15 @@ export default function Navbar() {
   return (
     <>
       <StyledAppBar>
-        <Toolbar
-          sx={{
-            px: { xs: 2, md: 3 },
-            minHeight: '60px !important',
-            gap: 1.5,
-            justifyContent: 'space-between',
-          }}
-        >
+        <Container maxWidth="lg" disableGutters>
+          <Toolbar
+            sx={{
+              px: { xs: 2, md: 3 },
+              minHeight: '60px !important',
+              gap: 1.5,
+              justifyContent: 'space-between',
+            }}
+          >
           {/* Logo */}
           <Box
             onClick={() => navigate('/')}
@@ -169,49 +151,29 @@ export default function Navbar() {
             aria-label="Rentify - Trang chủ"
             onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate('/')}
             sx={{
-              display: 'flex', alignItems: 'center', gap: 1,
+              display: 'flex', alignItems: 'center', gap: 1.5,
               cursor: 'pointer', flexShrink: 0, userSelect: 'none',
               '&:focus-visible': { outline: '2px solid #febb02', outlineOffset: '4px', borderRadius: '4px' },
             }}
           >
             <Box sx={{
-              width: 28, height: 28,
+              width: 40, height: 40,
               backgroundImage: "url('/logo/5.png')",
               backgroundSize: 'cover', backgroundPosition: 'center',
-              borderRadius: '4px', flexShrink: 0,
+              borderRadius: '6px', flexShrink: 0,
             }} />
             <Typography sx={{
-              fontWeight: 800, fontSize: '1.286rem', color: WHITE,
-              letterSpacing: '-0.5px',
+              fontWeight: 800, fontSize: '1.714rem', color: WHITE,
+              letterSpacing: '-0.8px',
+              fontFamily: '"Poppins", "Inter", "Segoe UI", sans-serif',
               display: { xs: 'none', sm: 'block' },
             }}>
               Rentify
             </Typography>
           </Box>
 
-          {/* Search — desktop */}
-          <SearchInput
-            placeholder="Tìm khu vực, phòng trọ..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && navigate('/listings')}
-            inputProps={{ 'aria-label': 'Tìm kiếm phòng trọ' }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: '#595959' }} />
-                </InputAdornment>
-              ),
-              endAdornment: search && (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
-                    <CloseIcon sx={{ fontSize: 14, color: '#595959' }} />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ display: { xs: 'none', md: 'flex' }, width: 280, flexShrink: 0 }}
-          />
+          {/* Spacer */}
+          <Box sx={{ flex: 1 }} />
 
           {/* Nav links — desktop */}
           <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'flex-end', gap: 0, flexShrink: 0 }}>
@@ -228,17 +190,7 @@ export default function Navbar() {
           </Box>
 
           {/* Right actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0, ml: 'auto' }}>
-            {/* Post button */}
-            <PostBtn
-              startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-              onClick={() => window.location.href = 'http://localhost:3333/login'}
-              aria-label="Đăng tin cho thuê"
-              sx={{ display: { xs: 'none', md: 'flex' } }}
-            >
-              Đăng tin
-            </PostBtn>
-
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
             {/* Filter */}
             <Tooltip title="Bộ lọc">
               <IconButton
@@ -256,6 +208,16 @@ export default function Navbar() {
                 <TuneIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
+
+            {/* Post button */}
+            <PostBtn
+              startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+              onClick={() => window.location.href = 'http://localhost:3333/login'}
+              aria-label="Đăng tin cho thuê"
+              sx={{ display: { xs: 'none', md: 'flex' } }}
+            >
+              Đăng tin
+            </PostBtn>
 
             {/* Notifications */}
             {user && (
@@ -325,7 +287,8 @@ export default function Navbar() {
               <MenuIcon />
             </IconButton>
           </Box>
-        </Toolbar>
+          </Toolbar>
+        </Container>
       </StyledAppBar>
 
       {/* ─── Notification dropdown ─────────────────────────────────────────── */}
@@ -435,16 +398,6 @@ export default function Navbar() {
             <IconButton onClick={() => setMobileOpen(false)} aria-label="Đóng menu" sx={{ color: WHITE }}>
               <CloseIcon />
             </IconButton>
-          </Box>
-
-          {/* Search */}
-          <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${BORDER}` }}>
-            <TextField
-              fullWidth size="small"
-              placeholder="Tìm phòng trọ..."
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 16, color: '#595959' }} /></InputAdornment> }}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '4px', fontSize: '0.857rem' } }}
-            />
           </Box>
 
           <List disablePadding>

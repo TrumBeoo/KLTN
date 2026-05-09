@@ -133,6 +133,8 @@ export default function ListingPage() {
   const [error, setError]         = useState(null)
   const [page, setPage]           = useState(1)
   const [poiName, setPoiName]     = useState('')
+  const [selectedRoomType, setSelectedRoomType] = useState('all')
+  const [selectedDistrict, setSelectedDistrict] = useState(null)
   const PER_PAGE = 8
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -140,8 +142,14 @@ export default function ListingPage() {
   const poiId = searchParams.get('poi')
   const poiType = searchParams.get('type')
   const district = searchParams.get('district')
+  const searchDate = searchParams.get('date')
+  const searchGuests = searchParams.get('guests')
+  const maxPrice = searchParams.get('maxPrice')
+  const amenity = searchParams.get('amenity')
+  const roomTypeParam = searchParams.get('roomType')
+  const nearUniversity = searchParams.get('nearUniversity')
 
-  useEffect(() => { fetchRooms() }, [poiId, poiType, district])
+  useEffect(() => { fetchRooms() }, [poiId, poiType, district, selectedRoomType, selectedDistrict, maxPrice, amenity, roomTypeParam, nearUniversity])
   
   useEffect(() => {
     if (poiId) {
@@ -170,8 +178,8 @@ export default function ListingPage() {
       if (poiId) {
         params.append('poi', poiId)
       }
-      if (district) {
-        params.append('district', district)
+      if (district || selectedDistrict) {
+        params.append('district', selectedDistrict || district)
       }
       
       if (params.toString()) {
@@ -181,7 +189,35 @@ export default function ListingPage() {
       const res = await fetch(url)
       const data = await res.json()
       if (data.success) {
-        const formatted = data.data.map(room => {
+        let filteredData = data.data
+        
+        // Filter by room type from URL or selected
+        const effectiveRoomType = roomTypeParam || selectedRoomType
+        if (effectiveRoomType && effectiveRoomType !== 'all') {
+          filteredData = filteredData.filter(room => room.RoomType === effectiveRoomType)
+        }
+        
+        // Filter by max price
+        if (maxPrice) {
+          const maxPriceNum = parseFloat(maxPrice)
+          filteredData = filteredData.filter(room => parseFloat(room.Price) <= maxPriceNum)
+        }
+        
+        // Filter by amenity
+        if (amenity) {
+          filteredData = filteredData.filter(room => {
+            const amenities = parseAmenities(room.Amenities)
+            return amenities.includes(amenity)
+          })
+        }
+        
+        // Filter near university (placeholder - would need POI data)
+        if (nearUniversity === 'true') {
+          // This would need actual POI filtering logic
+          // For now, just pass through
+        }
+        
+        const formatted = filteredData.map(room => {
           const imgUrl = room.images?.[0]?.ImageURL
           return {
             id: room.RoomID,
@@ -227,9 +263,19 @@ export default function ListingPage() {
   const totalPages = Math.ceil(listings.length / PER_PAGE)
   const latestListings = [...listings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10)
 
+  const handleRoomTypeChange = (roomType) => {
+    setSelectedRoomType(roomType)
+    setPage(1)
+  }
+
+  const handleDistrictChange = (district) => {
+    setSelectedDistrict(district)
+    setPage(1)
+  }
+
   return (
     <Box sx={{ backgroundColor: T.bg, minHeight: '100vh' }}>
-      <SecondaryMenu onCategoryChange={() => {}} onDistrictChange={() => {}} />
+      <SecondaryMenu onCategoryChange={handleRoomTypeChange} onDistrictChange={handleDistrictChange} />
 
       {/* ─── Toolbar ─────────────────────────────────────────────────────── */}
       <Box sx={{ backgroundColor: T.white, borderBottom: `1px solid ${T.border}` }}>
@@ -237,7 +283,13 @@ export default function ListingPage() {
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1.5 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text }}>
               <Box component="span" sx={{ color: T.blue }}>{listings.length}</Box>
-              &nbsp;phòng{poiId && poiName ? ` gần ${poiName}` : district ? ` tại ${district}` : ' tại Hà Nội'}
+              &nbsp;phòng{selectedRoomType && selectedRoomType !== 'all' ? ` ${selectedRoomType}` : ''}
+              {roomTypeParam ? ` ${roomTypeParam}` : ''}
+              {maxPrice ? ` dưới ${fmt(maxPrice)}đ` : ''}
+              {amenity ? ` có ${amenity === 'ac' ? 'điều hòa' : amenity}` : ''}
+              {poiId && poiName ? ` gần ${poiName}` : 
+               (selectedDistrict || district) ? ` tại ${selectedDistrict || district}` : 
+               ' tại Hà Nội'}
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button

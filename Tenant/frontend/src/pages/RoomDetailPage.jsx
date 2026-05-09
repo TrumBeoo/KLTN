@@ -99,6 +99,7 @@ export default function RoomDetailPage() {
   const [loading, setLoading]             = useState(true)
   const [imgIdx, setImgIdx]               = useState(0)
   const [isFav, setIsFav]                 = useState(false)
+  const [favLoading, setFavLoading]       = useState(false)
   const [openSchedule, setOpenSchedule]   = useState(false)
   const [openLoginModal, setOpenLoginModal] = useState(false)
   const [openCancelModal, setOpenCancelModal] = useState(false)
@@ -116,8 +117,8 @@ export default function RoomDetailPage() {
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
   const BASE = API.replace('/api', '')
 
-  useEffect(() => { if (roomId) { fetchRoom(); fetchUserSchedule() } }, [roomId])
-  useEffect(() => { if (roomId) fetchUserSchedule() }, [auth.user])
+  useEffect(() => { if (roomId) { fetchRoom(); fetchUserSchedule(); checkFavorite() } }, [roomId])
+  useEffect(() => { if (roomId) { fetchUserSchedule(); checkFavorite() } }, [auth.user])
 
   const fetchDocuments = async () => {
     setLoadingDocs(true)
@@ -145,6 +146,53 @@ export default function RoomDetailPage() {
       const data = await res.json()
       if (data.success) setRoom(data.data)
     } catch {} finally { setLoading(false) }
+  }
+
+  const checkFavorite = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) { setIsFav(false); return }
+    try {
+      const res = await fetch(`${API}/tenant/favorites/check/${roomId}`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (data.success) setIsFav(data.isFavorite)
+    } catch { setIsFav(false) }
+  }
+
+  const handleToggleFavorite = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) { setOpenLoginModal(true); return }
+    
+    setFavLoading(true)
+    try {
+      if (isFav) {
+        const res = await fetch(`${API}/tenant/favorites/${roomId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (data.success) {
+          setIsFav(false)
+          showSuccess('Thành công!', 'Đã xóa khỏi danh sách yêu thích')
+        }
+      } else {
+        const res = await fetch(`${API}/tenant/favorites`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId })
+        })
+        const data = await res.json()
+        if (data.success) {
+          setIsFav(true)
+          showSuccess('Thành công!', 'Đã thêm vào danh sách yêu thích')
+        } else {
+          showError('Lỗi!', data.message || 'Không thể thêm vào yêu thích')
+        }
+      }
+    } catch (err) {
+      showError('Lỗi!', 'Lỗi kết nối')
+    } finally {
+      setFavLoading(false)
+    }
   }
 
   const fetchUserSchedule = async () => {
@@ -279,11 +327,12 @@ export default function RoomDetailPage() {
               <Button
                 size="small"
                 startIcon={isFav ? <FavoriteIcon sx={{ fontSize: 16, color: T.blue }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
-                onClick={() => setIsFav(!isFav)}
+                onClick={handleToggleFavorite}
+                disabled={favLoading}
                 aria-label={isFav ? 'Bỏ lưu' : 'Lưu phòng'}
                 sx={{ color: isFav ? T.blue : T.text, border: `1px solid ${T.border}`, borderRadius: '4px', fontSize: '0.857rem' }}
               >
-                {isFav ? 'Đã lưu' : 'Lưu'}
+                {favLoading ? 'Đang xử lý...' : isFav ? 'Đã lưu' : 'Lưu'}
               </Button>
             </Stack>
           </Stack>
@@ -552,6 +601,20 @@ export default function RoomDetailPage() {
                       <DocumentIcon sx={{ mr: 1, fontSize: 18 }} />
                       Xem trước hợp đồng
                     </Button>
+                    {['Ở ghép', 'Phòng cho sinh viên', 'Phòng cặp đôi', 'Co-living', 'Ký túc xá', 'Homestay'].includes(room.RoomType) && (
+                      <Button
+                        fullWidth variant="outlined"
+                        onClick={() => navigate('/roommate')}
+                        sx={{
+                          borderColor: T.green, borderWidth: '2px', color: T.green, borderRadius: '4px',
+                          fontWeight: 700, fontSize: '0.929rem', py: 1.25, mb: 1.5,
+                          '&:hover': { borderWidth: '2px', backgroundColor: T.greenLt },
+                        }}
+                      >
+                        <GroupIcon sx={{ mr: 1, fontSize: 18 }} />
+                        Liên hệ Roommate
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <Box sx={{ backgroundColor: '#fde8eb', borderRadius: '4px', p: 1.5, mb: 1.5 }}>

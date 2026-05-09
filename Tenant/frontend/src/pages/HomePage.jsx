@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box, Container, Typography, Button, Grid, Chip, Stack,
-  IconButton, Tabs, Tab, Skeleton, Fab, Tooltip,
+  IconButton, Tabs, Tab, Skeleton, Fab, Tooltip, TextField, Popover, MenuItem, Autocomplete,
 } from '@mui/material'
 import {
   Star as StarIcon,
@@ -83,24 +83,36 @@ const HeroSection = styled(Box)({
 const HeroSearchBar = styled(Box)({
   display: 'flex',
   alignItems: 'stretch',
-  borderRadius: '4px',
-  overflow: 'visible',
-  backgroundColor: T.yellow,
-  padding: '4px',
-  gap: '4px',
-  boxShadow: 'rgba(0,0,0,0.24) 0px 4px 16px',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  backgroundColor: T.white,
+  boxShadow: 'rgba(0,0,0,0.15) 0px 8px 32px',
+  border: '1px solid rgba(255,255,255,0.3)',
 })
 
 const SearchSegment = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   backgroundColor: T.white,
-  borderRadius: '2px',
-  padding: '0 12px',
+  padding: '0 20px',
   flex: 1,
   minWidth: 0,
-  height: '48px',
-  cursor: 'text',
+  height: '64px',
+  position: 'relative',
+  transition: 'background-color 120ms ease',
+  '&:not(:last-child)::after': {
+    content: '""',
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    width: '1px',
+    height: '32px',
+    backgroundColor: '#e0e0e0',
+  },
+  '&:hover': {
+    backgroundColor: '#f8f9fa',
+  },
 })
 
 /** Room card — list style (horizontal on md+) */
@@ -255,6 +267,11 @@ export default function HomePage() {
   const [chatOpen, setChatOpen]           = useState(false)
   const [districts, setDistricts]         = useState([])
   const [loadingDistricts, setLoadingDistricts] = useState(true)
+  const [searchDistrict, setSearchDistrict] = useState(null)
+  const [districtOptions, setDistrictOptions] = useState([])
+  const [searchDate, setSearchDate]       = useState('')
+  const [guestAnchor, setGuestAnchor]     = useState(null)
+  const [guestCount, setGuestCount]       = useState(1)
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -272,7 +289,25 @@ export default function HomePage() {
     { step: 4, icon: '✅', title: 'Thuê phòng', desc: 'Ký hợp đồng và dọn vào ở ngay' },
   ]
 
-  useEffect(() => { fetchRooms(); fetchDistricts() }, [])
+  useEffect(() => { fetchRooms(); fetchDistricts(); fetchDistrictOptions() }, [])
+
+  const fetchDistrictOptions = async () => {
+    try {
+      const res = await fetch(`${API_URL}/locations/districts`)
+      const data = await res.json()
+      if (data.success) {
+        setDistrictOptions(data.data.map(d => ({ label: d, value: d })))
+      }
+    } catch (error) {
+      console.error('Error fetching districts:', error)
+      // Fallback data
+      setDistrictOptions([
+        'Ba Đình', 'Hoàn Kiếm', 'Hai Bà Trưng', 'Đống Đa', 'Cầu Giấy',
+        'Tây Hồ', 'Long Biên', 'Hà Đông', 'Thanh Xuân', 'Hoàng Mai',
+        'Nam Từ Liêm', 'Bắc Từ Liêm', 'Gia Lâm',
+      ].map(d => ({ label: d, value: d })))
+    }
+  }
 
   const fetchDistricts = async () => {
     try {
@@ -354,51 +389,127 @@ export default function HomePage() {
             Xem bản đồ · Đặt lịch xem · Tìm bạn ở ghép thông minh
           </Typography>
 
-          {/* Search bar — Booking.com style */}
+          {/* Search bar — Modern redesign */}
           <HeroSearchBar role="search" aria-label="Tìm kiếm phòng">
             <SearchSegment sx={{ flex: 2 }}>
-              <LocationIcon sx={{ fontSize: 20, color: T.muted, mr: 1, flexShrink: 0 }} />
-              <Box>
-                <Typography sx={{ fontSize: '0.714rem', color: T.muted, lineHeight: 1 }}>Khu vực</Typography>
-                <Typography sx={{ fontSize: '0.857rem', color: T.text, fontWeight: 500 }}>Hà Nội, Việt Nam</Typography>
+              <LocationIcon sx={{ fontSize: 24, color: T.blue, mr: 1.5, flexShrink: 0 }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.2, mb: 0.25, fontWeight: 500 }}>Địa điểm</Typography>
+                <Autocomplete
+                  value={searchDistrict}
+                  onChange={(e, newValue) => setSearchDistrict(newValue)}
+                  options={districtOptions}
+                  getOptionLabel={(option) => option?.label || ''}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Chọn quận/huyện"
+                      variant="standard"
+                      InputProps={{
+                        ...params.InputProps,
+                        disableUnderline: true,
+                        sx: { fontSize: '1rem', fontWeight: 600, color: T.text }
+                      }}
+                    />
+                  )}
+                  sx={{
+                    '& .MuiAutocomplete-input': { p: 0 },
+                    '& .MuiAutocomplete-endAdornment': { display: 'none' },
+                  }}
+                />
               </Box>
             </SearchSegment>
-            <SearchSegment sx={{ flex: 1 }}>
-              <CalendarIcon sx={{ fontSize: 20, color: T.muted, mr: 1, flexShrink: 0 }} />
-              <Box>
-                <Typography sx={{ fontSize: '0.714rem', color: T.muted, lineHeight: 1 }}>Nhận phòng</Typography>
-                <Typography sx={{ fontSize: '0.857rem', color: T.text, fontWeight: 500 }}>Chọn ngày</Typography>
+            <SearchSegment sx={{ flex: 1.2 }}>
+              <CalendarIcon sx={{ fontSize: 24, color: T.blue, mr: 1.5, flexShrink: 0 }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.2, mb: 0.25, fontWeight: 500 }}>Xem phòng</Typography>
+                <TextField
+                  type="date"
+                  value={searchDate}
+                  onChange={e => setSearchDate(e.target.value)}
+                  variant="standard"
+                  fullWidth
+                  InputProps={{ disableUnderline: true, sx: { fontSize: '1rem', fontWeight: 600, color: T.text } }}
+                  inputProps={{ min: new Date().toISOString().split('T')[0] }}
+                />
               </Box>
             </SearchSegment>
-            <SearchSegment sx={{ flex: 1 }}>
-              <PeopleIcon sx={{ fontSize: 20, color: T.muted, mr: 1, flexShrink: 0 }} />
-              <Box>
-                <Typography sx={{ fontSize: '0.714rem', color: T.muted, lineHeight: 1 }}>Số người</Typography>
-                <Typography sx={{ fontSize: '0.857rem', color: T.text, fontWeight: 500 }}>1 người</Typography>
+            <SearchSegment sx={{ flex: 1, cursor: 'pointer' }} onClick={e => setGuestAnchor(e.currentTarget)}>
+              <PeopleIcon sx={{ fontSize: 24, color: T.blue, mr: 1.5, flexShrink: 0 }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.2, mb: 0.25, fontWeight: 500 }}>Số người</Typography>
+                <Typography sx={{ fontSize: '1rem', color: T.text, fontWeight: 600 }}>{guestCount} người</Typography>
               </Box>
             </SearchSegment>
             <Button
-              onClick={() => navigate('/listings')}
+              onClick={() => {
+                const params = new URLSearchParams()
+                if (searchDistrict?.value) params.set('district', searchDistrict.value)
+                if (searchDate) params.set('date', searchDate)
+                if (guestCount > 1) params.set('guests', guestCount)
+                navigate(`/listings?${params.toString()}`)
+              }}
               variant="contained"
               aria-label="Tìm phòng"
               sx={{
-                backgroundColor: T.blue, color: T.white, borderRadius: '2px',
-                px: 3, height: '48px', fontSize: '0.929rem', fontWeight: 700,
-                whiteSpace: 'nowrap', flexShrink: 0,
-                '&:hover': { backgroundColor: T.blueDk },
+                backgroundColor: T.blue,
+                color: T.white,
+                borderRadius: 0,
+                px: 4,
+                height: '64px',
+                fontSize: '1rem',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minWidth: '140px',
+                '&:hover': {
+                  backgroundColor: T.blueDk,
+                },
+                '&:focus-visible': {
+                  outline: `3px solid ${T.yellow}`,
+                  outlineOffset: '-3px',
+                },
               }}
             >
-              <SearchIcon sx={{ mr: 0.5, fontSize: 18 }} />
-              Tìm phòng
+              <SearchIcon sx={{ mr: 1, fontSize: 22 }} />
+              Tìm
             </Button>
           </HeroSearchBar>
 
+          {/* Guest count popover */}
+          <Popover
+            open={!!guestAnchor}
+            anchorEl={guestAnchor}
+            onClose={() => setGuestAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            PaperProps={{ sx: { mt: 1, borderRadius: '8px', boxShadow: T.shadow1, minWidth: 200 } }}
+          >
+            {[1, 2, 3, 4].map(n => (
+              <MenuItem
+                key={n}
+                selected={guestCount === n}
+                onClick={() => { setGuestCount(n); setGuestAnchor(null) }}
+                sx={{ fontSize: '0.857rem', py: 1 }}
+              >
+                {n} người
+              </MenuItem>
+            ))}
+          </Popover>
+
           {/* Quick filter chips */}
           <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'center', flexWrap: 'wrap', gap: '8px !important' }}>
-            {['Gần trường ĐH', 'Dưới 3 triệu', 'Có điều hòa', 'Studio', 'Khép kín', 'Ở ghép'].map(label => (
+            {[
+              { label: 'Gần trường ĐH', filter: 'nearUniversity=true' },
+              { label: 'Dưới 3 triệu', filter: 'maxPrice=3000000' },
+              { label: 'Có điều hòa', filter: 'amenity=ac' },
+              { label: 'Studio', filter: 'roomType=Studio' },
+              { label: 'Khép kín', filter: 'roomType=Khép kín' },
+              { label: 'Ở ghép', filter: 'roomType=Ở ghép' },
+            ].map(({ label, filter }) => (
               <Chip
                 key={label} label={label}
-                onClick={() => navigate('/listings')}
+                onClick={() => navigate(`/listings?${filter}`)}
                 aria-label={`Lọc: ${label}`}
                 sx={{
                   backgroundColor: 'rgba(255,255,255,0.2)',

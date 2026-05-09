@@ -5,10 +5,11 @@
  * White background, blue active indicator, 14px text.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Box, Button, Menu, MenuItem, Stack, Typography, Container } from '@mui/material'
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
+import { filterAPI } from '../utils/api'
 
 const T = {
   blue:   '#006ce4',
@@ -24,8 +25,7 @@ const T = {
 const Strip = styled(Box)({
   backgroundColor: T.white,
   borderBottom: `1px solid ${T.border}`,
-  position: 'sticky',
-  top: 60,            // height of blue navbar
+  position: 'relative',
   zIndex: 99,
   overflowX: 'auto',
   '&::-webkit-scrollbar': { display: 'none' },
@@ -35,10 +35,10 @@ const Strip = styled(Box)({
 const CatBtn = styled(Button, { shouldForwardProp: p => p !== 'isActive' })(
   ({ isActive }) => ({
     textTransform: 'none',
-    fontSize: '0.857rem',
+    fontSize: '0.786rem',
     fontWeight: isActive ? 700 : 400,
     color: isActive ? T.blue : T.muted,
-    padding: '10px 16px',
+    padding: '8px 12px',
     borderRadius: 0,
     minWidth: 'auto',
     whiteSpace: 'nowrap',
@@ -56,41 +56,57 @@ const CatBtn = styled(Button, { shouldForwardProp: p => p !== 'isActive' })(
 
 const DistrictBtn = styled(Button)({
   textTransform: 'none',
-  fontSize: '0.857rem',
+  fontSize: '0.786rem',
   fontWeight: 400,
   color: T.text,
-  padding: '6px 12px',
+  padding: '4px 10px',
   borderRadius: '4px',
   border: `1px solid ${T.border}`,
   whiteSpace: 'nowrap',
   flexShrink: 0,
-  height: '32px',
+  height: '28px',
   minWidth: 'auto',
   '&:hover': { backgroundColor: T.bg, borderColor: '#8b8b8b' },
   '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
   transition: `all ${T.motion} ease`,
 })
 
-const districts = [
+const defaultCategories = [
+  { id: 'all', label: 'Tất cả' },
+]
+
+const defaultDistricts = [
   'Ba Đình', 'Hoàn Kiếm', 'Hai Bà Trưng', 'Đống Đa', 'Cầu Giấy',
   'Tây Hồ', 'Long Biên', 'Hà Đông', 'Thanh Xuân', 'Hoàng Mai',
   'Nam Từ Liêm', 'Bắc Từ Liêm', 'Gia Lâm',
 ]
 
-const categories = [
-  { id: 'all',     label: 'Tất cả' },
-  { id: 'premium', label: 'Cao cấp' },
-  { id: 'mini',    label: 'Chung cư mini' },
-  { id: 'duplex',  label: 'Duplex' },
-  { id: 'cheap',   label: 'Giá rẻ' },
-  { id: 'studio',  label: 'Studio' },
-  { id: 'share',   label: 'Ở ghép' },
-]
-
 export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
-  const [active, setActive]             = useState('all')
+  const [active, setActive] = useState('all')
   const [districtAnchor, setDistrictAnchor] = useState(null)
   const [selectedDistrict, setSelectedDistrict] = useState(null)
+  const [categories, setCategories] = useState(defaultCategories)
+  const [districts, setDistricts] = useState(defaultDistricts)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [roomTypesData, districtsData] = await Promise.all([
+          filterAPI.getRoomTypes(),
+          filterAPI.getDistricts(),
+        ])
+        if (roomTypesData?.length) {
+          setCategories(roomTypesData)
+        }
+        if (districtsData?.length) {
+          setDistricts(districtsData)
+        }
+      } catch (error) {
+        console.error('Error fetching filter data:', error)
+      }
+    }
+    fetchData()
+  }, [])
 
   const handleCat = id => { setActive(id); onCategoryChange?.(id) }
   const handleDistrict = d => {
@@ -125,7 +141,7 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
         <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
           <DistrictBtn
             endIcon={<ExpandMoreIcon sx={{
-              fontSize: 16,
+              fontSize: 14,
               transition: 'transform 200ms',
               transform: districtAnchor ? 'rotate(180deg)' : 'none',
             }} />}
@@ -149,7 +165,7 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
           onClose={() => setDistrictAnchor(null)}
           PaperProps={{
             sx: {
-              maxHeight: 320, width: 200, borderRadius: '4px', mt: 0.5,
+              maxHeight: 320, width: 180, borderRadius: '4px', mt: 0.5,
               boxShadow: 'rgba(26,26,26,0.16) 0px 2px 8px 0px',
               border: `1px solid ${T.border}`, py: 0.5,
             },
@@ -160,10 +176,10 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
           <MenuItem
             onClick={() => handleDistrict(null)}
             sx={{
-              fontSize: '0.857rem',
+              fontSize: '0.786rem',
               fontWeight: !selectedDistrict ? 700 : 400,
               color: !selectedDistrict ? T.blue : T.text,
-              py: 1,
+              py: 0.75,
             }}
           >
             Tất cả khu vực
@@ -174,7 +190,7 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
               onClick={() => handleDistrict(d)}
               selected={selectedDistrict === d}
               sx={{
-                fontSize: '0.857rem', color: T.text, py: 1,
+                fontSize: '0.786rem', color: T.text, py: 0.75,
                 '&.Mui-selected': { backgroundColor: T.blueLt, color: T.blue, fontWeight: 700 },
                 '&.Mui-selected:hover': { backgroundColor: '#d0e8ff' },
               }}

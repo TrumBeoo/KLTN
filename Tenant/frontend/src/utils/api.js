@@ -61,4 +61,9 @@ export const authAPI = {
     }),
 };
 
+export const filterAPI = {
+  getRoomTypes: () => apiCall('/filters/room-types', { method: 'GET' }),
+  getDistricts: () => apiCall('/filters/districts', { method: 'GET' }),
+};
+
 export default apiCall;

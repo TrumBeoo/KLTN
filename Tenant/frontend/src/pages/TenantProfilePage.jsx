@@ -113,15 +113,18 @@ export default function TenantProfilePage() {
     age: '',
     phone: '',
     email: '',
-    budget: '',
-    habit: '',
-    preference: '',
+    gender: '',
+    birthday: '',
+    university: '',
+    job: '',
+    bio: '',
   })
 
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab === 'preferences') setTabValue(1)
-    else if (tab === 'favorites') setTabValue(2)
+    if (tab === 'favorites') setTabValue(1)
+    else if (tab === 'history') setTabValue(2)
+    else if (tab === 'schedules') setTabValue(3)
     else setTabValue(0)
   }, [searchParams])
 
@@ -144,9 +147,11 @@ export default function TenantProfilePage() {
         age: data.data.Age || '',
         phone: data.data.Phone || '',
         email: data.data.Email || '',
-        budget: data.data.Budget || '',
-        habit: data.data.Habit || '',
-        preference: data.data.Preference || '',
+        gender: data.data.Gender || '',
+        birthday: data.data.Birthday ? data.data.Birthday.split('T')[0] : '',
+        university: data.data.University || '',
+        job: data.data.Job || '',
+        bio: data.data.Bio || '',
       })
       setLoading(false)
     } catch (err) {
@@ -205,9 +210,33 @@ export default function TenantProfilePage() {
       })
       setSuccess('Cập nhật thông tin thành công')
       setEditMode(false)
-      fetchProfile()
+      await fetchProfile()
     } catch (err) {
-      setError('Không thể cập nhật thông tin')
+      setError(err.response?.data?.message || 'Không thể cập nhật thông tin')
+    }
+  }
+
+  const handleToggleFavorite = async (roomId) => {
+    try {
+      const token = localStorage.getItem('token')
+      const isFavorite = favorites.some(f => f.RoomID === roomId)
+      
+      if (isFavorite) {
+        await axios.delete(`${API_URL}/tenant/favorites/${roomId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        setSuccess('Đã xóa khỏi danh sách yêu thích')
+      } else {
+        await axios.post(`${API_URL}/tenant/favorites`, 
+          { roomId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        setSuccess('Đã thêm vào danh sách yêu thích')
+      }
+      
+      await fetchFavorites()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể cập nhật danh sách yêu thích')
     }
   }
 
@@ -390,7 +419,6 @@ export default function TenantProfilePage() {
             scrollButtons="auto"
           >
             <Tab label="Thông tin cá nhân" icon={<PersonIcon />} iconPosition="start" />
-            <Tab label="Sở thích & Tiêu chí" icon={<TuneIcon />} iconPosition="start" />
             <Tab label="Phòng yêu thích" icon={<FavoriteIcon />} iconPosition="start" />
             <Tab label="Lịch sử thuê" icon={<HomeIcon />} iconPosition="start" />
             <Tab label="Lịch xem phòng" icon={<ScheduleIcon />} iconPosition="start" />
@@ -451,13 +479,81 @@ export default function TenantProfilePage() {
                       size="small"
                     />
                   </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Giới tính"
+                      name="gender"
+                      select
+                      value={formData.gender || ''}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled={!editMode}
+                      size="small"
+                      SelectProps={{ native: true }}
+                    >
+                      <option value="">Chọn giới tính</option>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                      <option value="other">Khác</option>
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Ngày sinh"
+                      name="birthday"
+                      type="date"
+                      value={formData.birthday || ''}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled={!editMode}
+                      size="small"
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Trường đại học"
+                      name="university"
+                      value={formData.university || ''}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled={!editMode}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Nghề nghiệp"
+                      name="job"
+                      value={formData.job || ''}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled={!editMode}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Giới thiệu bản thân"
+                      name="bio"
+                      value={formData.bio || ''}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled={!editMode}
+                      size="small"
+                      multiline
+                      rows={3}
+                      placeholder="Viết vài dòng giới thiệu về bản thân..."
+                    />
+                  </Grid>
                 </Grid>
-                {editMode && (
-                  <Button variant="contained" onClick={handleSave} sx={{ mt: 2 }}>
-                    Lưu thay đổi
-                  </Button>
-                )}
               </ProfileCard>
+
+              {editMode && (
+                <Button variant="contained" onClick={handleSave} fullWidth sx={{ mt: 2 }}>
+                  Lưu thay đổi
+                </Button>
+              )}
             </Grid>
 
             <Grid item xs={12} md={4}>
@@ -493,107 +589,6 @@ export default function TenantProfilePage() {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <ProfileCard>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-              <TuneIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Tiêu chí tìm phòng
-            </Typography>
-            <Stack spacing={3}>
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Ngân sách (VNĐ/tháng)
-                </Typography>
-                <TextField
-                  name="budget"
-                  type="number"
-                  value={formData.budget}
-                  onChange={handleChange}
-                  fullWidth
-                  disabled={!editMode}
-                  size="small"
-                  InputProps={{
-                    startAdornment: <MoneyIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                  }}
-                />
-                {formData.budget && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                    ≈ {formatCurrency(formData.budget)} VNĐ/tháng
-                  </Typography>
-                )}
-              </Box>
-
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Thói quen sinh hoạt
-                </Typography>
-                {editMode ? (
-                  <TextField
-                    name="habit"
-                    value={formData.habit}
-                    onChange={handleChange}
-                    fullWidth
-                    size="small"
-                    multiline
-                    rows={3}
-                    placeholder="VD: Đi ngủ sớm, thích yên tĩnh, không hút thuốc, nuôi thú cưng..."
-                    helperText="Phân cách bằng dấu phẩy"
-                  />
-                ) : (
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                    {parseHabits(formData.habit).length > 0 ? (
-                      parseHabits(formData.habit).map((habit, idx) => (
-                        <InfoChip key={idx} label={habit} />
-                      ))
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        Chưa cập nhật thói quen
-                      </Typography>
-                    )}
-                  </Stack>
-                )}
-              </Box>
-
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Tiện nghi mong muốn
-                </Typography>
-                {editMode ? (
-                  <TextField
-                    name="preference"
-                    value={formData.preference}
-                    onChange={handleChange}
-                    fullWidth
-                    size="small"
-                    multiline
-                    rows={3}
-                    placeholder="VD: Wifi, điều hòa, khép kín, chỗ để xe, gần trường học..."
-                    helperText="Phân cách bằng dấu phẩy"
-                  />
-                ) : (
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                    {parsePreferences(formData.preference).length > 0 ? (
-                      parsePreferences(formData.preference).map((pref, idx) => (
-                        <InfoChip key={idx} label={pref} />
-                      ))
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        Chưa cập nhật tiện nghi mong muốn
-                      </Typography>
-                    )}
-                  </Stack>
-                )}
-              </Box>
-
-              {editMode && (
-                <Button variant="contained" onClick={handleSave}>
-                  Lưu thay đổi
-                </Button>
-              )}
-            </Stack>
-          </ProfileCard>
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={2}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
             <FavoriteIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#c8102e' }} />
             Phòng yêu thích ({favorites.length})
@@ -628,6 +623,13 @@ export default function TenantProfilePage() {
                           sx={{ color: '#006ce4' }}
                         >
                           <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleToggleFavorite(room.RoomID)}
+                          sx={{ color: '#c8102e' }}
+                        >
+                          <FavoriteIcon fontSize="small" />
                         </IconButton>
                       </Stack>
                       {room.Rating && (
@@ -670,7 +672,7 @@ export default function TenantProfilePage() {
           )}
         </TabPanel>
 
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={2}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
             <HomeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
             Lịch sử thuê phòng ({rentalHistory.length})
@@ -727,7 +729,7 @@ export default function TenantProfilePage() {
           )}
         </TabPanel>
 
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={3}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
             <ScheduleIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
             Lịch xem phòng ({viewingSchedules.length})
