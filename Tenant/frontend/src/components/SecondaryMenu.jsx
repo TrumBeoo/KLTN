@@ -95,11 +95,15 @@ export default function SecondaryMenu({ onCategoryChange, onDistrictChange }) {
           filterAPI.getRoomTypes(),
           filterAPI.getDistricts(),
         ])
-        if (roomTypesData?.length) {
-          setCategories(roomTypesData)
+        if (roomTypesData?.success && roomTypesData?.data?.length) {
+          const formattedTypes = [
+            { id: 'all', label: 'Tất cả' },
+            ...roomTypesData.data.map(rt => ({ id: rt.value, label: rt.label }))
+          ]
+          setCategories(formattedTypes)
         }
-        if (districtsData?.length) {
-          setDistricts(districtsData)
+        if (districtsData?.success && districtsData?.data?.length) {
+          setDistricts(districtsData.data)
         }
       } catch (error) {
         console.error('Error fetching filter data:', error)

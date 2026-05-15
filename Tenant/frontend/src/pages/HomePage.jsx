@@ -18,6 +18,7 @@ import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box, Container, Typography, Button, Grid, Chip, Stack,
   IconButton, Tabs, Tab, Skeleton, Fab, Tooltip, TextField, Popover, MenuItem, Autocomplete,
+  Snackbar, Alert,
 } from '@mui/material'
 import {
   Star as StarIcon,
@@ -262,6 +263,8 @@ export default function HomePage() {
 
   const [tabValue, setTabValue]           = useState(0)
   const [favorites, setFavorites]         = useState({})
+  const [favLoading, setFavLoading]       = useState({})
+  const [snackbar, setSnackbar]           = useState({ open: false, message: '', severity: 'success' })
   const [listings, setListings]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [chatOpen, setChatOpen]           = useState(false)
@@ -289,7 +292,7 @@ export default function HomePage() {
     { step: 4, icon: '✅', title: 'Thuê phòng', desc: 'Ký hợp đồng và dọn vào ở ngay' },
   ]
 
-  useEffect(() => { fetchRooms(); fetchDistricts(); fetchDistrictOptions() }, [])
+  useEffect(() => { fetchRooms(); fetchDistricts(); fetchDistrictOptions(); checkFavorites() }, [])
 
   const fetchDistrictOptions = async () => {
     try {
@@ -355,15 +358,80 @@ export default function HomePage() {
             buildingName: room.BuildingName,
           }
         }))
+        checkFavorites()
       }
     } catch {} finally { setLoading(false) }
   }
 
-  const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
-  const toggleFav = (id, e) => { e.stopPropagation(); setFavorites(prev => ({ ...prev, [id]: !prev[id] })) }
-  const statusLabel = { available: 'Còn trống', pending: 'Chờ duyệt', booked: 'Đã đặt lịch', rented: 'Đã thuê' }
+  const checkFavorites = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    try {
+      const res = await fetch(`${API_URL}/tenant/favorites`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) {
+        const favMap = {}
+        data.data.forEach(fav => {
+          favMap[fav.RoomID] = true
+        })
+        setFavorites(favMap)
+      }
+    } catch (err) {
+      console.error('Check favorites error:', err)
+    }
+  }
 
-  // Filter for tabs
+  const toggleFav = async (id, e) => {
+    e.stopPropagation()
+    
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setSnackbar({ open: true, message: '⚠️ Vui lòng đăng nhập để lưu phòng yêu thích', severity: 'warning' })
+      setTimeout(() => navigate('/login'), 1500)
+      return
+    }
+    
+    setFavLoading(prev => ({ ...prev, [id]: true }))
+    
+    try {
+      const isFav = favorites[id]
+      
+      if (isFav) {
+        const res = await fetch(`${API_URL}/tenant/favorites/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (data.success) {
+          setFavorites(prev => ({ ...prev, [id]: false }))
+          setSnackbar({ open: true, message: '💔 Đã xóa khỏi danh sách yêu thích', severity: 'info' })
+        }
+      } else {
+        const res = await fetch(`${API_URL}/tenant/favorites`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: id })
+        })
+        const data = await res.json()
+        if (data.success) {
+          setFavorites(prev => ({ ...prev, [id]: true }))
+          setSnackbar({ open: true, message: '❤️ Đã thêm vào danh sách yêu thích', severity: 'success' })
+        } else {
+          setSnackbar({ open: true, message: data.message || 'Không thể thêm vào yêu thích', severity: 'error' })
+        }
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: 'Lỗi kết nối', severity: 'error' })
+    } finally {
+      setFavLoading(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
+  const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
+  const statusLabel = { available: 'Còn trống', pending: 'Chờ duyệt', booked: 'Đã đặt lịch', rented: 'Đã thuê' }
   const tabListings = listings.filter(l =>
     tabValue === 0 ? true :
     tabValue === 1 ? l.status === 'available' : l.rating >= 4.5
@@ -622,15 +690,17 @@ export default function HomePage() {
                       <IconButton
                         size="small"
                         onClick={e => toggleFav(listing.id, e)}
+                        disabled={favLoading[listing.id]}
                         aria-label={favorites[listing.id] ? 'Bỏ yêu thích' : 'Lưu phòng'}
                         sx={{
                           position: 'absolute', top: 8, right: 8,
                           backgroundColor: 'rgba(255,255,255,0.9)',
                           backdropFilter: 'blur(4px)',
-                          color: favorites[listing.id] ? T.blue : '#595959',
+                          color: favorites[listing.id] ? '#e91e63' : '#595959',
                           p: '4px',
-                          '&:hover': { backgroundColor: T.white, color: T.blue },
+                          '&:hover': { backgroundColor: T.white, color: '#e91e63' },
                           '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                          '&:disabled': { opacity: 0.6 },
                         }}
                       >
                         {favorites[listing.id]
@@ -865,6 +935,23 @@ export default function HomePage() {
           />
         </Box>
       )}
+
+      {/* Snackbar for favorite actions */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', fontSize: '0.929rem', fontWeight: 600 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

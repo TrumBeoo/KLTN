@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import RoommateProfileForm from '../components/RoommateProfileForm'
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
@@ -580,6 +582,8 @@ function FilterSheet({ prefs, onChange, onClose }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function RoommateMatchingPage() {
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
   const [tab, setTab] = useState('match') // match | discover
   const [prefs, setPrefs] = useState({ budget: [2, 6], gender: 'any', locations: [], lifestyle: [] })
   const [showFilter, setShowFilter] = useState(false)
@@ -689,8 +693,20 @@ export default function RoommateMatchingPage() {
 
   const current = queue[0]
 
-  // ── Show profile form if user doesn't have profile ──────────────────────
-  if (!hasProfile || showProfileForm) {
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16, animation: 'float 2s ease-in-out infinite' }}>🏠</div>
+          <div style={{ fontSize: 16, color: C.muted }}>Đang tải...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Show profile form if user is logged in but doesn't have profile ──────
+  if (user && (!hasProfile || showProfileForm)) {
     return (
       <RoommateProfileForm
         onSubmit={handleProfileSubmit}
@@ -711,7 +727,7 @@ export default function RoommateMatchingPage() {
         <style>{`@keyframes blob { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-20px) scale(1.05)} 66%{transform:translate(-15px,15px) scale(0.97)} } @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }`}</style>
 
         <div style={{ textAlign: 'center', maxWidth: 500, position: 'relative' }}>
-          <div style={{ fontSize: 48, marginBottom: 16, animation: 'float 3s ease-in-out infinite' }}></div>
+          <div style={{ fontSize: 48, marginBottom: 16, animation: 'float 3s ease-in-out infinite' }}>🤝</div>
           <h1 style={{ fontSize: 36, fontWeight: 800, color: C.text, margin: '0 0 8px', letterSpacing: -1, lineHeight: 1.1 }}>
             Tìm roommate<br />
             <span style={{ background: `linear-gradient(135deg, ${C.accent}, ${C.green})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>thật sự phù hợp</span>
@@ -733,23 +749,49 @@ export default function RoommateMatchingPage() {
             ))}
           </div>
 
-          <button onClick={() => setStarted(true)} style={{
-            width: '100%', padding: '16px', borderRadius: 16,
-            background: `linear-gradient(135deg, ${C.accent}, #9b8ef8)`,
-            border: 'none', color: '#fff', fontSize: 16, fontWeight: 700,
-            cursor: 'pointer', boxShadow: `0 8px 32px ${C.accentGlow}`,
-            letterSpacing: 0.3,
-          }}>
-            Bắt đầu tìm kiếm →
-          </button>
-          <button onClick={() => setShowProfileForm(true)} style={{
-            width: '100%', padding: '12px', marginTop: 12,
-            background: 'transparent', border: `1px solid ${C.border}`,
-            color: C.muted, fontSize: 14, fontWeight: 500,
-            cursor: 'pointer', borderRadius: 12,
-          }}>
-            ⚙️ Chỉnh sửa hồ sơ
-          </button>
+          {!user ? (
+            // Show login prompt for non-authenticated users
+            <>
+              <button onClick={() => navigate('/login', { state: { from: '/roommate' } })} style={{
+                width: '100%', padding: '16px', borderRadius: 16,
+                background: `linear-gradient(135deg, ${C.accent}, #9b8ef8)`,
+                border: 'none', color: '#fff', fontSize: 16, fontWeight: 700,
+                cursor: 'pointer', boxShadow: `0 8px 32px ${C.accentGlow}`,
+                letterSpacing: 0.3,
+              }}>
+                🔐 Đăng nhập để bắt đầu
+              </button>
+              <button onClick={() => navigate('/register')} style={{
+                width: '100%', padding: '12px', marginTop: 12,
+                background: 'transparent', border: `1px solid ${C.border}`,
+                color: C.muted, fontSize: 14, fontWeight: 500,
+                cursor: 'pointer', borderRadius: 12,
+              }}>
+                Chưa có tài khoản? Đăng ký ngay
+              </button>
+            </>
+          ) : (
+            // Show start button for authenticated users
+            <>
+              <button onClick={() => setStarted(true)} style={{
+                width: '100%', padding: '16px', borderRadius: 16,
+                background: `linear-gradient(135deg, ${C.accent}, #9b8ef8)`,
+                border: 'none', color: '#fff', fontSize: 16, fontWeight: 700,
+                cursor: 'pointer', boxShadow: `0 8px 32px ${C.accentGlow}`,
+                letterSpacing: 0.3,
+              }}>
+                Bắt đầu tìm kiếm →
+              </button>
+              <button onClick={() => setShowProfileForm(true)} style={{
+                width: '100%', padding: '12px', marginTop: 12,
+                background: 'transparent', border: `1px solid ${C.border}`,
+                color: C.muted, fontSize: 14, fontWeight: 500,
+                cursor: 'pointer', borderRadius: 12,
+              }}>
+                ⚙️ Chỉnh sửa hồ sơ
+              </button>
+            </>
+          )}
           <div style={{ marginTop: 12, fontSize: 12, color: C.subtle }}>Đã có {CANDIDATES.length} người đang tìm roommate tại Hà Nội</div>
         </div>
       </div>

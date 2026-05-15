@@ -14,6 +14,7 @@ import RoomDetailPage from './pages/RoomDetailPage'
 import ListingPage from './pages/ListingPage'
 import RoommateMatchingPage from './pages/RoommateMatchingPage'
 import BlogPage from './pages/BlogPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route path="/profile" element={<TenantProfilePage />} />

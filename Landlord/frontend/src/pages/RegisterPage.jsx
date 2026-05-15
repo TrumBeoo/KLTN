@@ -319,8 +319,15 @@ export default function RegisterPage() {
           <Button
             fullWidth
             variant="outlined"
+            onClick={() => window.location.href = `${API_URL}/auth/google`}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
+            <Box
+              component="img"
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google"
+              sx={{ width: 18, height: 18, mr: 1 }}
+            />
             Đăng ký với Google
           </Button>
 

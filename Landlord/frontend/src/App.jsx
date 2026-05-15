@@ -5,6 +5,7 @@ import LandlordLayout from './components/LandlordLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import AuthCallback from './pages/AuthCallback'
 import LandlordDashboard from './pages/LandlordDashboard'
 import ManageRooms from './pages/ManageRooms'
 import ManageBuildings from './pages/ManageBuildings'
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route element={<ProtectedRoute><LandlordLayout /></ProtectedRoute>}>
           <Route path="/" element={<LandlordDashboard />} />
           <Route path="/dashboard" element={<LandlordDashboard />} />

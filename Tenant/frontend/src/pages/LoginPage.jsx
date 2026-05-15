@@ -6,11 +6,11 @@
  * No full-bleed hero image — Booking style is pure form-focused.
  */
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
-  Box, TextField, Button, Typography, Link, Alert,
+  Box, TextField, Button, Typography, Link, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
   InputAdornment, IconButton, Checkbox, FormControlLabel,
   Divider, Stack,
 } from '@mui/material'
@@ -38,7 +38,11 @@ const T = {
 export default function LoginPage() {
   useScrollToTop()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { login } = useAuth()
+
+  const from = location.state?.from || '/'
 
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
@@ -46,6 +50,19 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError]           = useState('')
   const [loading, setLoading]       = useState(false)
+  const [errorDialog, setErrorDialog] = useState({ open: false, title: '', message: '' })
+
+  useEffect(() => {
+    const error = searchParams.get('error')
+    const errorTitle = searchParams.get('error_title')
+    if (error) {
+      setErrorDialog({
+        open: true,
+        title: errorTitle ? decodeURIComponent(errorTitle) : 'Lỗi đăng nhập',
+        message: decodeURIComponent(error)
+      })
+    }
+  }, [searchParams])
 
   const handleSubmit = async e => {
     e.preventDefault()
@@ -53,12 +70,16 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/')
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:5000/api/auth/google'
   }
 
   return (
@@ -186,6 +207,7 @@ export default function LoginPage() {
 
             <Button
               fullWidth variant="outlined"
+              onClick={handleGoogleLogin}
               aria-label="Đăng nhập với Google"
               startIcon={
                 <svg width="18" height="18" viewBox="0 0 20 20">
@@ -223,6 +245,36 @@ export default function LoginPage() {
         {' '}và{' '}
         <Link href="#" underline="hover" sx={{ color: T.muted }}>Chính sách bảo mật</Link>
       </Typography>
+
+      {/* Error Dialog */}
+      <Dialog
+        open={errorDialog.open}
+        onClose={() => setErrorDialog({ ...errorDialog, open: false })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: '#d32f2f' }}>
+          {errorDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: '0.929rem', color: T.text, lineHeight: 1.6 }}>
+            {errorDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setErrorDialog({ ...errorDialog, open: false })}
+            variant="contained"
+            sx={{
+              backgroundColor: T.blue,
+              '&:hover': { backgroundColor: T.blueDk },
+              px: 3
+            }}
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

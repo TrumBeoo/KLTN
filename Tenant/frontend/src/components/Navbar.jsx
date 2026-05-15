@@ -35,6 +35,7 @@ import { styled } from '@mui/material/styles'
 import { useAuth } from '../hooks/useAuth'
 import FilterModal from './FilterModal'
 import notificationService from '../services/notificationService'
+import { VercelNavTabs } from './ui/vercel-tabs'
 
 // ─── Tokens ─────────────────────────────────────────────────────────────────
 const BLUE      = '#006ce4'
@@ -118,6 +119,23 @@ export default function Navbar() {
     finally { setLoadingNotif(false) }
   }
 
+  const handleFilterApply = (filters) => {
+    // Build query params from filters
+    const params = new URLSearchParams()
+    
+    if (filters.district) params.append('district', filters.district)
+    if (filters.maxPrice) params.append('maxPrice', filters.maxPrice)
+    if (filters.minArea) params.append('minArea', filters.minArea)
+    if (filters.maxArea) params.append('maxArea', filters.maxArea)
+    if (filters.roomTypes?.length > 0) params.append('roomType', filters.roomTypes[0])
+    if (filters.amenities?.length > 0) params.append('amenity', filters.amenities[0])
+    if (filters.pois?.length > 0) params.append('poi', filters.pois[0])
+    
+    // Navigate to listings page with filters
+    navigate(`/listings?${params.toString()}`)
+    setFilterOpen(false)
+  }
+
   const isActive = (path) => location.pathname === path
 
   const handleLogout = async () => {
@@ -130,6 +148,8 @@ export default function Navbar() {
     { label: 'Ở ghép',    path: '/roommate', icon: <PeopleIcon sx={{ fontSize: 16 }} /> },
     { label: 'Blog',      path: '/blog', icon: <BlogIcon sx={{ fontSize: 16 }} /> },
   ]
+
+  const vercelTabsItems = navLinks.map(link => ({ name: link.label, to: link.path }))
 
   return (
     <>
@@ -176,17 +196,8 @@ export default function Navbar() {
           <Box sx={{ flex: 1 }} />
 
           {/* Nav links — desktop */}
-          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'flex-end', gap: 0, flexShrink: 0 }}>
-            {navLinks.map(link => (
-              <NavBtn
-                key={link.path}
-                onClick={() => navigate(link.path)}
-                active={isActive(link.path) ? 1 : 0}
-                aria-current={isActive(link.path) ? 'page' : undefined}
-              >
-                {link.label}
-              </NavBtn>
-            ))}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', gap: 0, flexShrink: 0, pb: 0.75 }}>
+            <VercelNavTabs items={vercelTabsItems} />
           </Box>
 
           {/* Right actions */}
@@ -447,7 +458,7 @@ export default function Navbar() {
         </Box>
       </Drawer>
 
-      <FilterModal open={filterOpen} onClose={() => setFilterOpen(false)} onApply={() => {}} />
+      <FilterModal open={filterOpen} onClose={() => setFilterOpen(false)} onApply={handleFilterApply} initialFilters={null} />
     </>
   )
 }

@@ -634,7 +634,7 @@ export default function TenantProfilePage() {
                       </Stack>
                       {room.Rating && (
                         <Box sx={{ mb: 1 }}>
-                          <Rating value={room.Rating} precision={0.5} size="small" readOnly />
+                          <Rating value={parseFloat(room.Rating) || 0} precision={0.5} size="small" readOnly />
                         </Box>
                       )}
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

@@ -19,7 +19,7 @@ import NotificationModal from '../components/NotificationModal'
 import {
   Box, Container, Grid, Typography, Button, Stack, IconButton,
   Dialog, TextField, Alert, CircularProgress, Divider, Breadcrumbs, Link,
-  Chip,
+  Chip, Snackbar,
 } from '@mui/material'
 import {
   LocationOn as LocationIcon, Phone as PhoneIcon, Message as MessageIcon,
@@ -100,6 +100,7 @@ export default function RoomDetailPage() {
   const [imgIdx, setImgIdx]               = useState(0)
   const [isFav, setIsFav]                 = useState(false)
   const [favLoading, setFavLoading]       = useState(false)
+  const [snackbar, setSnackbar]           = useState({ open: false, message: '', severity: 'success' })
   const [openSchedule, setOpenSchedule]   = useState(false)
   const [openLoginModal, setOpenLoginModal] = useState(false)
   const [openCancelModal, setOpenCancelModal] = useState(false)
@@ -172,7 +173,9 @@ export default function RoomDetailPage() {
         const data = await res.json()
         if (data.success) {
           setIsFav(false)
-          showSuccess('Thành công!', 'Đã xóa khỏi danh sách yêu thích')
+          setSnackbar({ open: true, message: '💔 Đã xóa khỏi danh sách yêu thích', severity: 'info' })
+        } else {
+          setSnackbar({ open: true, message: data.message || 'Không thể xóa khỏi yêu thích', severity: 'error' })
         }
       } else {
         const res = await fetch(`${API}/tenant/favorites`, {
@@ -183,13 +186,13 @@ export default function RoomDetailPage() {
         const data = await res.json()
         if (data.success) {
           setIsFav(true)
-          showSuccess('Thành công!', 'Đã thêm vào danh sách yêu thích')
+          setSnackbar({ open: true, message: '❤️ Đã thêm vào danh sách yêu thích', severity: 'success' })
         } else {
-          showError('Lỗi!', data.message || 'Không thể thêm vào yêu thích')
+          setSnackbar({ open: true, message: data.message || 'Không thể thêm vào yêu thích', severity: 'error' })
         }
       }
     } catch (err) {
-      showError('Lỗi!', 'Lỗi kết nối')
+      setSnackbar({ open: true, message: 'Lỗi kết nối', severity: 'error' })
     } finally {
       setFavLoading(false)
     }
@@ -326,11 +329,11 @@ export default function RoomDetailPage() {
               </Button>
               <Button
                 size="small"
-                startIcon={isFav ? <FavoriteIcon sx={{ fontSize: 16, color: T.blue }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
+                startIcon={isFav ? <FavoriteIcon sx={{ fontSize: 16, color: '#e91e63' }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
                 onClick={handleToggleFavorite}
                 disabled={favLoading}
                 aria-label={isFav ? 'Bỏ lưu' : 'Lưu phòng'}
-                sx={{ color: isFav ? T.blue : T.text, border: `1px solid ${T.border}`, borderRadius: '4px', fontSize: '0.857rem' }}
+                sx={{ color: isFav ? '#e91e63' : T.text, border: `1px solid ${T.border}`, borderRadius: '4px', fontSize: '0.857rem' }}
               >
                 {favLoading ? 'Đang xử lý...' : isFav ? 'Đã lưu' : 'Lưu'}
               </Button>
@@ -768,6 +771,23 @@ export default function RoomDetailPage() {
       </Dialog>
 
       <NotificationModal open={notification.open} onClose={hideNotification} type={notification.type} title={notification.title} message={notification.message} />
+
+      {/* Snackbar for favorite actions */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', fontSize: '0.929rem', fontWeight: 600 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {/* Documents modal */}
       <Dialog open={openDocuments} onClose={() => setOpenDocuments(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '8px' } }}>

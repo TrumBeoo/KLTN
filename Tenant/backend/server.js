@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const session = require('express-session');
+const passport = require('./config/passport');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -12,6 +14,7 @@ const profileRoutes = require('./routes/profile');
 const poiRoutes = require('./routes/poi');
 const documentRoutes = require('./routes/documents');
 const filterRoutes = require('./routes/filters');
+const favoriteRoutes = require('./routes/favorites');
 
 const app = express();
 
@@ -24,6 +27,18 @@ app.use(cors({
 }));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Session configuration for Passport
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your_session_secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Request logging
 app.use((req, res, next) => {
@@ -41,6 +56,7 @@ app.use('/api/tenant', profileRoutes);
 app.use('/api/poi', poiRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/filters', filterRoutes);
+app.use('/api/tenant/favorites', favoriteRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 

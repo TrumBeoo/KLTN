@@ -12,6 +12,15 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Kiểm tra role - chỉ cho phép Tenant
+    if (decoded.role !== 'Tenant') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền truy cập. Vui lòng sử dụng tài khoản người thuê.'
+      });
+    }
+    
     req.user = decoded;
     next();
   } catch (error) {

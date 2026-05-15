@@ -11,9 +11,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import SecondaryMenu from '../components/SecondaryMenu'
 import RoomMap from '../components/RoomMap'
+import SortMenu from '../components/SortMenu'
+import FilterModal from '../components/FilterModal'
 import {
   Box, Container, Grid, Button, Typography, Stack, IconButton,
-  Skeleton, Chip, Tooltip, Pagination,
+  Skeleton, Chip, Tooltip, Pagination, Snackbar, Alert,
 } from '@mui/material'
 import {
   Star as StarIcon, LocationOn as LocationIcon,
@@ -25,7 +27,7 @@ import {
   ImageNotSupported as NoImageIcon,
   ArrowForward as ArrowForwardIcon,
   FilterList as FilterIcon,
-  Sort as SortIcon,
+  Tune as TuneIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 
@@ -127,7 +129,10 @@ export default function ListingPage() {
   const [searchParams] = useSearchParams()
 
   const [favorites, setFavorites] = useState({})
+  const [favLoading, setFavLoading] = useState({})
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
   const [listings, setListings]   = useState([])
+  const [latestListings, setLatestListings] = useState([])
   const [mapRooms, setMapRooms]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -135,6 +140,11 @@ export default function ListingPage() {
   const [poiName, setPoiName]     = useState('')
   const [selectedRoomType, setSelectedRoomType] = useState('all')
   const [selectedDistrict, setSelectedDistrict] = useState(null)
+  const [sortBy, setSortBy]       = useState('newest')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [activeFilters, setActiveFilters] = useState(0)
+  const [amenityName, setAmenityName] = useState('')
+  const [roomTypeName, setRoomTypeName] = useState('')
   const PER_PAGE = 8
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -145,17 +155,33 @@ export default function ListingPage() {
   const searchDate = searchParams.get('date')
   const searchGuests = searchParams.get('guests')
   const maxPrice = searchParams.get('maxPrice')
+  const minArea = searchParams.get('minArea')
+  const maxArea = searchParams.get('maxArea')
   const amenity = searchParams.get('amenity')
   const roomTypeParam = searchParams.get('roomType')
   const nearUniversity = searchParams.get('nearUniversity')
 
-  useEffect(() => { fetchRooms() }, [poiId, poiType, district, selectedRoomType, selectedDistrict, maxPrice, amenity, roomTypeParam, nearUniversity])
+  useEffect(() => { fetchRooms() }, [poiId, poiType, district, selectedRoomType, selectedDistrict, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity])
+  
+  useEffect(() => { fetchLatestRooms(); checkFavorites() }, [])
   
   useEffect(() => {
     if (poiId) {
       fetchPOIName()
     }
   }, [poiId])
+  
+  useEffect(() => {
+    if (amenity) {
+      fetchAmenityName()
+    }
+  }, [amenity])
+  
+  useEffect(() => {
+    if (roomTypeParam) {
+      fetchRoomTypeName()
+    }
+  }, [roomTypeParam])
   
   const fetchPOIName = async () => {
     try {
@@ -166,6 +192,61 @@ export default function ListingPage() {
       }
     } catch (error) {
       console.error('Fetch POI name error:', error)
+    }
+  }
+
+  const fetchAmenityName = async () => {
+    try {
+      const res = await fetch(`${API_URL}/filters/amenities`)
+      const data = await res.json()
+      if (data.success) {
+        const amenityObj = data.data.find(a => a.value === amenity)
+        if (amenityObj) {
+          setAmenityName(amenityObj.label)
+        }
+      }
+    } catch (error) {
+      console.error('Fetch amenity name error:', error)
+    }
+  }
+
+  const fetchRoomTypeName = async () => {
+    try {
+      const res = await fetch(`${API_URL}/filters/room-types`)
+      const data = await res.json()
+      if (data.success) {
+        const roomTypeObj = data.data.find(rt => rt.value === roomTypeParam)
+        if (roomTypeObj) {
+          setRoomTypeName(roomTypeObj.label)
+        }
+      }
+    } catch (error) {
+      console.error('Fetch room type name error:', error)
+    }
+  }
+
+  const fetchLatestRooms = async () => {
+    try {
+      const res = await fetch(`${API_URL}/rooms`)
+      const data = await res.json()
+      if (data.success) {
+        const formatted = data.data.map(room => {
+          const imgUrl = room.images?.[0]?.ImageURL
+          return {
+            id: room.RoomID,
+            title: room.Title || `${room.RoomType} - ${room.RoomCode}`,
+            location: room.BuildingAddress || 'Chưa cập nhật',
+            price: room.Price?.toString() || '0',
+            area: room.Area || 0,
+            image: imgUrl ? (imgUrl.startsWith('http') ? imgUrl : `${API_URL.replace('/api', '')}${imgUrl}`) : null,
+            createdAt: room.CreatedAt || room.created_at || new Date().toISOString(),
+          }
+        })
+        const latest = [...formatted].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10)
+        setLatestListings(latest)
+      }
+    } catch (error) {
+      console.error('Fetch latest rooms error:', error)
     }
   }
 
@@ -201,6 +282,16 @@ export default function ListingPage() {
         if (maxPrice) {
           const maxPriceNum = parseFloat(maxPrice)
           filteredData = filteredData.filter(room => parseFloat(room.Price) <= maxPriceNum)
+        }
+        
+        // Filter by area range
+        if (minArea) {
+          const minAreaNum = parseFloat(minArea)
+          filteredData = filteredData.filter(room => parseFloat(room.Area) >= minAreaNum)
+        }
+        if (maxArea) {
+          const maxAreaNum = parseFloat(maxArea)
+          filteredData = filteredData.filter(room => parseFloat(room.Area) <= maxAreaNum)
         }
         
         // Filter by amenity
@@ -245,6 +336,7 @@ export default function ListingPage() {
         setMapRooms(formatted.filter(r => r.latitude && r.longitude).map(r => ({
           id: r.id, title: r.title, price: r.price, latitude: r.latitude, longitude: r.longitude,
         })))
+        checkFavorites()
       } else setError('Không thể tải danh sách phòng')
     } catch { setError('Lỗi kết nối server') }
     finally { setLoading(false) }
@@ -256,12 +348,113 @@ export default function ListingPage() {
     catch { return [] }
   }
 
-  const toggleFav = (id, e) => { e?.stopPropagation(); setFavorites(prev => ({ ...prev, [id]: !prev[id] })) }
+  const checkFavorites = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    try {
+      const res = await fetch(`${API_URL}/tenant/favorites`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) {
+        const favMap = {}
+        data.data.forEach(fav => {
+          favMap[fav.RoomID] = true
+        })
+        setFavorites(favMap)
+      }
+    } catch (err) {
+      console.error('Check favorites error:', err)
+    }
+  }
+
+  const toggleFav = async (id, e) => {
+    e?.stopPropagation()
+    
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setSnackbar({ open: true, message: '⚠️ Vui lòng đăng nhập để lưu phòng yêu thích', severity: 'warning' })
+      setTimeout(() => navigate('/login'), 1500)
+      return
+    }
+    
+    setFavLoading(prev => ({ ...prev, [id]: true }))
+    
+    try {
+      const isFav = favorites[id]
+      
+      if (isFav) {
+        const res = await fetch(`${API_URL}/tenant/favorites/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (data.success) {
+          setFavorites(prev => ({ ...prev, [id]: false }))
+          setSnackbar({ open: true, message: '💔 Đã xóa khỏi danh sách yêu thích', severity: 'info' })
+        }
+      } else {
+        const res = await fetch(`${API_URL}/tenant/favorites`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: id })
+        })
+        const data = await res.json()
+        if (data.success) {
+          setFavorites(prev => ({ ...prev, [id]: true }))
+          setSnackbar({ open: true, message: '❤️ Đã thêm vào danh sách yêu thích', severity: 'success' })
+        } else {
+          setSnackbar({ open: true, message: data.message || 'Không thể thêm vào yêu thích', severity: 'error' })
+        }
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: 'Lỗi kết nối', severity: 'error' })
+    } finally {
+      setFavLoading(prev => ({ ...prev, [id]: false }))
+    }
+  }
   const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
 
-  const paginated = listings.slice((page - 1) * PER_PAGE, page * PER_PAGE)
-  const totalPages = Math.ceil(listings.length / PER_PAGE)
-  const latestListings = [...listings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10)
+  // Sắp xếp listings
+  const sortedListings = [...listings].sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        return new Date(b.createdAt) - new Date(a.createdAt)
+      case 'oldest':
+        return new Date(a.createdAt) - new Date(b.createdAt)
+      case 'price-asc':
+        return parseFloat(a.price) - parseFloat(b.price)
+      case 'price-desc':
+        return parseFloat(b.price) - parseFloat(a.price)
+      case 'area-asc':
+        return a.area - b.area
+      case 'area-desc':
+        return b.area - a.area
+      case 'rating':
+        return b.rating - a.rating
+      case 'views':
+        return b.views - a.views
+      default:
+        return 0
+    }
+  })
+
+  const paginated = sortedListings.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  const totalPages = Math.ceil(sortedListings.length / PER_PAGE)
+
+  // Count active filters on mount and when params change
+  useEffect(() => {
+    let count = 0
+    if (maxPrice && maxPrice !== '20000000') count++ // Only count if not default max
+    if (minArea && minArea !== '0') count++
+    if (maxArea && maxArea !== '100') count++
+    if (amenity) count++
+    if (roomTypeParam) count++
+    if (selectedDistrict || district) count++
+    if (poiId) count++
+    setActiveFilters(count)
+  }, [maxPrice, minArea, maxArea, amenity, roomTypeParam, selectedDistrict, district, poiId])
 
   const handleRoomTypeChange = (roomType) => {
     setSelectedRoomType(roomType)
@@ -271,6 +464,24 @@ export default function ListingPage() {
   const handleDistrictChange = (district) => {
     setSelectedDistrict(district)
     setPage(1)
+  }
+
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort)
+    setPage(1)
+  }
+
+  const handleFilterApply = () => {
+    // Count active filters
+    let count = 0
+    if (maxPrice) count++
+    if (minArea || maxArea) count++
+    if (amenity) count++
+    if (roomTypeParam || selectedRoomType !== 'all') count++
+    if (selectedDistrict || district) count++
+    if (poiId) count++
+    setActiveFilters(count)
+    setFilterOpen(false)
   }
 
   return (
@@ -284,25 +495,57 @@ export default function ListingPage() {
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text }}>
               <Box component="span" sx={{ color: T.blue }}>{listings.length}</Box>
               &nbsp;phòng{selectedRoomType && selectedRoomType !== 'all' ? ` ${selectedRoomType}` : ''}
-              {roomTypeParam ? ` ${roomTypeParam}` : ''}
+              {roomTypeParam && roomTypeName ? ` ${roomTypeName}` : ''}
               {maxPrice ? ` dưới ${fmt(maxPrice)}đ` : ''}
-              {amenity ? ` có ${amenity === 'ac' ? 'điều hòa' : amenity}` : ''}
+              {amenity && amenityName ? ` có ${amenityName}` : ''}
               {poiId && poiName ? ` gần ${poiName}` : 
                (selectedDistrict || district) ? ` tại ${selectedDistrict || district}` : 
                ' tại Hà Nội'}
             </Typography>
             <Stack direction="row" spacing={1}>
+              <SortMenu currentSort={sortBy} onSortChange={handleSortChange} />
               <Button
-                size="small" startIcon={<SortIcon sx={{ fontSize: 16 }} />}
-                sx={{ color: T.text, border: `1px solid ${T.border}`, borderRadius: '4px', fontSize: '0.857rem', '&:hover': { borderColor: T.text } }}
-              >
-                Sắp xếp
-              </Button>
-              <Button
-                size="small" startIcon={<FilterIcon sx={{ fontSize: 16 }} />}
-                sx={{ color: T.blue, border: `1px solid ${T.blue}`, borderRadius: '4px', fontSize: '0.857rem', fontWeight: 600, backgroundColor: T.blueLt, '&:hover': { backgroundColor: '#d0e8ff' } }}
+                size="small"
+                onClick={() => setFilterOpen(true)}
+                startIcon={<TuneIcon sx={{ fontSize: 16 }} />}
+                aria-label="Mở bộ lọc"
+                sx={{
+                  color: activeFilters > 0 ? T.white : T.blue,
+                  border: `1px solid ${T.blue}`,
+                  borderRadius: '4px',
+                  fontSize: '0.857rem',
+                  fontWeight: 600,
+                  backgroundColor: activeFilters > 0 ? T.blue : T.blueLt,
+                  px: 1.5,
+                  py: 0.75,
+                  position: 'relative',
+                  '&:hover': {
+                    backgroundColor: activeFilters > 0 ? T.blueDk : '#d0e8ff',
+                  },
+                  '&:focus-visible': {
+                    outline: `2px solid ${T.blue}`,
+                    outlineOffset: '2px',
+                  },
+                  transition: 'all 120ms ease',
+                }}
               >
                 Bộ lọc
+                {activeFilters > 0 && (
+                  <Chip
+                    label={activeFilters}
+                    size="small"
+                    sx={{
+                      ml: 0.75,
+                      height: 18,
+                      minWidth: 18,
+                      fontSize: '0.714rem',
+                      fontWeight: 700,
+                      backgroundColor: T.white,
+                      color: T.blue,
+                      '& .MuiChip-label': { px: 0.5 },
+                    }}
+                  />
+                )}
               </Button>
             </Stack>
           </Stack>
@@ -356,13 +599,15 @@ export default function ListingPage() {
                             <IconButton
                               size="small"
                               onClick={e => toggleFav(listing.id, e)}
+                              disabled={favLoading[listing.id]}
                               aria-label={favorites[listing.id] ? 'Bỏ lưu' : 'Lưu phòng'}
                               sx={{
                                 position: 'absolute', top: 8, right: 8,
                                 backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
-                                color: favorites[listing.id] ? T.blue : '#595959', p: '4px',
-                                '&:hover': { backgroundColor: T.white, color: T.blue },
+                                color: favorites[listing.id] ? '#e91e63' : '#595959', p: '4px',
+                                '&:hover': { backgroundColor: T.white, color: '#e91e63' },
                                 '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                                '&:disabled': { opacity: 0.6 },
                               }}
                             >
                               {favorites[listing.id] ? <FavoriteIcon sx={{ fontSize: 16 }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
@@ -555,6 +800,76 @@ export default function ListingPage() {
           </Grid>
         )}
       </Container>
+
+      {/* Filter Modal */}
+      <FilterModal
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        initialFilters={{
+          district: selectedDistrict || district,
+          minPrice: maxPrice ? 0 : null,
+          maxPrice: maxPrice ? parseFloat(maxPrice) : null,
+          minArea: minArea ? parseFloat(minArea) : null,
+          maxArea: maxArea ? parseFloat(maxArea) : null,
+          roomTypes: roomTypeParam ? [roomTypeParam] : [],
+          amenities: amenity ? [amenity] : [],
+          pois: poiId ? [poiId] : [],
+        }}
+        onApply={(filters) => {
+          // Build query params from filters
+          const params = new URLSearchParams()
+          
+          // Only add params if filter is enabled and has value
+          if (filters.district) {
+            params.set('district', filters.district)
+          }
+          
+          if (filters.maxPrice) {
+            params.set('maxPrice', filters.maxPrice)
+          }
+          
+          if (filters.minArea) {
+            params.set('minArea', filters.minArea)
+          }
+          
+          if (filters.maxArea) {
+            params.set('maxArea', filters.maxArea)
+          }
+          
+          if (filters.roomTypes?.length > 0) {
+            params.set('roomType', filters.roomTypes[0])
+          }
+          
+          if (filters.amenities?.length > 0) {
+            params.set('amenity', filters.amenities[0])
+          }
+          
+          if (filters.pois?.length > 0) {
+            params.set('poi', filters.pois[0])
+          }
+          
+          // Update URL with new params
+          navigate(`/listings?${params.toString()}`, { replace: true })
+          setFilterOpen(false)
+        }}
+      />
+
+      {/* Snackbar for favorite actions */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', fontSize: '0.929rem', fontWeight: 600 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

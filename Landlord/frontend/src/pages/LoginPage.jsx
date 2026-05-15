@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useNotification } from '../hooks/useNotification'
 import NotificationModal from '../components/NotificationModal'
 import {
@@ -27,10 +27,22 @@ const API_URL = import.meta.env.VITE_API_URL
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [formData, setFormData] = useState({ username: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const error = searchParams.get('error')
+    const errorTitle = searchParams.get('error_title')
+    if (error) {
+      showError(
+        errorTitle ? decodeURIComponent(errorTitle) : 'Lỗi đăng nhập',
+        decodeURIComponent(error)
+      )
+    }
+  }, [searchParams])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -243,6 +255,7 @@ export default function LoginPage() {
             <Button
               fullWidth
               variant="outlined"
+              onClick={() => window.location.href = `${API_URL}/auth/google`}
               sx={{
                 mt: 2,
                 color: '#0F1011',
@@ -254,6 +267,12 @@ export default function LoginPage() {
                 '&:hover': { borderColor: '#5E6AD2', backgroundColor: 'rgba(94,106,210,0.04)' }
               }}
             >
+              <Box
+                component="img"
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google"
+                sx={{ width: 18, height: 18, mr: 1 }}
+              />
               Đăng nhập với Google
             </Button>
           </Box>

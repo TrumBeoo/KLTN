@@ -216,6 +216,93 @@ class UserService {
       connection.release();
     }
   }
+
+  async getUserById(accountId) {
+    const [rows] = await pool.query(
+      `SELECT a.AccountID, a.Username, a.Role, a.Status, a.AvatarURL,
+              COALESCE(t.Name, l.Name) as Name,
+              COALESCE(t.Email, l.Email) as Email,
+              COALESCE(t.Phone, l.Phone) as Phone
+       FROM ACCOUNT a
+       LEFT JOIN TENANT t ON a.AccountID = t.AccountID
+       LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
+       WHERE a.AccountID = ?`,
+      [accountId]
+    );
+    return rows[0] || null;
+  }
+
+  async findOrCreateGoogleUser({ googleId, email, name, avatarURL }) {
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      // Check if user exists by GoogleID
+      let [users] = await connection.query(
+        'SELECT AccountID, Role FROM ACCOUNT WHERE GoogleID = ?',
+        [googleId]
+      );
+
+      if (users.length > 0) {
+        const accountId = users[0].AccountID;
+        await connection.commit();
+        const user = await this.getUserById(accountId);
+        return user;
+      }
+
+      // Check if user exists by email
+      [users] = await connection.query(
+        `SELECT a.AccountID, a.Role FROM ACCOUNT a
+         LEFT JOIN TENANT t ON a.AccountID = t.AccountID
+         WHERE t.Email = ?`,
+        [email]
+      );
+
+      if (users.length > 0) {
+        // Link Google account to existing user
+        const accountId = users[0].AccountID;
+        await connection.query(
+          'UPDATE ACCOUNT SET GoogleID = ?, AvatarURL = ? WHERE AccountID = ?',
+          [googleId, avatarURL, accountId]
+        );
+        await connection.commit();
+        const user = await this.getUserById(accountId);
+        return user;
+      }
+
+      // Create new user
+      const accountId = await this.generateAccountId();
+      const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 5);
+      const timestamp = Date.now().toString().slice(-4);
+      const username = `${emailPrefix}_${timestamp}`;
+
+      await connection.query(
+        'INSERT INTO ACCOUNT (AccountID, Username, Password, Role, Status, GoogleID, AvatarURL) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [accountId, username, '', 'Tenant', 'Active', googleId, avatarURL]
+      );
+
+      const tenantId = await this.generateTenantId();
+      const now = new Date();
+
+      await connection.query(
+        'INSERT INTO TENANT (TenantID, AccountID, Username, Name, Email, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [tenantId, accountId, username, name, email, now, now]
+      );
+
+      await connection.commit();
+      
+      // Fetch the complete user after commit
+      const user = await this.getUserById(accountId);
+      return user;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in findOrCreateGoogleUser:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = new UserService();

@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box, TextField, Button, Typography, Link, Alert,
@@ -30,7 +30,10 @@ const T = {
 export default function RegisterPage() {
   useScrollToTop()
   const navigate = useNavigate()
-  const { register } = useAuth()
+  const location = useLocation()
+  const { register, login } = useAuth()
+
+  const from = location.state?.from || '/'
 
   const [formData, setFormData] = useState({
     username: '', fullName: '', email: '', phone: '',
@@ -54,12 +57,18 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await register(formData.username, formData.password, formData.fullName, formData.email, formData.phone)
-      navigate('/login?registered=true')
+      // Auto login after successful registration
+      await login(formData.username, formData.password)
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGoogleSignup = () => {
+    window.location.href = 'http://localhost:5000/api/auth/google'
   }
 
   const fields = [
@@ -195,6 +204,7 @@ export default function RegisterPage() {
 
             <Button
               fullWidth variant="outlined"
+              onClick={handleGoogleSignup}
               aria-label="Đăng ký với Google"
               startIcon={
                 <svg width="18" height="18" viewBox="0 0 20 20">

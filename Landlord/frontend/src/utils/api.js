@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api';
 
 const apiCall = async (endpoint, options = {}) => {
   const url = `${API_URL}${endpoint}`;
@@ -24,7 +24,7 @@ const apiCall = async (endpoint, options = {}) => {
       console.error('403 Forbidden - Invalid role detected');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login?error=' + encodeURIComponent('Bạn không có quyền truy cập. Vui lòng sử dụng tài khoản người thuê.');
+      window.location.href = '/login?error=' + encodeURIComponent('Bạn không có quyền truy cập. Vui lòng sử dụng tài khoản chủ nhà.');
       throw new Error('Forbidden - Invalid role');
     }
 
@@ -71,11 +71,6 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ newPassword }),
     }),
-};
-
-export const filterAPI = {
-  getRoomTypes: () => apiCall('/filters/room-types', { method: 'GET' }),
-  getDistricts: () => apiCall('/filters/districts', { method: 'GET' }),
 };
 
 export default apiCall;

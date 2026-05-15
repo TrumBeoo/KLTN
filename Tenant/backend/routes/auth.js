@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const passport = require('../config/passport');
 const userService = require('../services/userService');
 const authMiddleware = require('../middleware/auth');
 const {
@@ -246,5 +247,48 @@ router.delete('/avatar', authMiddleware, async (req, res) => {
     });
   }
 });
+
+// Google OAuth routes
+router.get('/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email']
+  })
+);
+
+router.get('/google/callback',
+  passport.authenticate('google', { 
+    session: false, 
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed&error_title=X%C3%A1c%20th%E1%BB%B1c%20Google%20th%E1%BA%A5t%20b%E1%BA%A1i` 
+  }),
+  async (req, res) => {
+    try {
+      // Check if user exists
+      if (!req.user) {
+        console.error('No user in request after Google auth');
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed&error_title=L%E1%BB%97i%20x%C3%A1c%20th%E1%BB%B1c`);
+      }
+
+      // Only allow Tenant role
+      if (req.user.Role !== 'Tenant') {
+        console.log(`Invalid role: ${req.user.Role}, expected Tenant`);
+        const errorTitle = encodeURIComponent('Sai loại tài khoản');
+        const errorMsg = encodeURIComponent(
+          `Tài khoản Google của bạn đã được đăng ký với vai trò "${req.user.Role === 'Landlord' ? 'Chủ nhà' : req.user.Role}". ` +
+          'Vui lòng sử dụng ứng dụng dành cho Chủ nhà hoặc đăng ký tài khoản mới cho Người thuê.'
+        );
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=${errorMsg}&error_title=${errorTitle}`);
+      }
+
+      const token = userService.generateToken(req.user);
+      console.log('Google auth successful, redirecting with token');
+      res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    } catch (error) {
+      console.error('Google callback error:', error);
+      const errorTitle = encodeURIComponent('Lỗi xác thực');
+      const errorMsg = encodeURIComponent('Có lỗi xảy ra trong quá trình đăng nhập. Vui lòng thử lại.');
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=${errorMsg}&error_title=${errorTitle}`);
+    }
+  }
+);
 
 module.exports = router;

@@ -51,8 +51,21 @@ export const AuthProvider = ({ children }) => {
     return await authAPI.changePassword(newPassword)
   }
 
+  const setTokenAndUser = (newToken) => {
+    localStorage.setItem('token', newToken)
+    setToken(newToken)
+    // Fetch user info with the new token
+    authAPI.getCurrentUser(newToken).then(data => {
+      localStorage.setItem('user', JSON.stringify(data.user))
+      setUser(data.user)
+    }).catch(error => {
+      console.error('Failed to fetch user info:', error)
+      logout()
+    })
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, changePassword }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, changePassword, setToken: setTokenAndUser }}>
       {children}
     </AuthContext.Provider>
   )
