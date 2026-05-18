@@ -2,7 +2,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import theme from './theme'
 import AdminLayout from './components/AdminLayout'
-import AdminDashboard from './pages/AdminDashboard'
+import Dashboard from './pages/Dashboard'
+import Users from './pages/Users'
+import Listings from './pages/Listings'
+import Reports from './pages/Reports'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -12,14 +16,11 @@ function App() {
         <Routes>
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="users" element={<AdminDashboard />} />
-            <Route path="buildings" element={<AdminDashboard />} />
-            <Route path="rooms" element={<AdminDashboard />} />
-            <Route path="contracts" element={<AdminDashboard />} />
-            <Route path="payments" element={<AdminDashboard />} />
-            <Route path="reports" element={<AdminDashboard />} />
-            <Route path="settings" element={<AdminDashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="listings" element={<Listings />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </Router>

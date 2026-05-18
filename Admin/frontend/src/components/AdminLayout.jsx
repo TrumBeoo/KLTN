@@ -1,456 +1,482 @@
-import { useState, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import React, { useState } from 'react'
 import {
   Box,
+  AppBar,
+  Toolbar,
   Drawer,
+  IconButton,
+  Typography,
+  Avatar,
+  Menu,
+  MenuItem,
   List,
   ListItem,
-  ListItemButton,
   ListItemIcon,
   ListItemText,
   Divider,
-  Avatar,
   Stack,
-  TextField,
-  IconButton,
+  InputBase,
   Badge,
-  Typography,
-  Tooltip
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
+  Menu as MenuIcon,
+  Close as CloseIcon,
   Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  Business as BuildingIcon,
-  MeetingRoom as RoomIcon,
-  Description as ContractIcon,
-  Payment as PaymentIcon,
-  Assessment as ReportIcon,
+  People as UsersIcon,
+  ArticleOutlined as ListingsIcon,
+  ReportProblem as ReportsIcon,
   Settings as SettingsIcon,
   Search as SearchIcon,
-  Notifications as NotificationsIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
-  AdminPanelSettings as AdminIcon
+  Notifications as BellIcon,
+  Logout as LogOutIcon
 } from '@mui/icons-material'
 
-const SIDEBAR_WIDTH = 240
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+const SIDEBAR_WIDTH = 260
+const SIDEBAR_WIDTH_COLLAPSED = 80
 
-const menuItems = [
-  { label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { label: 'Người dùng', icon: PeopleIcon, path: '/users' },
-  { label: 'Chung cư', icon: BuildingIcon, path: '/buildings' },
-  { label: 'Phòng', icon: RoomIcon, path: '/rooms' },
-  { label: 'Hợp đồng', icon: ContractIcon, path: '/contracts' },
-  { label: 'Thanh toán', icon: PaymentIcon, path: '/payments' }
-]
-
-const bottomMenuItems = [
-  { label: 'Báo cáo', icon: ReportIcon, path: '/reports' },
-  { label: 'Cài đặt', icon: SettingsIcon, path: '/settings' }
-]
-
-const NavItem = ({ item, isActive, onClick }) => (
-  <ListItem disablePadding sx={{ mb: 0.25 }}>
-    <ListItemButton
-      onClick={onClick}
-      sx={{
-        borderRadius: '4px',
-        px: 1.25,
-        py: 0.875,
-        color: isActive ? '#061b31' : '#64748d',
-        backgroundColor: isActive ? 'rgba(83,58,253,0.08)' : 'transparent',
-        fontWeight: isActive ? 400 : 300,
-        transition: 'all 0.15s ease',
-        '&:hover': {
-          backgroundColor: isActive ? 'rgba(83,58,253,0.1)' : 'rgba(0,0,0,0.04)',
-          color: '#061b31'
-        },
-        '& .MuiListItemIcon-root': {
-          color: isActive ? '#533afd' : '#64748d',
-          transition: 'color 0.15s ease'
-        },
-        '&:hover .MuiListItemIcon-root': {
-          color: isActive ? '#533afd' : '#273951'
-        }
-      }}
-    >
-      <ListItemIcon sx={{ minWidth: 34 }}>
-        <item.icon sx={{ fontSize: '1.1rem' }} />
-      </ListItemIcon>
-      <ListItemText
-        primary={item.label}
-        primaryTypographyProps={{
-          fontSize: '0.875rem',
-          fontWeight: 'inherit',
-          letterSpacing: '-0.01em'
-        }}
-      />
-      {isActive && (
-        <Box
-          sx={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            backgroundColor: '#533afd',
-            flexShrink: 0
-          }}
-        />
-      )}
-    </ListItemButton>
-  </ListItem>
-)
-
-export default function AdminLayout() {
+const AdminLayout = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
   const location = useLocation()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [user, setUser] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null)
+  const [notificationMenuAnchor, setNotificationMenuAnchor] = useState(null)
 
-  useEffect(() => {
-    const userData = localStorage.getItem('admin')
-    if (userData) {
-      setUser(JSON.parse(userData))
-    }
-  }, [])
-
-  const handleLogout = async () => {
-    const token = localStorage.getItem('adminToken')
-    try {
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      })
-    } catch (error) {}
-    localStorage.removeItem('adminToken')
-    localStorage.removeItem('admin')
-    navigate('/login')
-  }
+  const menuItems = [
+    { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+    { label: 'Users', path: '/users', icon: <UsersIcon /> },
+    { label: 'Listings', path: '/listings', icon: <ListingsIcon /> },
+    { label: 'Reports', path: '/reports', icon: <ReportsIcon /> },
+    { label: 'Settings', path: '/settings', icon: <SettingsIcon /> }
+  ]
 
   const isActive = (path) => location.pathname === path
 
-  const SidebarContent = (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        backgroundColor: '#ffffff',
-        borderRight: '1px solid #e5edf5'
-      }}
-    >
-      {/* Brand */}
-      <Box sx={{ px: 2, py: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box
-          component="img"
-          src="/logo/5.png"
-          alt="Admin"
-          sx={{
-            height: 28,
-            width: 'auto',
-            borderRadius: '4px',
-            border: '1px solid rgba(83,58,253,0.2)'
-          }}
-        />
-        <Box
-          sx={{
-            fontSize: '0.9375rem',
-            fontWeight: 400,
-            color: '#061b31',
-            letterSpacing: '-0.02em',
-            fontFeatureSettings: '"ss01"'
-          }}
-        >
-          Admin Panel
-        </Box>
-        <Box
-          sx={{
-            ml: 'auto',
-            fontSize: '0.625rem',
-            fontWeight: 400,
-            color: '#533afd',
-            backgroundColor: 'rgba(83,58,253,0.1)',
-            px: 0.75,
-            py: 0.25,
-            borderRadius: '4px',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase'
-          }}
-        >
-          Admin
-        </Box>
-      </Box>
+  const handleMenuItemClick = (path) => {
+    navigate(path)
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }
 
-      <Divider sx={{ borderColor: '#e5edf5' }} />
+  const handleProfileMenuOpen = (event) => {
+    setProfileMenuAnchor(event.currentTarget)
+  }
 
-      {/* Main Menu */}
-      <Box sx={{ flex: 1, px: 1.5, py: 1.5, overflowY: 'auto' }}>
-        <Box sx={{ mb: 0.5, px: 1, pb: 0.5 }}>
-          <Typography
-            sx={{
-              fontSize: '0.6875rem',
-              fontWeight: 400,
-              color: '#64748d',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em'
-            }}
-          >
-            Quản lý
-          </Typography>
-        </Box>
-        <List disablePadding>
-          {menuItems.map((item) => (
-            <NavItem
-              key={item.path}
-              item={item}
-              isActive={isActive(item.path)}
-              onClick={() => navigate(item.path)}
-            />
-          ))}
-        </List>
+  const handleProfileMenuClose = () => {
+    setProfileMenuAnchor(null)
+  }
 
-        <Box sx={{ mt: 2, mb: 0.5, px: 1, pb: 0.5 }}>
-          <Typography
-            sx={{
-              fontSize: '0.6875rem',
-              fontWeight: 400,
-              color: '#64748d',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em'
-            }}
-          >
-            Hệ thống
-          </Typography>
-        </Box>
-        <List disablePadding>
-          {bottomMenuItems.map((item) => (
-            <NavItem
-              key={item.path}
-              item={item}
-              isActive={isActive(item.path)}
-              onClick={() => navigate(item.path)}
-            />
-          ))}
-        </List>
-      </Box>
-
-      <Divider sx={{ borderColor: '#e5edf5' }} />
-
-      {/* User Info */}
-      <Box sx={{ p: 1.5 }}>
-        <Box
-          onClick={() => navigate('/settings')}
-          sx={{
-            px: 1.25,
-            py: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.25,
-            cursor: 'pointer',
-            borderRadius: '4px',
-            transition: 'background-color 0.15s ease',
-            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
-          }}
-        >
-          <Avatar
-            sx={{
-              width: 28,
-              height: 28,
-              bgcolor: '#533afd',
-              fontSize: '0.75rem',
-              fontWeight: 400
-            }}
-          >
-            {user?.name?.charAt(0).toUpperCase() || 'A'}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box
-              sx={{
-                fontSize: '0.8125rem',
-                fontWeight: 400,
-                color: '#061b31',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                letterSpacing: '-0.01em'
-              }}
-            >
-              {user?.name || 'Admin'}
-            </Box>
-            <Box sx={{ fontSize: '0.6875rem', color: '#64748d' }}>
-              Quản trị viên
-            </Box>
-          </Box>
-          <Tooltip title="Đăng xuất">
-            <IconButton
-              size="small"
-              onClick={(e) => { e.stopPropagation(); handleLogout() }}
-              sx={{
-                color: '#64748d',
-                p: 0.5,
-                '&:hover': { color: '#ea2261', backgroundColor: 'rgba(234,34,97,0.08)' }
-              }}
-            >
-              <LogoutIcon sx={{ fontSize: '0.875rem' }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-    </Box>
-  )
-
-  const pageTitles = {
-    '/dashboard': 'Dashboard',
-    '/users': 'Quản lý người dùng',
-    '/buildings': 'Quản lý chung cư',
-    '/rooms': 'Quản lý phòng',
-    '/contracts': 'Quản lý hợp đồng',
-    '/payments': 'Quản lý thanh toán',
-    '/reports': 'Báo cáo',
-    '/settings': 'Cài đặt'
+  const handleLogout = () => {
+    handleProfileMenuClose()
+    // TODO: Implement logout logic
+    navigate('/login')
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#ffffff' }}>
-      {/* Sidebar - Desktop */}
-      <Box
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: theme.palette.background.default }}>
+      {/* Top Navigation */}
+      <AppBar
+        position="fixed"
         sx={{
-          width: SIDEBAR_WIDTH,
-          display: { xs: 'none', md: 'block' },
-          position: 'fixed',
-          height: '100vh',
-          overflowY: 'auto',
-          zIndex: 100
+          left: isMobile ? 0 : sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH,
+          right: 0,
+          zIndex: theme.zIndex.drawer - 1,
+          backgroundColor: theme.palette.background.paper,
+          borderBottom: `1px solid ${theme.palette.divider}`
         }}
       >
-        {SidebarContent}
-      </Box>
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', px: 2 }}>
+          {/* Left section */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {!isMobile && (
+              <Tooltip title={sidebarCollapsed ? 'Expand' : 'Collapse'}>
+                <IconButton
+                  size="small"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  sx={{ color: theme.palette.text.primary }}
+                >
+                  {sidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
+                </IconButton>
+              </Tooltip>
+            )}
+            {isMobile && (
+              <IconButton
+                size="small"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                sx={{ color: theme.palette.text.primary }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+          </Box>
 
-      {/* Sidebar - Mobile */}
+          {/* Center search */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: theme.palette.background.subtle,
+              borderRadius: 1,
+              px: 1.5,
+              py: 0.5,
+              flex: 1,
+              maxWidth: 300,
+              mx: 2
+            }}
+          >
+            <SearchIcon sx={{ fontSize: '1.2rem', color: theme.palette.text.secondary }} />
+            <InputBase
+              placeholder="Search..."
+              sx={{ ml: 1, flex: 1, fontSize: '0.875rem', color: theme.palette.text.secondary }}
+              inputProps={{ 'aria-label': 'search' }}
+            />
+          </Box>
+
+          {/* Right section */}
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Tooltip title="Notifications">
+              <IconButton
+                size="small"
+                onClick={(e) => setNotificationMenuAnchor(e.currentTarget)}
+                sx={{ color: theme.palette.text.primary }}
+              >
+                <Badge badgeContent={3} color="error">
+                  <BellIcon sx={{ fontSize: '1.3rem' }} />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            <Divider orientation="vertical" variant="middle" flexItem sx={{ my: 1 }} />
+
+            <Tooltip title="Profile">
+              <IconButton
+                size="small"
+                onClick={handleProfileMenuOpen}
+                sx={{
+                  p: 0.5,
+                  backgroundColor: theme.palette.primary.light,
+                  color: '#fff'
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    backgroundColor: theme.palette.primary.main,
+                    fontSize: '0.875rem',
+                    fontWeight: 600
+                  }}
+                >
+                  AD
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Toolbar>
+      </AppBar>
+
+      {/* Sidebar */}
       <Drawer
+        variant={isMobile ? 'temporary' : 'permanent'}
         anchor="left"
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        sx={{ display: { xs: 'block', md: 'none' } }}
-        PaperProps={{ sx: { width: SIDEBAR_WIDTH, border: 'none' } }}
+        open={isMobile ? sidebarOpen : true}
+        onClose={() => setSidebarOpen(false)}
+        sx={{
+          width: sidebarCollapsed && !isMobile ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: sidebarCollapsed && !isMobile ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH,
+            boxSizing: 'border-box',
+            backgroundColor: theme.palette.background.paper,
+            borderRight: `1px solid ${theme.palette.divider}`,
+            transition: 'width 0.3s ease',
+            mt: 0,
+            pt: 0,
+            top: 0,
+            overflowX: 'hidden'
+          }
+        }}
       >
-        {SidebarContent}
+        {/* Sidebar Header */}
+        <Box
+          sx={{
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: 64,
+            borderBottom: `1px solid ${theme.palette.divider}`
+          }}
+        >
+          {!sidebarCollapsed && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '6px',
+                  backgroundColor: theme.palette.primary.main,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '1.1rem'
+                }}
+              >
+                A
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem', lineHeight: 1 }}>
+                  Admin
+                </Typography>
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                  Dashboard
+                </Typography>
+              </Box>
+            </Box>
+          )}
+          {sidebarCollapsed && (
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '6px',
+                backgroundColor: theme.palette.primary.main,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '1rem'
+              }}
+            >
+              A
+            </Box>
+          )}
+        </Box>
+
+        {/* Sidebar Menu */}
+        <Box sx={{ py: 1, px: 1.5, mt: 2 }}>
+          <List sx={{ p: 0 }}>
+            {menuItems.map((item, index) => (
+              <ListItem
+                key={index}
+                button
+                onClick={() => handleMenuItemClick(item.path)}
+                selected={isActive(item.path)}
+                sx={{
+                  py: 1,
+                  px: 1.5,
+                  mb: 0.5,
+                  borderRadius: '6px',
+                  backgroundColor: isActive(item.path) ? theme.palette.primary.light : 'transparent',
+                  color: isActive(item.path) ? '#fff' : theme.palette.text.primary,
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    backgroundColor: isActive(item.path)
+                      ? theme.palette.primary.light
+                      : theme.palette.background.subtle,
+                    color: isActive(item.path) ? '#fff' : theme.palette.text.primary
+                  },
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: sidebarCollapsed ? 0 : 40,
+                    color: 'inherit',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {React.cloneElement(item.icon, { sx: { fontSize: '1.25rem' } })}
+                </ListItemIcon>
+                {!sidebarCollapsed && (
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      ml: 0.5
+                    }}
+                  />
+                )}
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+
+        {/* Sidebar Footer */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            p: 1.5,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            backgroundColor: theme.palette.background.paper
+          }}
+        >
+          <Tooltip title={sidebarCollapsed ? 'Logout' : ''}>
+            <ListItem
+              button
+              sx={{
+                py: 1,
+                px: 1.5,
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  backgroundColor: theme.palette.error.light,
+                  color: theme.palette.error.main
+                },
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
+              }}
+              onClick={handleLogout}
+            >
+              <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 40, color: 'inherit' }}>
+                <LogOutIcon sx={{ fontSize: '1.25rem' }} />
+              </ListItemIcon>
+              {!sidebarCollapsed && (
+                <ListItemText
+                  primary="Logout"
+                  primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500, ml: 0.5 }}
+                />
+              )}
+            </ListItem>
+          </Tooltip>
+        </Box>
       </Drawer>
 
       {/* Main Content */}
       <Box
+        component="main"
         sx={{
           flex: 1,
-          ml: { xs: 0, md: `${SIDEBAR_WIDTH}px` },
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh'
+          ml: isMobile ? 0 : sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED - SIDEBAR_WIDTH : 0,
+          transition: 'margin 0.3s ease',
+          mt: 8,
+          overflow: 'auto'
         }}
       >
-        {/* Top Header */}
-        <Box
-          sx={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 99,
-            backgroundColor: 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid #e5edf5',
-            px: { xs: 2, md: 3 },
-            py: 0,
-            height: 56,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2
-          }}
-        >
-          {/* Left: Mobile menu + Page title */}
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <IconButton
-              sx={{ display: { md: 'none' }, color: '#64748d' }}
-              onClick={() => setMobileOpen(true)}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography
-              sx={{
-                fontSize: '0.9375rem',
-                fontWeight: 400,
-                color: '#061b31',
-                letterSpacing: '-0.02em',
-                display: { xs: 'none', sm: 'block' }
-              }}
-            >
-              {pageTitles[location.pathname] || 'Dashboard'}
-            </Typography>
-          </Stack>
-
-          {/* Right: Search + Actions */}
-          <Stack direction="row" spacing={1} alignItems="center">
-            <TextField
-              placeholder="Tìm kiếm..."
-              size="small"
-              variant="outlined"
-              InputProps={{
-                startAdornment: <SearchIcon sx={{ mr: 0.75, color: '#64748d', fontSize: '1rem' }} />,
-                sx: {
-                  height: 32,
-                  fontSize: '0.8125rem',
-                  backgroundColor: '#ffffff',
-                  '& input': { py: 0 }
-                }
-              }}
-              sx={{
-                width: { xs: 160, sm: 240 },
-                display: { xs: 'none', sm: 'block' },
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '4px',
-                  height: 32
-                }
-              }}
-            />
-
-            <Tooltip title="Thông báo">
-              <IconButton
-                sx={{
-                  color: '#64748d',
-                  p: 0.875,
-                  border: '1px solid #e5edf5',
-                  borderRadius: '4px',
-                  backgroundColor: '#ffffff',
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    borderColor: '#533afd',
-                    color: '#533afd'
-                  }
-                }}
-              >
-                <Badge
-                  badgeContent={3}
-                  color="error"
-                  sx={{ '& .MuiBadge-badge': { fontSize: '0.5625rem', minWidth: 14, height: 14, p: '0 3px' } }}
-                >
-                  <NotificationsIcon sx={{ fontSize: '1.1rem' }} />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        </Box>
-
-        {/* Page Content */}
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            p: { xs: 2, md: 3 },
-            maxWidth: '100%',
-            overflow: 'auto'
-          }}
-        >
+        <Box sx={{ p: 3 }}>
           <Outlet />
         </Box>
       </Box>
+
+      {/* Profile Menu */}
+      <Menu
+        anchorEl={profileMenuAnchor}
+        open={Boolean(profileMenuAnchor)}
+        onClose={handleProfileMenuClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            backgroundColor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+          }
+        }}
+      >
+        <MenuItem sx={{ py: 1.5, px: 2, fontSize: '0.875rem' }}>
+          <Avatar sx={{ mr: 1.5, width: 32, height: 32 }}>AD</Avatar>
+          <Box>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>Admin</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
+              admin@platform.com
+            </Typography>
+          </Box>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleProfileMenuClose} sx={{ fontSize: '0.875rem' }}>
+          Profile
+        </MenuItem>
+        <MenuItem onClick={handleProfileMenuClose} sx={{ fontSize: '0.875rem' }}>
+          Settings
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogout} sx={{ fontSize: '0.875rem', color: theme.palette.error.main }}>
+          <LogOutIcon sx={{ mr: 1, fontSize: '1rem' }} />
+          Logout
+        </MenuItem>
+      </Menu>
+
+      {/* Notification Menu */}
+      <Menu
+        anchorEl={notificationMenuAnchor}
+        open={Boolean(notificationMenuAnchor)}
+        onClose={() => setNotificationMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            width: 320,
+            backgroundColor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+          }
+        }}
+      >
+        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+          <Typography sx={{ fontSize: '0.875rem', fontWeight: 600 }}>Notifications</Typography>
+        </Box>
+        <MenuItem sx={{ py: 1.5, px: 2, fontSize: '0.875rem', whiteSpace: 'normal' }}>
+          <Box>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>New listing submitted</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
+              5 minutes ago
+            </Typography>
+          </Box>
+        </MenuItem>
+        <MenuItem sx={{ py: 1.5, px: 2, fontSize: '0.875rem', whiteSpace: 'normal' }}>
+          <Box>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>User flagged for review</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
+              10 minutes ago
+            </Typography>
+          </Box>
+        </MenuItem>
+        <MenuItem sx={{ py: 1.5, px: 2, fontSize: '0.875rem', whiteSpace: 'normal' }}>
+          <Box>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>Report submitted</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
+              1 hour ago
+            </Typography>
+          </Box>
+        </MenuItem>
+      </Menu>
+
+      {/* Mobile overlay */}
+      {isMobile && sidebarOpen && (
+        <Box
+          onClick={() => setSidebarOpen(false)}
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: theme.zIndex.drawer - 1
+          }}
+        />
+      )}
     </Box>
   )
 }
+
+export default AdminLayout

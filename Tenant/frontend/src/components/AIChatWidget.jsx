@@ -105,24 +105,74 @@ function formatMessage(text) {
     .replace(/\n/g, '<br/>')
 }
 
-export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose }) {
+export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose, userId = null }) {
   const [input, setInput]             = useState('')
   const [messages, setMessages]       = useState([])
   const [loading, setLoading]         = useState(false)
   const [suggestions, setSuggestions] = useState(QUICK_PROMPTS)
   const [history, setHistory]         = useState([])
+  const [currentIntent, setCurrentIntent] = useState(null)
+  const [sessionId, setSessionId]     = useState(null)
   const messagesEndRef = useRef(null)
   const inputRef       = useRef(null)
 
   useEffect(() => {
-    if (messages.length === 0) {
+    // Load chat history nếu có userId
+    const loadChatHistory = async () => {
+      if (!userId) {
+        // Không có userId, hiển thị welcome message
+        setMessages([{
+          id: 'welcome', role: 'assistant', timestamp: new Date(),
+          text: '👋 Xin chào! Tôi là **Rentify AI**.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Xem thống kê và so sánh\n• Đặt lịch xem phòng\n\nBạn cần tìm gì?',
+        }])
+        return
+      }
+
+      try {
+        const res = await fetch(`${apiUrl}/chat/history/${userId}?limit=1`)
+        if (!res.ok) throw new Error('Failed to load history')
+        const data = await res.json()
+        
+        if (data.success && data.data && data.data.length > 0) {
+          const latestSession = data.data[0]
+          setSessionId(latestSession.SessionID)
+          
+          // Parse messages từ JSON
+          const historyMessages = latestSession.Messages ? JSON.parse(latestSession.Messages) : []
+          
+          if (historyMessages.length > 0) {
+            const formattedMessages = historyMessages.map((msg, idx) => ({
+              id: msg.MessageID || `msg-${idx}`,
+              role: msg.Role,
+              text: msg.Content,
+              timestamp: new Date(msg.CreatedAt),
+              intent: msg.Intent,
+            }))
+            setMessages(formattedMessages)
+            
+            // Rebuild history for context
+            const contextHistory = historyMessages.map(msg => ({
+              role: msg.Role,
+              content: msg.Content,
+            }))
+            setHistory(contextHistory)
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error)
+      }
+      
+      // Fallback: hiển thị welcome message
       setMessages([{
         id: 'welcome', role: 'assistant', timestamp: new Date(),
         text: '👋 Xin chào! Tôi là **Rentify AI**.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Xem thống kê và so sánh\n• Đặt lịch xem phòng\n\nBạn cần tìm gì?',
       }])
     }
+
+    loadChatHistory()
     setTimeout(() => inputRef.current?.focus(), 300)
-  }, [])
+  }, [userId, apiUrl])
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
@@ -142,17 +192,31 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
       const res = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, conversation_history: newHistory.slice(-6) }),
+        body: JSON.stringify({ 
+          message: userText, 
+          conversation_history: newHistory.slice(-6),
+          user_id: userId,
+          session_id: sessionId,
+        }),
       })
       if (!res.ok) throw new Error('API error')
       const data = await res.json()
 
+      // Lưu session_id từ response
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id)
+      }
+
       const botMsg = {
         id: (Date.now() + 1).toString(), role: 'assistant',
         text: data.reply || 'Xin lỗi, có lỗi xảy ra.', timestamp: new Date(),
+        intent: data.intent,
+        filters: data.filters,
+        data: data.data,
       }
       setMessages(prev => [...prev, botMsg])
       setSuggestions(data.suggested_questions || [])
+      setCurrentIntent(data.intent)
       setHistory([...newHistory, { role: 'assistant', content: data.reply }])
     } catch {
       setMessages(prev => [...prev, {
@@ -171,6 +235,8 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
     setMessages([])
     setHistory([])
     setSuggestions(QUICK_PROMPTS)
+    setCurrentIntent(null)
+    setSessionId(null)
     setTimeout(() => setMessages([{
       id: 'welcome-reset', role: 'assistant', timestamp: new Date(),
       text: '🔄 Cuộc trò chuyện mới bắt đầu!\n\nTôi có thể giúp gì cho bạn?',

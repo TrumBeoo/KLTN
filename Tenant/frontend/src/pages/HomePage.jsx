@@ -932,6 +932,7 @@ export default function HomePage() {
           <AIChatWidget
             apiUrl={import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'}
             onClose={() => setChatOpen(false)}
+            userId={localStorage.getItem('token') ? JSON.parse(atob(localStorage.getItem('token').split('.')[1])).accountId : null}
           />
         </Box>
       )}
