@@ -30,6 +30,7 @@ import {
   Article as BlogIcon,
   AddBox as AddIcon,
   Login as LoginIcon,
+  LocalShipping as LocalShippingIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 import { useAuth } from '../hooks/useAuth'
@@ -146,6 +147,7 @@ export default function Navbar() {
     { label: 'Trang chủ', path: '/', icon: <HomeIcon sx={{ fontSize: 16 }} /> },
     { label: 'Tin đăng',  path: '/listings', icon: <ApartmentIcon sx={{ fontSize: 16 }} /> },
     { label: 'Ở ghép',    path: '/roommate', icon: <PeopleIcon sx={{ fontSize: 16 }} /> },
+    { label: 'Chuyển phòng', path: '/moving-service', icon: <LocalShippingIcon sx={{ fontSize: 16 }} /> },
     { label: 'Blog',      path: '/blog', icon: <BlogIcon sx={{ fontSize: 16 }} /> },
   ]
 

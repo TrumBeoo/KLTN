@@ -48,7 +48,9 @@ import {
   Download as DownloadIcon,
   Refresh as RefreshIcon,
   CloudUpload as UploadIcon,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckCircle as CheckIcon,
+  Replay as ReplayIcon
 } from '@mui/icons-material'
 
 const StatusBadge = ({ status, displayStatus }) => {
@@ -827,6 +829,56 @@ export default function ManageRooms() {
     })
   }
 
+  const handleConfirmRental = async (roomId, roomCode) => {
+    showConfirm(
+      'Xác nhận cho thuê', 
+      `Bạn chắc chắn muốn xác nhận phòng ${roomCode} đã được cho thuê? Phòng sẽ bị ẩn khỏi danh sách tìm kiếm của người thuê.`, 
+      async () => {
+        try {
+          const response = await fetch(`${API_URL}/rooms/${roomId}/confirm-rental`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          const data = await response.json()
+          if (data.success) {
+            showSuccess('Thành công!', data.message)
+            fetchRooms()
+          } else {
+            showError('Lỗi!', data.message)
+          }
+        } catch (error) {
+          console.error('Confirm rental error:', error)
+          showError('Lỗi!', error.message)
+        }
+      }
+    )
+  }
+
+  const handleMarkAvailable = async (roomId, roomCode) => {
+    showConfirm(
+      'Cập nhật còn trống', 
+      `Bạn chắc chắn muốn cập nhật phòng ${roomCode} về trạng thái còn trống? Phòng sẽ hiển thị lại cho người thuê.`, 
+      async () => {
+        try {
+          const response = await fetch(`${API_URL}/rooms/${roomId}/mark-available`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          const data = await response.json()
+          if (data.success) {
+            showSuccess('Thành công!', data.message)
+            fetchRooms()
+          } else {
+            showError('Lỗi!', data.message)
+          }
+        } catch (error) {
+          console.error('Mark available error:', error)
+          showError('Lỗi!', error.message)
+        }
+      }
+    )
+  }
+
   const handleOpenDialog = (room = null) => {
     setSelectedRoom(room)
     setOpenDialog(true)
@@ -1036,6 +1088,26 @@ export default function ManageRooms() {
                     <TableCell>{formatDate(room.UpdatedAt)}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5}>
+                        {room.Status === 'available' && (
+                          <IconButton 
+                            size="small" 
+                            color="success"
+                            title="Xác nhận cho thuê" 
+                            onClick={() => handleConfirmRental(room.RoomID, room.RoomCode)}
+                          >
+                            <CheckIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                        {room.Status === 'rented' && (
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            title="Cập nhật còn trống" 
+                            onClick={() => handleMarkAvailable(room.RoomID, room.RoomCode)}
+                          >
+                            <ReplayIcon fontSize="small" />
+                          </IconButton>
+                        )}
                         <IconButton size="small" title="Sửa" onClick={() => handleOpenDialog(room)}>
                           <EditIcon fontSize="small" />
                         </IconButton>

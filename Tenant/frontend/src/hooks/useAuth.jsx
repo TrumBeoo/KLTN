@@ -28,8 +28,8 @@ export const AuthProvider = ({ children }) => {
     return data
   }
 
-  const register = async (username, password, name, email, phone) => {
-    return await authAPI.register(username, password, name, email, phone)
+  const register = async (username, password, name, email, phone, role = 'Tenant') => {
+    return await authAPI.register(username, password, name, email, phone, role)
   }
 
   const logout = async () => {

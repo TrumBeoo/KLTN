@@ -128,11 +128,13 @@ class RoomService {
               b.BuildingName, b.Address as BuildingAddress,
               loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
               loc.Latitude, loc.Longitude,
-              (SELECT GROUP_CONCAT(ImageURL ORDER BY DisplayOrder ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs
+              (SELECT GROUP_CONCAT(ImageURL ORDER BY DisplayOrder ASC) FROM ROOM_IMAGE WHERE RoomID = r.RoomID) as ImageURLs,
+              lst.IsVisible as ListingVisible
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
-       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID`;
+       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
+       LEFT JOIN LISTING lst ON r.RoomID = lst.RoomID`;
     
     const params = [];
     const conditions = [];
@@ -144,7 +146,9 @@ class RoomService {
       params.push(poiId);
     }
     
-    conditions.push("(r.Status IN ('available', 'viewing') OR r.Status = 'rented')");
+    // Only show available rooms or rooms with viewing schedules
+    // Hide rented rooms and rooms with hidden listings
+    conditions.push("(r.Status IN ('available', 'viewing') AND (lst.IsVisible IS NULL OR lst.IsVisible = 1))");
     
     if (district) {
       conditions.push('loc.District = ?');

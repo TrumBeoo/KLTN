@@ -748,4 +748,138 @@ router.get('/:id/amenities', authMiddleware, async (req, res) => {
   }
 });
 
+// Confirm room rental (mark as rented)
+router.put('/:id/confirm-rental', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    // Get LandlordID from AccountID
+    const [landlords] = await connection.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin chủ nhà'
+      });
+    }
+
+    const landlordId = landlords[0].LandlordID;
+
+    // Check if room belongs to landlord
+    const [rooms] = await connection.query(
+      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ?',
+      [req.params.id, landlordId]
+    );
+
+    if (rooms.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy phòng'
+      });
+    }
+
+    // Update room status to rented
+    await connection.query(
+      `UPDATE ROOM SET Status = 'rented', UpdatedAt = NOW() WHERE RoomID = ?`,
+      [req.params.id]
+    );
+
+    // Hide listing if exists
+    await connection.query(
+      `UPDATE LISTING SET IsVisible = 0, UpdatedAt = NOW() WHERE RoomID = ?`,
+      [req.params.id]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Đã xác nhận cho thuê phòng thành công'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Confirm rental error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server: ' + error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// Mark room as available again
+router.put('/:id/mark-available', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    // Get LandlordID from AccountID
+    const [landlords] = await connection.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin chủ nhà'
+      });
+    }
+
+    const landlordId = landlords[0].LandlordID;
+
+    // Check if room belongs to landlord
+    const [rooms] = await connection.query(
+      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ?',
+      [req.params.id, landlordId]
+    );
+
+    if (rooms.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy phòng'
+      });
+    }
+
+    // Update room status to available
+    await connection.query(
+      `UPDATE ROOM SET Status = 'available', UpdatedAt = NOW() WHERE RoomID = ?`,
+      [req.params.id]
+    );
+
+    // Show listing if exists
+    await connection.query(
+      `UPDATE LISTING SET IsVisible = 1, UpdatedAt = NOW() WHERE RoomID = ?`,
+      [req.params.id]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Đã cập nhật phòng về trạng thái còn trống'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Mark available error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server: ' + error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 module.exports = router;

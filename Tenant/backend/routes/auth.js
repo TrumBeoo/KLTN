@@ -35,11 +35,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Only allow Tenant role
-    if (user.Role !== 'Tenant') {
+    // Allow both Tenant and Provider roles
+    if (user.Role !== 'Tenant' && user.Role !== 'Provider') {
       return res.status(403).json({
         success: false,
-        message: 'Chỉ người thuê mới có thể đăng nhập ở trang này. Vui lòng sử dụng đúng trang đăng nhập cho role của bạn.'
+        message: 'Chỉ người thuê và nhà cung cấp dịch vụ mới có thể đăng nhập ở trang này.'
       });
     }
 
@@ -70,7 +70,11 @@ router.post('/login', async (req, res) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, name, email, phone } = req.body;
+    const { username, password, name, email, phone, role } = req.body;
+
+    // Validate role
+    const allowedRoles = ['Tenant', 'Provider'];
+    const userRole = role && allowedRoles.includes(role) ? role : 'Tenant';
 
     if (!validateUsername(username)) {
       return res.status(400).json({
@@ -129,7 +133,7 @@ router.post('/register', async (req, res) => {
       name,
       email,
       phone,
-      'Tenant'
+      userRole
     );
 
     res.status(201).json({
@@ -268,13 +272,13 @@ router.get('/google/callback',
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed&error_title=L%E1%BB%97i%20x%C3%A1c%20th%E1%BB%B1c`);
       }
 
-      // Only allow Tenant role
-      if (req.user.Role !== 'Tenant') {
-        console.log(`Invalid role: ${req.user.Role}, expected Tenant`);
+      // Allow both Tenant and Provider roles
+      if (req.user.Role !== 'Tenant' && req.user.Role !== 'Provider') {
+        console.log(`Invalid role: ${req.user.Role}, expected Tenant or Provider`);
         const errorTitle = encodeURIComponent('Sai loại tài khoản');
         const errorMsg = encodeURIComponent(
           `Tài khoản Google của bạn đã được đăng ký với vai trò "${req.user.Role === 'Landlord' ? 'Chủ nhà' : req.user.Role}". ` +
-          'Vui lòng sử dụng ứng dụng dành cho Chủ nhà hoặc đăng ký tài khoản mới cho Người thuê.'
+          'Vui lòng sử dụng ứng dụng dành cho Chủ nhà hoặc đăng ký tài khoản mới.'
         );
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=${errorMsg}&error_title=${errorTitle}`);
       }

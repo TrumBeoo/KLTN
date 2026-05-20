@@ -41,8 +41,9 @@ class UserService {
       `SELECT a.AccountID FROM ACCOUNT a
        LEFT JOIN TENANT t ON a.AccountID = t.AccountID
        LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
-       WHERE t.Email = ? OR l.Email = ?`,
-      [email, email]
+       LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
+       WHERE t.Email = ? OR l.Email = ? OR mp.Email = ?`,
+      [email, email, email]
     );
     return rows.length > 0;
   }
@@ -52,16 +53,17 @@ class UserService {
     
     let query = `
       SELECT a.AccountID, a.Username, a.Password, a.Role, a.Status,
-             COALESCE(t.Name, l.Name) as Name,
-             COALESCE(t.Email, l.Email) as Email,
-             COALESCE(t.Phone, l.Phone) as Phone
+             COALESCE(t.Name, l.Name, mp.Name) as Name,
+             COALESCE(t.Email, l.Email, mp.Email) as Email,
+             COALESCE(t.Phone, l.Phone, mp.Phone) as Phone
       FROM ACCOUNT a
       LEFT JOIN TENANT t ON a.AccountID = t.AccountID
       LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
-      WHERE ${isEmail ? '(t.Email = ? OR l.Email = ?)' : 'a.Username = ?'}
+      LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
+      WHERE ${isEmail ? '(t.Email = ? OR l.Email = ? OR mp.Email = ?)' : 'a.Username = ?'}
     `;
 
-    const params = isEmail ? [username, username] : [username];
+    const params = isEmail ? [username, username, username] : [username];
     const [rows] = await pool.query(query, params);
 
     if (rows.length === 0) {
@@ -105,6 +107,12 @@ class UserService {
           'INSERT INTO TENANT (TenantID, AccountID, Username, Name, Email, Phone, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           [tenantId, accountId, username, name, email, phone, now, now]
         );
+      } else if (role === 'Provider') {
+        const providerId = await this.generateProviderId();
+        await connection.query(
+          'INSERT INTO MOVING_PROVIDER (ProviderID, AccountID, Name, Phone, Email, VerifiedStatus, IsActive, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [providerId, accountId, name, phone, email, 'pending', true, now, now]
+        );
       } else {
         const landlordId = await this.generateLandlordId();
         await connection.query(
@@ -133,6 +141,18 @@ class UserService {
       return 'LAN' + String(lastId + 1).padStart(5, '0');
     }
     return 'LAN00001';
+  }
+
+  async generateProviderId() {
+    const [rows] = await pool.query(
+      'SELECT ProviderID FROM MOVING_PROVIDER ORDER BY ProviderID DESC LIMIT 1'
+    );
+    
+    if (rows.length > 0) {
+      const lastId = parseInt(rows[0].ProviderID.substring(3));
+      return 'PRO' + String(lastId + 1).padStart(7, '0');
+    }
+    return 'PRO0000001';
   }
 
   async updatePassword(accountId, newPassword) {
@@ -220,12 +240,13 @@ class UserService {
   async getUserById(accountId) {
     const [rows] = await pool.query(
       `SELECT a.AccountID, a.Username, a.Role, a.Status, a.AvatarURL,
-              COALESCE(t.Name, l.Name) as Name,
-              COALESCE(t.Email, l.Email) as Email,
-              COALESCE(t.Phone, l.Phone) as Phone
+              COALESCE(t.Name, l.Name, mp.Name) as Name,
+              COALESCE(t.Email, l.Email, mp.Email) as Email,
+              COALESCE(t.Phone, l.Phone, mp.Phone) as Phone
        FROM ACCOUNT a
        LEFT JOIN TENANT t ON a.AccountID = t.AccountID
        LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
+       LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
        WHERE a.AccountID = ?`,
       [accountId]
     );

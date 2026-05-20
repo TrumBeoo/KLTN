@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const authMiddleware = (req, res, next) => {
+const providerAuthMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -13,11 +13,11 @@ const authMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Kiểm tra role - cho phép Tenant và Provider
-    if (decoded.role !== 'Tenant' && decoded.role !== 'Provider') {
+    // Kiểm tra role - chỉ cho phép Provider
+    if (decoded.role !== 'Provider') {
       return res.status(403).json({
         success: false,
-        message: 'Bạn không có quyền truy cập. Vui lòng sử dụng tài khoản người thuê hoặc nhà cung cấp dịch vụ.'
+        message: 'Bạn không có quyền truy cập. Vui lòng sử dụng tài khoản nhà cung cấp dịch vụ.'
       });
     }
     
@@ -35,4 +35,4 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-module.exports = authMiddleware;
+module.exports = providerAuthMiddleware;

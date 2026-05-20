@@ -47,10 +47,10 @@ export const authAPI = {
       body: JSON.stringify({ username, password }),
     }),
 
-  register: (username, password, name, email, phone) =>
+  register: (username, password, name, email, phone, role = 'Tenant') =>
     apiCall('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password, name, email, phone }),
+      body: JSON.stringify({ username, password, name, email, phone, role }),
     }),
 
   logout: () =>

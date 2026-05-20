@@ -8,7 +8,7 @@ import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
   Box, TextField, Button, Typography, Link, Alert,
   InputAdornment, IconButton, Checkbox, FormControlLabel,
-  Divider, Stack,
+  Divider, Stack, Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material'
 import {
   Visibility as VisibilityIcon,
@@ -38,6 +38,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     username: '', fullName: '', email: '', phone: '',
     password: '', confirmPassword: '', termsAccepted: false,
+    role: 'Tenant', // Default role
   })
   const [showPass, setShowPass]       = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -56,7 +57,7 @@ export default function RegisterPage() {
     if (!formData.termsAccepted) { setError('Vui lòng đồng ý với Điều khoản sử dụng'); return }
     setLoading(true)
     try {
-      await register(formData.username, formData.password, formData.fullName, formData.email, formData.phone)
+      await register(formData.username, formData.password, formData.fullName, formData.email, formData.phone, formData.role)
       // Auto login after successful registration
       await login(formData.username, formData.password)
       navigate(from, { replace: true })
@@ -114,6 +115,20 @@ export default function RegisterPage() {
 
           <Box component="form" onSubmit={handleSubmit}>
             <Stack spacing={2}>
+              {/* Role Selection */}
+              <FormControl fullWidth>
+                <InputLabel>Loại tài khoản</InputLabel>
+                <Select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  label="Loại tài khoản"
+                >
+                  <MenuItem value="Tenant">Người thuê - Tìm phòng trọ</MenuItem>
+                  <MenuItem value="Provider">Nhà cung cấp - Cung cấp dịch vụ vận chuyển</MenuItem>
+                </Select>
+              </FormControl>
+
               {fields.map(f => (
                 <TextField
                   key={f.name}

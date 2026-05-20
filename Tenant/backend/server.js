@@ -15,6 +15,7 @@ const poiRoutes = require('./routes/poi');
 const documentRoutes = require('./routes/documents');
 const filterRoutes = require('./routes/filters');
 const favoriteRoutes = require('./routes/favorites');
+const movingServiceRoutes = require('./routes/movingService');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/poi', poiRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/filters', filterRoutes);
 app.use('/api/tenant/favorites', favoriteRoutes);
+app.use('/api/moving', movingServiceRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 

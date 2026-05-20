@@ -4,6 +4,7 @@ import { AuthProvider } from './hooks/useAuth'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTopButton from './components/ScrollToTopButton'
+import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -15,6 +16,8 @@ import ListingPage from './pages/ListingPage'
 import RoommateMatchingPage from './pages/RoommateMatchingPage'
 import BlogPage from './pages/BlogPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
+import MovingServicePage from './pages/MovingServicePage'
+import ProviderDashboardPage from './pages/ProviderDashboardPage'
 
 function App() {
   return (
@@ -35,6 +38,15 @@ function App() {
               <Route path="/listings" element={<ListingPage />} />
               <Route path="/roommate" element={<RoommateMatchingPage />} />
               <Route path="/blog" element={<BlogPage />} />
+              <Route path="/moving-service" element={<MovingServicePage />} />
+              <Route 
+                path="/provider/dashboard" 
+                element={
+                  <ProtectedRoute requiredRole="Provider">
+                    <ProviderDashboardPage />
+                  </ProtectedRoute>
+                } 
+              />
             </Routes>
           </Box>
           <ScrollToTopButton />
