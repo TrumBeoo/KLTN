@@ -92,17 +92,68 @@ const SuggestionChip = styled(Chip)({
   '&:hover': { backgroundColor: '#d0e8ff', borderColor: T.blue },
 })
 
+const RoomLinkStyles = `
+  .room-link {
+    color: ${T.blue};
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid ${T.blue};
+    transition: all 120ms ease;
+    cursor: pointer;
+  }
+  .room-link:hover {
+    color: ${T.blueDk};
+    border-bottom-color: ${T.blueDk};
+    background-color: ${T.blueLt};
+  }
+  .room-link:focus-visible {
+    outline: 2px solid ${T.blue};
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+`
+
 const QUICK_PROMPTS = [
   'Phòng còn trống?',
   'Phòng giá rẻ nhất',
   'Gợi ý phòng cho tôi',
-  'Lịch xem phòng',
+  'Đặt lịch xem phòng',
 ]
 
-function formatMessage(text) {
-  return text
+function formatMessage(text, roomData = null, bookingState = null) {
+  let formatted = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br/>')
+  
+  if (roomData && Array.isArray(roomData) && roomData.length > 0) {
+    const roomCodes = new Set()
+    roomData.forEach(room => {
+      const roomCode = room.RoomCode
+      if (roomCode) roomCodes.add(roomCode)
+    })
+    
+    roomCodes.forEach(roomCode => {
+      const regex = new RegExp(`\\b(${roomCode})\\b`, 'g')
+      
+      formatted = formatted.replace(regex, (match, p1, offset) => {
+        const beforeMatch = formatted.substring(0, offset)
+        const openTags = (beforeMatch.match(/</g) || []).length
+        const closeTags = (beforeMatch.match(/>/g) || []).length
+        
+        if (openTags > closeTags) {
+          return match
+        }
+        
+        if (beforeMatch.endsWith('href="/room/') || beforeMatch.includes(`data-room-code="${roomCode}"`)) {
+          return match
+        }
+        
+        return `<a href="/room/${roomCode}" class="room-link" data-room-code="${roomCode}">${match}</a>`
+      })
+    })
+  }
+  
+  return formatted
 }
 
 export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose, userId = null }) {
@@ -112,6 +163,7 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
   const [suggestions, setSuggestions] = useState(QUICK_PROMPTS)
   const [history, setHistory]         = useState([])
   const [currentIntent, setCurrentIntent] = useState(null)
+  const [bookingState, setBookingState] = useState(null)
   const [sessionId, setSessionId]     = useState(null)
   const messagesEndRef = useRef(null)
   const inputRef       = useRef(null)
@@ -207,6 +259,11 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
         setSessionId(data.session_id)
       }
 
+      // Lưu booking state nếu có
+      if (data.booking_state) {
+        setBookingState(data.booking_state)
+      }
+
       const botMsg = {
         id: (Date.now() + 1).toString(), role: 'assistant',
         text: data.reply || 'Xin lỗi, có lỗi xảy ra.', timestamp: new Date(),
@@ -244,7 +301,9 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
   }
 
   return (
-    <ChatWindow role="dialog" aria-label="Chat với Rentify AI" aria-modal="true">
+    <>
+      <style>{RoomLinkStyles}</style>
+      <ChatWindow role="dialog" aria-label="Chat với Rentify AI" aria-modal="true">
       {/* Header */}
       <Box sx={{
         px: 2, py: 1.5,
@@ -312,8 +371,15 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
             )}
             <MessageBubble
               role={msg.role}
-              dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}
+              dangerouslySetInnerHTML={{ __html: formatMessage(msg.text, msg.data, msg.bookingState) }}
               aria-label={msg.role === 'user' ? 'Tin nhắn của bạn' : 'Tin nhắn từ AI'}
+              onClick={(e) => {
+                if (e.target.classList.contains('room-link')) {
+                  e.preventDefault()
+                  const roomCode = e.target.getAttribute('data-room-code')
+                  if (roomCode) window.open(`/room/${roomCode}`, '_blank')
+                }
+              }}
             />
             {msg.role === 'user' && (
               <Avatar sx={{ width: 24, height: 24, bgcolor: T.blue, flexShrink: 0, mb: 0.25 }}>
@@ -408,5 +474,6 @@ export default function AIChatWidget({ apiUrl = 'http://localhost:8000', onClose
         </Box>
       </Box>
     </ChatWindow>
+    </>
   )
 }
