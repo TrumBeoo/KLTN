@@ -99,37 +99,41 @@ class _GroqClient:
 
     def _parse_time_expressions(self, intent_data: Dict, message: str) -> Dict:
         """Parse natural time expressions to date/time"""
-        from datetime import datetime, timedelta
-        
-        filters = intent_data.get("filters", {})
-        msg = message.lower()
-        
-        # Parse date
-        if not filters.get("date"):
-            today = datetime.now()
+        try:
+            from datetime import datetime, timedelta
             
-            if any(k in msg for k in ["hôm nay", "nay"]):
-                filters["date"] = today.strftime("%Y-%m-%d")
-            elif any(k in msg for k in ["ngày mai", "mai"]):
-                filters["date"] = (today + timedelta(days=1)).strftime("%Y-%m-%d")
-            elif any(k in msg for k in ["cuối tuần", "thứ 7", "chủ nhật"]):
-                # Find next weekend
-                days_ahead = 5 - today.weekday()  # Saturday
-                if days_ahead <= 0:
-                    days_ahead += 7
-                filters["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
-        
-        # Parse time
-        if not filters.get("time"):
-            if any(k in msg for k in ["sáng", "buổi sáng"]):
-                filters["time"] = "09:00"
-            elif any(k in msg for k in ["chiều", "buổi chiều"]):
-                filters["time"] = "14:00"
-            elif any(k in msg for k in ["tối", "buổi tối"]):
-                filters["time"] = "18:00"
-        
-        intent_data["filters"] = filters
-        return intent_data
+            filters = intent_data.get("filters", {})
+            msg = message.lower()
+            
+            # Parse date
+            if not filters.get("date"):
+                today = datetime.now()
+                
+                if any(k in msg for k in ["hôm nay", "nay"]):
+                    filters["date"] = today.strftime("%Y-%m-%d")
+                elif any(k in msg for k in ["ngày mai", "mai"]):
+                    filters["date"] = (today + timedelta(days=1)).strftime("%Y-%m-%d")
+                elif any(k in msg for k in ["cuối tuần", "thứ 7", "chủ nhật"]):
+                    # Find next weekend
+                    days_ahead = 5 - today.weekday()  # Saturday
+                    if days_ahead <= 0:
+                        days_ahead += 7
+                    filters["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+            
+            # Parse time
+            if not filters.get("time"):
+                if any(k in msg for k in ["sáng", "buổi sáng"]):
+                    filters["time"] = "09:00"
+                elif any(k in msg for k in ["chiều", "buổi chiều"]):
+                    filters["time"] = "14:00"
+                elif any(k in msg for k in ["tối", "buổi tối"]):
+                    filters["time"] = "18:00"
+            
+            intent_data["filters"] = filters
+            return intent_data
+        except Exception as e:
+            print(f"[Time Parse Error] {e}")
+            return intent_data
 
     def generate_reply(self, message: str, data: Any, history: List[Dict], intent: str = "") -> str:
         """Generate natural-language reply. Falls back to template on failure."""
@@ -208,14 +212,27 @@ def _rule_based_intent(message: str) -> Dict[str, Any]:
     if any(g in msg for g in greetings) and len(msg.split()) <= 4:
         return {"intent": "general_chat", "filters": filters, "sort_by": None}
     
-    # Booking intents
+    # Booking intents - check these FIRST before search
     if any(k in msg for k in ["đặt lịch", "xem phòng", "hẹn xem", "book", "schedule"]):
         intent = "schedule_viewing"
+        # Don't do room search, just handle booking
+        return {"intent": intent, "filters": filters, "sort_by": None}
     elif any(k in msg for k in ["lịch đã đặt", "xem lịch", "kiểm tra lịch", "lịch hẹn"]):
         intent = "check_schedule"
+        return {"intent": intent, "filters": filters, "sort_by": None}
     elif any(k in msg for k in ["hủy lịch", "cancel", "không xem nữa"]):
         intent = "cancel_viewing"
-    elif any(k in msg for k in ["giá rẻ", "rẻ nhất", "tiết kiệm"]):
+        return {"intent": intent, "filters": filters, "sort_by": None}
+    
+    # Time expressions alone (in booking context) should trigger schedule_viewing
+    time_keywords = ["mai", "ngày mai", "hôm nay", "thứ", "sáng", "chiều", "tối", "giờ"]
+    if any(k in msg for k in time_keywords) and len(msg.split()) <= 5:
+        # Likely a time response in booking flow
+        intent = "schedule_viewing"
+        return {"intent": intent, "filters": filters, "sort_by": None}
+    
+    # Room search intents
+    if any(k in msg for k in ["giá rẻ", "rẻ nhất", "tiết kiệm"]):
         intent = "get_cheap_rooms"
         filters["sort_by"] = "price_asc"
     elif any(k in msg for k in ["còn trống", "đang trống", "chưa thuê"]):
@@ -386,9 +403,18 @@ class ChatOrchestrator:
 
         # 2. Intent + filter extraction with context
         context = self._session_context.get(session_id, {})
+        filters = {}  # Initialize filters first
+        
+        # Detect contextual references
+        msg_lower = message.lower()
+        if any(k in msg_lower for k in ["đặt lịch", "xem phòng", "book", "hẹn xem"]) and not filters.get("room_code"):
+            # User wants to book but didn't specify room - use context
+            if context.get("current_room"):
+                filters["room_code"] = context["current_room"]
+        
         intent_data = self._ai.extract_intent(message, context)
         intent  = intent_data.get("intent", "general_chat")
-        filters = intent_data.get("filters", {})
+        filters.update(intent_data.get("filters", {}))
         if intent_data.get("sort_by"):
             filters["sort_by"] = intent_data["sort_by"]
 
@@ -473,53 +499,73 @@ class ChatOrchestrator:
         self, message: str, filters: Dict, user_id: str, session_id: str, context: Dict
     ) -> Dict[str, Any]:
         """Handle room viewing schedule booking"""
-        import requests
-        
-        # Extract room_code from context or filters
-        room_code = filters.get("room_code") or context.get("current_room")
-        date = filters.get("date")
-        time = filters.get("time")
-        
-        if not room_code:
-            reply = "Bạn muốn đặt lịch xem phòng nào? Mình cần biết mã phòng để đặt lịch cho bạn nhé."
-            return self._build_response(reply, "schedule_viewing", filters, None, session_id)
-        
-        if not date or not time:
-            # Get available slots
-            try:
-                backend_url = "http://localhost:5000"  # Tenant backend
-                room_info = self._db.get_room_detail(room_code)
-                
-                if not room_info:
-                    reply = f"Không tìm thấy phòng {room_code}. Bạn kiểm tra lại mã phòng nhé."
-                    return self._build_response(reply, "schedule_viewing", filters, None, session_id)
-                
-                # Suggest time slots
-                reply = f"""📅 Đặt lịch xem phòng **{room_code}**
+        try:
+            # Extract room_code from filters or context
+            room_code = filters.get("room_code") or context.get("current_room")
+            date = filters.get("date")
+            time = filters.get("time")
+            
+            # Parse natural time from message if not in filters
+            if not date or not time:
+                try:
+                    from booking_service import BookingService
+                    bs = BookingService()
+                    parsed = bs.parse_natural_time(message)
+                    if not date and parsed.get("date"):
+                        date = parsed["date"]
+                    if not time and parsed.get("time"):
+                        time = parsed["time"]
+                except Exception as e:
+                    print(f"[Time Parse Error] {e}")
+            
+            if not room_code:
+                reply = "Bạn muốn đặt lịch xem phòng nào? Mình cần biết mã phòng để đặt lịch cho bạn nhé.\n\nVí dụ: 'Đặt lịch xem phòng ROM00011'"
+                return self._build_response(reply, "schedule_viewing", filters, None, session_id)
+            
+            if not date or not time:
+                # Get room info
+                try:
+                    room_info = self._db.get_room_detail(room_code)
+                    
+                    if not room_info:
+                        reply = f"Không tìm thấy phòng {room_code}. Bạn kiểm tra lại mã phòng nhé."
+                        return self._build_response(reply, "schedule_viewing", filters, None, session_id)
+                    
+                    # Store room in context for next message
+                    self._session_context[session_id] = {
+                        **context,
+                        "current_room": room_code,
+                        "booking_flow": "awaiting_time"
+                    }
+                    
+                    # Suggest time slots
+                    reply = f"""📅 Đặt lịch xem phòng **{room_code}**
 
 Bạn muốn xem phòng vào ngày nào? Ví dụ:
-• "Mai sáng"
-• "Thứ 7 chiều"
+• "Mai sáng" (9h sáng mai)
+• "Thứ 7 chiều" (2h chiều thứ 7)
 • "Hôm nay lúc 14:00"
 
 Mình sẽ kiểm tra lịch trống và đặt cho bạn ngay!"""
-                
-                return {
-                    "reply": reply,
-                    "intent": "schedule_viewing",
-                    "filters": filters,
-                    "data": {"room_code": room_code, "room_info": room_info},
-                    "suggested_questions": ["Mai sáng", "Thứ 7 chiều", "Hôm nay 14:00"],
-                    "session_id": session_id,
-                    "booking_state": "awaiting_time",
-                }
-            except Exception as e:
-                print(f"[Booking Error] {e}")
-                reply = "Có lỗi khi lấy thông tin phòng. Bạn thử lại sau nhé."
-                return self._build_response(reply, "schedule_viewing", filters, None, session_id)
-        
-        # Have all info, create booking
-        reply = f"""✅ Đã ghi nhận yêu cầu đặt lịch!
+                    
+                    return {
+                        "reply": reply,
+                        "intent": "schedule_viewing",
+                        "filters": {"room_code": room_code},
+                        "data": {"room_code": room_code, "room_info": room_info},
+                        "suggested_questions": ["Mai sáng", "Thứ 7 chiều", "Hôm nay 14:00"],
+                        "session_id": session_id,
+                        "booking_state": "awaiting_time",
+                    }
+                except Exception as e:
+                    print(f"[Booking Error] {e}")
+                    import traceback
+                    traceback.print_exc()
+                    reply = "Có lỗi khi lấy thông tin phòng. Bạn thử lại sau nhé."
+                    return self._build_response(reply, "schedule_viewing", filters, None, session_id)
+            
+            # Have all info, create booking
+            reply = f"""✅ Đã ghi nhận yêu cầu đặt lịch!
 
 🏠 Phòng: **{room_code}**
 📅 Ngày: {date}
@@ -531,16 +577,26 @@ Mình sẽ kiểm tra lịch trống và đặt cho bạn ngay!"""
 3. Nhấn nút "Đặt lịch xem phòng"
 
 Hoặc bạn có thể [xem phòng ngay](/room/{room_code})"""
-        
-        return {
-            "reply": reply,
-            "intent": "schedule_viewing",
-            "filters": filters,
-            "data": {"room_code": room_code, "date": date, "time": time},
-            "suggested_questions": SUGGESTIONS_BY_INTENT["schedule_viewing"],
-            "session_id": session_id,
-            "booking_state": "pending_confirmation",
-        }
+            
+            # Clear booking flow from context
+            if session_id in self._session_context:
+                self._session_context[session_id].pop("booking_flow", None)
+            
+            return {
+                "reply": reply,
+                "intent": "schedule_viewing",
+                "filters": {"room_code": room_code, "date": date, "time": time},
+                "data": {"room_code": room_code, "date": date, "time": time},
+                "suggested_questions": SUGGESTIONS_BY_INTENT["schedule_viewing"],
+                "session_id": session_id,
+                "booking_state": "pending_confirmation",
+            }
+        except Exception as e:
+            print(f"[Schedule Viewing Error] {e}")
+            import traceback
+            traceback.print_exc()
+            reply = "Có lỗi khi xử lý đặt lịch. Bạn thử lại sau nhé."
+            return self._build_response(reply, "schedule_viewing", filters, None, session_id)
 
     async def _handle_check_schedule(self, user_id: str, session_id: str) -> Dict[str, Any]:
         """Check user's viewing schedules"""
