@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useScrollToTop } from "../hooks/useScrollToTop";
 import { movingServiceAPI } from "../services/movingServiceAPI";
 
 // ─── Design tokens (matching existing system) ─────────────────────────────────
@@ -848,6 +849,7 @@ const SkeletonCard = () => (
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function MovingServicePage() {
+  useScrollToTop()
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState("all");

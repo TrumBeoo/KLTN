@@ -103,6 +103,7 @@ export default function RoomDetailPage() {
   const [snackbar, setSnackbar]           = useState({ open: false, message: '', severity: 'success' })
   const [openSchedule, setOpenSchedule]   = useState(false)
   const [openLoginModal, setOpenLoginModal] = useState(false)
+  const [loginModalType, setLoginModalType] = useState('favorite') // 'favorite' or 'schedule'
   const [openCancelModal, setOpenCancelModal] = useState(false)
   const [openDocuments, setOpenDocuments] = useState(false)
   const [documents, setDocuments] = useState([])
@@ -161,7 +162,7 @@ export default function RoomDetailPage() {
 
   const handleToggleFavorite = async () => {
     const token = localStorage.getItem('token')
-    if (!token) { setOpenLoginModal(true); return }
+    if (!token) { setLoginModalType('favorite'); setOpenLoginModal(true); return }
     
     setFavLoading(true)
     try {
@@ -214,7 +215,24 @@ export default function RoomDetailPage() {
     try {
       const res = await fetch(`${API}/available-slots/${roomId}?date=${date}`)
       const data = await res.json()
-      if (data.success) setAvailableSlots(data.data)
+      if (data.success) {
+        let slots = data.data
+        const today = new Date().toISOString().split('T')[0]
+        if (date === today) {
+          const now = new Date()
+          const currentHour = now.getHours()
+          const currentMinute = now.getMinutes()
+          slots = slots.filter(slot => {
+            const [time, period] = slot.split(' ')
+            const [hour, minute] = time.split(':').map(Number)
+            let slotHour = hour
+            if (period === 'PM' && hour !== 12) slotHour += 12
+            if (period === 'AM' && hour === 12) slotHour = 0
+            return slotHour > currentHour || (slotHour === currentHour && minute > currentMinute)
+          })
+        }
+        setAvailableSlots(slots)
+      }
     } catch { setAvailableSlots([]) }
     finally { setLoadingSlots(false) }
   }
@@ -581,7 +599,7 @@ export default function RoomDetailPage() {
                   <>
                     <Button
                       fullWidth variant="contained"
-                      onClick={() => auth.user ? setOpenSchedule(true) : setOpenLoginModal(true)}
+                      onClick={() => auth.user ? setOpenSchedule(true) : (setLoginModalType('schedule'), setOpenLoginModal(true))}
                       sx={{
                         backgroundColor: T.yellow, color: T.text, borderRadius: '4px',
                         fontWeight: 700, fontSize: '1rem', py: 1.5, mb: 1.5,
@@ -671,7 +689,9 @@ export default function RoomDetailPage() {
             <StarIcon sx={{ fontSize: 24, color: T.blue }} />
           </Box>
           <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 0.5 }}>Yêu cầu đăng nhập</Typography>
-          <Typography sx={{ fontSize: '0.857rem', color: T.muted, mb: 2.5 }}>Đăng nhập để đặt lịch xem phòng</Typography>
+          <Typography sx={{ fontSize: '0.857rem', color: T.muted, mb: 2.5 }}>
+            {loginModalType === 'favorite' ? 'Đăng nhập để lưu phòng yêu thích' : 'Đăng nhập để đặt lịch xem phòng'}
+          </Typography>
           <Stack spacing={1}>
             <Button variant="contained" fullWidth onClick={() => { setOpenLoginModal(false); navigate('/login') }}
               sx={{ backgroundColor: T.blue, borderRadius: '4px', fontWeight: 700 }}>

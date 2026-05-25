@@ -145,7 +145,7 @@ export default function ListingPage() {
   const [activeFilters, setActiveFilters] = useState(0)
   const [amenityName, setAmenityName] = useState('')
   const [roomTypeName, setRoomTypeName] = useState('')
-  const PER_PAGE = 8
+  const PER_PAGE = 10
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 

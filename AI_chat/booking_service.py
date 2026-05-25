@@ -247,6 +247,26 @@ class BookingService:
             if days_ahead == 0:
                 days_ahead = 7
             result["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+        elif any(k in text for k in ["thứ 3", "thứ ba"]):
+            days_ahead = (1 - today.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            result["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+        elif any(k in text for k in ["thứ 4", "thứ tư"]):
+            days_ahead = (2 - today.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            result["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+        elif any(k in text for k in ["thứ 5", "thứ năm"]):
+            days_ahead = (3 - today.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            result["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+        elif any(k in text for k in ["thứ 6", "thứ sáu"]):
+            days_ahead = (4 - today.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            result["date"] = (today + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
         elif any(k in text for k in ["thứ 7", "cuối tuần"]):
             days_ahead = (5 - today.weekday()) % 7
             if days_ahead == 0:

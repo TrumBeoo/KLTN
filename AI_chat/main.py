@@ -42,15 +42,36 @@ async def health():
 @app.post("/chat")
 async def chat(req: ChatRequest):
     try:
+        print(f"[Chat Request] message={req.message[:50]}..., user_id={req.user_id}")
+        
         result = await orchestrator.process(
             message=req.message,
             history=req.conversation_history or [],
             user_id=req.user_id,
             session_id=req.session_id,
         )
+        
+        print(f"[Chat Response] intent={result.get('intent')}, reply_length={len(result.get('reply', ''))}")
         return JSONResponse(content=result)
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[Chat Error] {error_detail}")
+        
+        # Return user-friendly error
+        return JSONResponse(
+            status_code=500,
+            content={
+                "reply": "Xin lỗi, mình đang gặp chút vấn đề kỹ thuật. Bạn thử lại sau nhé! 🙏",
+                "intent": "error",
+                "filters": {},
+                "data": None,
+                "suggested_questions": ["Tìm phòng giá rẻ", "Phòng còn trống", "Thống kê phòng"],
+                "error": str(e),
+                "session_id": req.session_id or "unknown"
+            }
+        )
 
 
 @app.get("/rooms/stats")

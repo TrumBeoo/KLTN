@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNotification } from '../hooks/useNotification'
 import NotificationModal from '../components/NotificationModal'
 import POISelector from '../components/POISelector'
+import ContractFormDialog from '../components/ContractFormDialog'
 import ManageListings from './ManageListings'
 import {
   Box,
@@ -672,7 +673,9 @@ export default function ManageRooms() {
   const { notification, showSuccess, showError, showConfirm, hideNotification } = useNotification()
   const [activeTab, setActiveTab] = useState(0)
   const [openDialog, setOpenDialog] = useState(false)
+  const [openContractDialog, setOpenContractDialog] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
+  const [selectedRoomForContract, setSelectedRoomForContract] = useState(null)
   const [rooms, setRooms] = useState([])
   const [buildings, setBuildings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -830,28 +833,31 @@ export default function ManageRooms() {
   }
 
   const handleConfirmRental = async (roomId, roomCode) => {
-    showConfirm(
-      'Xác nhận cho thuê', 
-      `Bạn chắc chắn muốn xác nhận phòng ${roomCode} đã được cho thuê? Phòng sẽ bị ẩn khỏi danh sách tìm kiếm của người thuê.`, 
-      async () => {
-        try {
-          const response = await fetch(`${API_URL}/rooms/${roomId}/confirm-rental`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          const data = await response.json()
-          if (data.success) {
-            showSuccess('Thành công!', data.message)
-            fetchRooms()
-          } else {
-            showError('Lỗi!', data.message)
-          }
-        } catch (error) {
-          console.error('Confirm rental error:', error)
-          showError('Lỗi!', error.message)
-        }
+    // Open contract form dialog
+    setSelectedRoomForContract({ roomId, roomCode })
+    setOpenContractDialog(true)
+  }
+
+  const handleSubmitContract = async (formData) => {
+    try {
+      const response = await fetch(`${API_URL}/contracts`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      })
+      const data = await response.json()
+      if (data.success) {
+        showSuccess('Thành công!', 'Đã tạo hợp đồng và xác nhận cho thuê phòng')
+        setOpenContractDialog(false)
+        setSelectedRoomForContract(null)
+        fetchRooms()
+      } else {
+        showError('Lỗi!', data.message)
       }
-    )
+    } catch (error) {
+      console.error('Submit contract error:', error)
+      showError('Lỗi!', error.message)
+    }
   }
 
   const handleMarkAvailable = async (roomId, roomCode) => {
@@ -1132,6 +1138,17 @@ export default function ManageRooms() {
       </Card>
 
       <RoomForm open={openDialog} onClose={handleCloseDialog} room={selectedRoom} buildings={buildings} onSubmit={handleSubmitRoom} />
+      
+      <ContractFormDialog
+        open={openContractDialog}
+        onClose={() => {
+          setOpenContractDialog(false)
+          setSelectedRoomForContract(null)
+        }}
+        roomId={selectedRoomForContract?.roomId}
+        roomCode={selectedRoomForContract?.roomCode}
+        onSubmit={handleSubmitContract}
+      />
       
       <NotificationModal
         open={notification.open}

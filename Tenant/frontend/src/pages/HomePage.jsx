@@ -42,6 +42,7 @@ import {
   ArrowForward as ArrowForwardIcon,
   TrendingUp as TrendingIcon,
   Close as CloseIcon,
+  LocalShipping as TruckIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 import AIChatWidget from '../components/AIChatWidget'
@@ -67,12 +68,20 @@ const T = {
 
 // ─── Styled ────────────────────────────────────────────────────────────────
 
-/** Hero: search-bar style (no full-bleed image — Booking.com uses blue+search) */
+/** Hero: search-bar style with background image */
 const HeroSection = styled(Box)({
-  background: `linear-gradient(135deg, #003580 0%, ${T.blue} 50%, #0078cc 100%)`,
+  backgroundImage: 'url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&q=80)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
   padding: '48px 0 56px',
   position: 'relative',
   overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    inset: 0,
+    background: 'rgba(0, 53, 128, 0.5)',
+  },
   '&::after': {
     content: '""',
     position: 'absolute',
@@ -442,7 +451,7 @@ export default function HomePage() {
 
       {/* ─── Hero ─────────────────────────────────────────────────────────── */}
       <HeroSection role="banner" aria-label="Hero section">
-        <Container maxWidth="md">
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
           <Typography
             variant="h1"
             sx={{
@@ -451,7 +460,7 @@ export default function HomePage() {
               textShadow: '0 1px 4px rgba(0,0,0,0.3)',
             }}
           >
-            Tìm phòng trọ lý tưởng tại Hà Nội
+            Tìm phòng trọ/CCMN lý tưởng tại Hà Nội
           </Typography>
           <Typography sx={{ color: 'rgba(255,255,255,0.9)', textAlign: 'center', mb: 3, fontSize: '0.929rem' }}>
             Xem bản đồ · Đặt lịch xem · Tìm bạn ở ghép thông minh
@@ -873,12 +882,16 @@ export default function HomePage() {
               { icon: '👥', title: 'Tìm bạn ở ghép',
                 desc: 'Kết nối người có cùng sở thích, tiết kiệm chi phí, an toàn hơn',
                 btn: 'Tìm bạn ngay', btnColor: '#6a1b9a', onClick: () => navigate('/roommate') },
+              { icon: <TruckIcon sx={{ fontSize: 40, color: '#ff6b35' }} />, title: 'Dịch vụ vận chuyển',
+                desc: 'Hỗ trợ chuyển nhà, vận chuyển đồ đạc nhanh chóng, giá tốt',
+                btn: 'Đặt dịch vụ ngay', btnColor: '#ff6b35', btnTextColor: T.white,
+                onClick: () => navigate('/moving-service') },
               { icon: '🏠', title: 'Bạn là chủ nhà?',
                 desc: 'Đăng tin miễn phí, tiếp cận hàng nghìn người thuê đang tìm kiếm',
                 btn: 'Đăng phòng miễn phí', btnColor: '#f5a623', btnTextColor: T.white,
                 onClick: () => window.location.href = 'http://localhost:3333/login' },
             ].map((item, i) => (
-              <Grid item xs={12} md={4} key={i}>
+              <Grid item xs={12} sm={6} md={3} key={i}>
                 <Box sx={{
                   p: 3, borderRadius: '8px', border: `1px solid ${T.border}`,
                   height: '100%', display: 'flex', flexDirection: 'column', gap: 2,
@@ -931,8 +944,10 @@ export default function HomePage() {
         <Box sx={{ position: 'fixed', bottom: 80, right: 90, zIndex: 9999 }}>
           <AIChatWidget
             apiUrl={import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'}
+            tenantBackendUrl={API_URL}
             onClose={() => setChatOpen(false)}
             userId={localStorage.getItem('token') ? JSON.parse(atob(localStorage.getItem('token').split('.')[1])).accountId : null}
+            authToken={localStorage.getItem('token')}
           />
         </Box>
       )}

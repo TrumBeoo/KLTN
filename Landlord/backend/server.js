@@ -18,6 +18,11 @@ const locationRoutes = require('./routes/locations');
 const profileRoutes = require('./routes/profile');
 const roomAttributeRoutes = require('./routes/roomAttributes');
 const poiRoutes = require('./routes/poi');
+const contractRoutes = require('./routes/contracts');
+
+// Import contract notification service
+const contractNotificationService = require('./services/contractNotificationService');
+const contractCleanupService = require('./services/contractCleanupService');
 
 const app = express();
 
@@ -64,6 +69,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/room-attributes', roomAttributeRoutes);
 app.use('/api/poi', poiRoutes);
+app.use('/api/contracts', contractRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 
@@ -97,4 +103,10 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`API URL: http://localhost:${PORT}/api`);
   console.log(`Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+  
+  // Start contract notification service
+  contractNotificationService.start();
+  
+  // Start contract cleanup service
+  contractCleanupService.start();
 });

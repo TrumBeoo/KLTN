@@ -35,5 +35,5 @@ echo.
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 echo.
-echo Kich hoat mo truong ao neu can: .\.venv\Scripts\Activate.ps1
+echo Kich hoat moi truong ao neu can: .\.venv\Scripts\Activate.ps1
 echo Quay ve: deactivate

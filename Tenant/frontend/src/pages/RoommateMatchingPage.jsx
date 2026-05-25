@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useScrollToTop } from '../hooks/useScrollToTop'
 import RoommateProfileForm from '../components/RoommateProfileForm'
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
@@ -582,6 +583,7 @@ function FilterSheet({ prefs, onChange, onClose }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function RoommateMatchingPage() {
+  useScrollToTop()
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const [tab, setTab] = useState('match') // match | discover

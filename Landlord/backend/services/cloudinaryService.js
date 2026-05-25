@@ -6,7 +6,8 @@ const path = require('path');
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  timeout: 120000 // 120 seconds timeout
 });
 
 /**
@@ -43,13 +44,14 @@ async function uploadImage(fileBuffer, folder = 'rooms/images', options = {}) {
 }
 
 /**
- * Upload document file to Cloudinary
+ * Upload document file to Cloudinary with retry logic
  * @param {Buffer} fileBuffer - File buffer from multer
  * @param {String} documentType - Document type (contract, receipt, etc.)
  * @param {Object} options - Additional options
+ * @param {Number} retries - Number of retry attempts
  * @returns {Promise} - Returns {secure_url, public_id}
  */
-async function uploadDocument(fileBuffer, documentType = 'documents', options = {}) {
+async function uploadDocument(fileBuffer, documentType = 'documents', options = {}, retries = 2) {
   return new Promise((resolve, reject) => {
     // Xác định resource_type dựa trên file type
     const resourceType = options.resource_type || 'raw'; // PDF, DOCX = raw, images = image
@@ -59,14 +61,27 @@ async function uploadDocument(fileBuffer, documentType = 'documents', options = 
         folder: `documents/${documentType}`,
         resource_type: resourceType,
         overwrite: false,
-        // Thêm các options quan trọng cho documents
-        access_mode: 'public', // Đảm bảo file có thể truy cập công khai
+        access_mode: 'public',
+        timeout: 120000, // 120 seconds
+        chunk_size: 6000000, // 6MB chunks for large files
         ...options
       },
-      (error, result) => {
+      async (error, result) => {
         if (error) {
           console.error('Cloudinary upload error:', error);
-          reject(new Error(`Cloudinary upload failed: ${error.message}`));
+          
+          // Retry on timeout or network errors
+          if (retries > 0 && (error.http_code === 499 || error.message.includes('Timeout') || error.message.includes('ETIMEDOUT'))) {
+            console.log(`Retrying upload... (${retries} attempts left)`);
+            try {
+              const retryResult = await uploadDocument(fileBuffer, documentType, options, retries - 1);
+              resolve(retryResult);
+            } catch (retryError) {
+              reject(retryError);
+            }
+          } else {
+            reject(new Error(`Cloudinary upload failed: ${error.message}`));
+          }
         } else {
           console.log('Cloudinary upload success:', {
             public_id: result.public_id,

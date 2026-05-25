@@ -753,6 +753,15 @@ router.put('/:id/confirm-rental', authMiddleware, async (req, res) => {
   const connection = await db.getConnection();
   
   try {
+    const { contractData } = req.body;
+
+    if (!contractData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp thông tin hợp đồng'
+      });
+    }
+
     await connection.beginTransaction();
 
     // Get LandlordID from AccountID
@@ -785,23 +794,12 @@ router.put('/:id/confirm-rental', authMiddleware, async (req, res) => {
       });
     }
 
-    // Update room status to rented
-    await connection.query(
-      `UPDATE ROOM SET Status = 'rented', UpdatedAt = NOW() WHERE RoomID = ?`,
-      [req.params.id]
-    );
-
-    // Hide listing if exists
-    await connection.query(
-      `UPDATE LISTING SET IsVisible = 0, UpdatedAt = NOW() WHERE RoomID = ?`,
-      [req.params.id]
-    );
-
-    await connection.commit();
-
+    // Return contract form data requirement
     res.json({
       success: true,
-      message: 'Đã xác nhận cho thuê phòng thành công'
+      requireContract: true,
+      roomId: req.params.id,
+      message: 'Vui lòng điền thông tin hợp đồng'
     });
   } catch (error) {
     await connection.rollback();

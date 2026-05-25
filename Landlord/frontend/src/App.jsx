@@ -11,7 +11,7 @@ import ManageRooms from './pages/ManageRooms'
 import ManageBuildings from './pages/ManageBuildings'
 import LandlordProfile from './pages/LandlordProfile'
 import ViewingSchedulesPage from './pages/ViewingSchedulesPage'
-import ManageContracts from './pages/ManageContracts'
+import ContractManagement from './pages/ContractManagement'
 import ReportsPage from './pages/ReportsPage'
 
 function App() {
@@ -28,7 +28,7 @@ function App() {
           <Route path="/manage-buildings" element={<ManageBuildings />} />
           <Route path="/manage-rooms" element={<ManageRooms />} />
           <Route path="/viewing-schedules" element={<ViewingSchedulesPage />} />
-          <Route path="/contracts" element={<ManageContracts />} />
+          <Route path="/contracts" element={<ContractManagement />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/profile" element={<LandlordProfile />} />
         </Route>
