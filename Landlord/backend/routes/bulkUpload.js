@@ -367,7 +367,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
 
     // Verify building ownership and get building's district
     const [buildings] = await connection.query(
-      'SELECT BuildingID, LocationID, District FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      'SELECT BuildingID, LocationID, District, BuildingName FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
       [buildingId, landlordId]
     );
 
@@ -377,7 +377,9 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     }
 
     const buildingDistrict = buildings[0].District;
+    const buildingName = buildings[0].BuildingName;
     console.log('Building district:', buildingDistrict);
+    console.log('Building name:', buildingName);
 
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -446,15 +448,15 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
         try {
           await connection.query(`
             INSERT INTO UPLOAD_DETAIL (
-              UploadDetailID, UploadJobID, BuildingID, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
+              UploadDetailID, UploadJobID, BuildingID, BuildingName, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
               Address, RoomType, Description, Furniture, Amenities, Service, Rules, FloorType, Status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
           `, [
-            uploadDetailId, uploadJobId, buildingId, rowCounter, parsed.roomCode, parsed.title, parsed.price,
+            uploadDetailId, uploadJobId, buildingId, buildingName, rowCounter, parsed.roomCode, parsed.title, parsed.price,
             parsed.area, parsed.maxPeople, parsed.address, parsed.roomType, parsed.description,
             parsed.furniture, parsed.amenities, parsed.service, parsed.rules, parsed.floorType
           ]);
-          console.log('Created UPLOAD_DETAIL:', uploadDetailId, 'for district:', rowDistrict);
+          console.log('Created UPLOAD_DETAIL:', uploadDetailId, 'BuildingName:', buildingName);
         } catch (error) {
           console.error('Error creating UPLOAD_DETAIL:', error, 'for row:', index + 1);
           await connection.rollback();
