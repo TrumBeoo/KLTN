@@ -1,0 +1,22 @@
+flowchart TD
+    %% Thực thể bên ngoài
+    A[Người thuê]
+
+    %% Quy trình chính
+    B[Quản lý tin đăng và tìm kiếm phòng]
+
+    %% Kho dữ liệu
+    C1[CSDL Tin đăng]
+    C2[CSDL Phòng]
+
+    %% Luồng dữ liệu từ người thuê
+    A -->|Tìm kiếm / Lọc / Xem chi tiết phòng| B
+
+    %% Quy trình tương tác với cơ sở dữ liệu
+    B -->|Truy xuất thông tin tin đăng| C1
+    C1 -->|Dữ liệu tin đăng| B
+    B -->|Truy xuất dữ liệu phòng| C2
+    C2 -->|Thông tin chi tiết phòng / trạng thái / bản đồ| B
+
+    %% Phản hồi cho người thuê
+    B -->|Hiển thị tin đăng & thông tin phòng| A

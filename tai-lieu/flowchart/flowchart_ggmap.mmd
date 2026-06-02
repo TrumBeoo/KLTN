@@ -1,0 +1,12 @@
+flowchart TD
+    A[Bắt đầu] --> B[Người thuê truy cập Module bản đồ]
+    B --> C[Chọn vị trí / địa điểm mong muốn]
+    C --> D[Chọn bán kính tìm kiếm]
+    D --> E[Hệ thống lọc phòng theo khoảng cách & trạng thái]
+    E --> F[Hiển thị phòng trên bản đồ]
+    F --> G[Người thuê chọn phòng để xem chi tiết]
+    G --> H[Tính toán khoảng cách & thời gian di chuyển]
+    H --> I{Người thuê đặt lịch xem phòng?}
+    I -->|Có| J[Tích hợp với Module đặt lịch xem]
+    I -->|Không| K[Kết thúc]
+    J --> K

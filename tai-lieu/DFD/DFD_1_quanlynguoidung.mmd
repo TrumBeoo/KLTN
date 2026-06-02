@@ -1,0 +1,30 @@
+flowchart TB
+    %% Thực thể bên ngoài
+    CHU_NHA[Chủ nhà]
+    NGUOI_THUE[Người thuê]
+    QT[Quản trị viên]
+
+    %% Kho dữ liệu
+    DULIEU_NGUOIDUNG[(Dữ liệu người dùng)]
+
+    %% Process chính
+    P1[Đăng ký / Đăng nhập]
+    P2[Phân quyền theo vai trò]
+    P3[Quản lý thông tin người dùng]
+
+    %% Luồng dữ liệu
+    CHU_NHA -->|Đăng ký/Đăng nhập| P1
+    NGUOI_THUE -->|Đăng ký/Đăng nhập| P1
+    QT -->|Đăng ký/Đăng nhập| P1
+
+    P1 -->|Thông tin xác thực| DULIEU_NGUOIDUNG
+    P1 -->|Xác nhận đăng nhập| P2
+
+    P2 -->|Quyền truy cập| CHU_NHA
+    P2 -->|Quyền truy cập| NGUOI_THUE
+    P2 -->|Quyền truy cập| QT
+
+    P3 -->|Lưu / Cập nhật thông tin| DULIEU_NGUOIDUNG
+    CHU_NHA -->|Cập nhật thông tin cá nhân| P3
+    NGUOI_THUE -->|Cập nhật thông tin cá nhân| P3
+    QT -->|Cập nhật thông tin cá nhân| P3

@@ -1,0 +1,56 @@
+flowchart TB
+    A[Quản lý tin đăng và tìm kiếm phòng]
+
+    %% Cấp 1
+    A --> B[Hiển thị tin đăng]
+    A --> C[Xem chi tiết phòng]
+    A --> D[Đánh dấu yêu thích]
+
+    %% 4.1 Hiển thị tin đăng
+    B --> B1[Lấy danh sách tin đăng]
+    B --> B2[Lọc tin đăng]
+    B --> B3[Hiển thị kết quả]
+
+    B1 --> B11[Lấy tin đăng còn hiệu lực]
+    B1 --> B12[Sắp xếp theo thời gian]
+
+    B2 --> B21[Lọc theo khu vực]
+    B2 --> B22[Lọc theo giá thuê]
+    B2 --> B23[Lọc theo loại phòng]
+    B2 --> B24[Lọc theo tiện nghi]
+    B2 --> B25[Lọc theo trạng thái phòng]
+
+    B3 --> B31[Hiển thị dạng danh sách]
+    B3 --> B32[Phân trang kết quả]
+
+    %% 4.2 Xem chi tiết phòng
+    C --> C1[Lấy thông tin phòng]
+    C --> C2[Hiển thị tiện nghi]
+    C --> C3[Hiển thị hình ảnh]
+    C --> C4[Hiển thị vị trí bản đồ]
+    C --> C5[Hiển thị đánh giá]
+
+    C1 --> C11[Thông tin cơ bản]
+    C1 --> C12[Giá thuê và trạng thái]
+
+    C3 --> C31[Xem ảnh phòng]
+    C3 --> C32[Trình chiếu ảnh]
+
+    C4 --> C41[Định vị trên Google Maps]
+    C4 --> C42[Tính khoảng cách]
+
+    C5 --> C51[Điểm đánh giá trung bình]
+    C5 --> C52[Nội dung nhận xét]
+
+    %% 4.3 Đánh dấu yêu thích
+    D --> D1[Thêm phòng vào yêu thích]
+    D --> D2[Xem danh sách yêu thích]
+    D --> D3[Xóa khỏi yêu thích]
+
+    D1 --> D11[Kiểm tra đăng nhập]
+    D1 --> D12[Lưu phòng yêu thích]
+
+    D2 --> D21[Truy xuất danh sách]
+    D2 --> D22[Hiển thị phòng đã lưu]
+
+    D3 --> D31[Hủy theo dõi phòng]

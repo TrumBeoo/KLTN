@@ -1,0 +1,324 @@
+Mô tả chức năng hệ thống quản lý cho thuê phòng trọ
+1. Quản lý người dùng (User Management)
+
+1.1. Đăng ký tài khoản
+
+Người dùng (Tenant/ Landlord) nhập thông tin cá nhân: Họ tên, Email, Số điện thoại, Mật khẩu, Vai trò (Tenant, Landlord).
+
+Hệ thống kiểm tra:
+
+Email/SĐT/Username đã tồn tại hay chưa.
+
+Mật khẩu hợp lệ (ít nhất 8 ký tự, bao gồm chữ và số).
+
+Nếu xác thực thành công:
+
+Hệ thống gửi mã xác thực (nếu cần) qua Email/SMS.
+
+Tạo tài khoản mới trong cơ sở dữ liệu.
+
+1.2. Đăng nhập
+
+Người dùng nhập tên đăng nhập và mật khẩu.
+
+Hệ thống xác thực và:
+
+Cho phép truy cập theo vai trò (Tenant, Landlord, Admin).
+
+Lưu phiên đăng nhập và thời gian đăng nhập.
+
+1.3. Cập nhật thông tin cá nhân
+
+Người dùng có thể chỉnh sửa:
+
+Thông tin liên hệ (SĐT, Email)
+
+Ảnh đại diện
+
+Mật khẩu (có xác thực mật khẩu cũ)
+
+Hệ thống ghi nhận lịch sử thay đổi để quản lý.
+
+1.4. Khóa/Mở tài khoản
+
+Admin có quyền:
+
+Khóa tài khoản khi phát hiện vi phạm
+
+Mở lại tài khoản theo yêu cầu hợp lệ
+
+Khi khóa tài khoản:
+
+Người dùng không thể đăng nhập
+
+Các nghiệp vụ liên quan bị tạm ngưng (đặt lịch, đăng tin…)
+
+2. Quản lý chung cư mini và phòng trọ (Room Management)
+
+2.1. Khai báo chung cư
+
+Chủ nhà nhập thông tin:
+
+Địa chỉ, khu vực, số tầng, mô tả chung cư
+
+Hệ thống lưu trữ và gán các phòng thuộc chung cư này.
+
+2.2. Thêm phòng
+
+Nhập thông tin phòng:
+
+Diện tích, Giá thuê, Loại phòng (khép kín/ở ghép), Số người tối đa, Trạng thái, Mô tả
+
+Gắn tiện nghi và hình ảnh phòng
+
+Hệ thống kiểm tra dữ liệu hợp lệ trước khi lưu.
+
+2.3. Sửa/xóa phòng
+
+Chủ nhà có thể:
+
+Cập nhật thông tin phòng khi thay đổi thực tế
+
+Xóa phòng nếu không còn cho thuê
+
+Lưu ý:
+
+Nếu phòng đang có hợp đồng hiệu lực, hệ thống cảnh báo trước khi xóa.
+
+2.4. Quản lý trạng thái phòng
+
+Hệ thống tự động cập nhật:
+
+Trống, Đang thuê, Đang đặt lịch xem, Bảo trì
+
+Căn cứ vào:
+
+Hợp đồng
+
+Lịch xem
+
+Yêu cầu bảo trì
+
+3. Tự động hóa đăng tin cho thuê (Listing Automation)
+
+3.1. Tải dữ liệu phòng
+
+Chủ nhà tải file Excel/CSV chứa nhiều phòng.
+
+Hệ thống tự đọc dữ liệu:
+
+Kiểm tra định dạng, giá trị hợp lệ
+
+Báo lỗi nếu thông tin không hợp lệ
+
+3.2. Tạo tin đăng tự động
+
+Hệ thống sinh tin đăng cho từng phòng:
+
+Lấy thông tin phòng, tiện nghi, hình ảnh, vị trí
+
+Gán trạng thái tin đăng theo trạng thái phòng
+
+3.3. Đồng bộ trạng thái
+
+Khi phòng thay đổi trạng thái:
+
+Hệ thống tự cập nhật trạng thái tin đăng
+
+Ví dụ: “Phòng đã thuê” → tin đăng chuyển thành “Đã cho thuê”
+
+4. Quản lý tin đăng và tìm kiếm phòng (Listing & Search)
+
+4.1. Hiển thị tin đăng
+
+Người thuê xem danh sách tin đăng
+
+Lọc theo:
+
+Khu vực, Giá, Loại phòng, Tiện nghi, Trạng thái
+
+4.2. Xem chi tiết phòng
+
+Hiển thị:
+
+Thông tin phòng, tiện nghi
+
+Hình ảnh, vị trí trên bản đồ
+
+Đánh giá từ người thuê trước
+
+4.3. Đánh dấu yêu thích
+
+Người thuê có thể lưu lại các phòng quan tâm để theo dõi
+
+5. Quản lý lịch xem phòng (Viewing Schedule)
+
+5.1. Đặt lịch xem
+
+Người thuê chọn phòng và thời gian
+
+Gửi yêu cầu đặt lịch đến hệ thống
+
+5.2. Duyệt lịch xem
+
+Chủ nhà nhận thông báo
+
+Xác nhận hoặc từ chối lịch xem
+
+Hệ thống tự động gửi thông báo cho người thuê
+
+5.3. Cập nhật trạng thái
+
+Khi lịch xem được duyệt:
+
+Phòng chuyển sang “Đang đặt lịch xem”
+
+Tránh trùng lịch với các người thuê khác
+
+6. Quản lý hợp đồng và trạng thái phòng (Contract Management)
+
+6.1. Tạo hợp đồng
+
+Chủ nhà nhập:
+
+Ngày bắt đầu, Ngày kết thúc, Tiền cọc, Tổng tiền, Điều khoản
+
+Hệ thống kiểm tra:
+
+Phòng có đang thuê không
+
+Không trùng lịch hợp đồng
+
+6.2. Cập nhật trạng thái phòng
+
+Khi hợp đồng có hiệu lực:
+
+Phòng chuyển sang trạng thái “Đã cho thuê”
+
+Lưu lịch sử hợp đồng để tra cứu
+
+7. Quản lý thanh toán (Payment Management)
+
+7.1. Ghi nhận thanh toán
+
+Chủ nhà nhập:
+
+Số tiền, Ngày thanh toán, Hình thức (Tiền mặt, Chuyển khoản), Trạng thái
+
+7.2. Theo dõi công nợ
+
+Hệ thống thống kê các khoản:
+
+Đã thanh toán
+
+Sắp đến hạn
+
+Gửi thông báo nhắc nhở thanh toán cho người thuê
+
+8. Hỗ trợ tìm bạn ở ghép (AI Matching)
+
+8.1. Khai báo nhu cầu
+
+Người thuê nhập:
+
+Thông tin cá nhân, Sở thích, Thói quen, Ngân sách, Tiêu chí ở ghép
+
+8.2. Tìm kiếm thủ công
+
+Người thuê lọc và chọn bạn ở ghép theo tiêu chí mong muốn
+
+8.3. Gợi ý tự động (AI)
+
+Hệ thống AI:
+
+Phân tích dữ liệu người thuê, phòng
+
+Tính điểm tương thích
+
+Hiển thị kết quả:
+
+Điểm tương thích
+
+Lý do gợi ý
+
+9. Quản lý bản đồ và vị trí (Location Management)
+
+9.1. Gắn vị trí phòng
+
+Chủ nhà nhập địa chỉ
+
+Hệ thống xác định vị trí trên Google Maps (Latitude, Longitude)
+
+9.2. Hiển thị bản đồ
+
+Người thuê xem vị trí phòng
+
+Tính khoảng cách tới các địa điểm quan trọng:
+
+Trường học, bệnh viện, trung tâm mua sắm
+
+10. Quản lý tiện nghi phòng (Amenity Management)
+
+10.1. Thêm/sửa/xóa tiện nghi
+
+Chủ nhà quản lý danh sách tiện nghi chung
+
+Gán tiện nghi cho từng phòng
+
+10.2. Lọc phòng theo tiện nghi
+
+Người thuê chọn tiện nghi mong muốn
+
+Hệ thống lọc phòng phù hợp
+
+11. Quản lý đánh giá (Review Management)
+
+11.1. Đánh giá
+
+Sau khi thuê, người thuê:
+
+Cho điểm (1–5)
+
+Viết nội dung đánh giá
+
+11.2. Hiển thị đánh giá
+
+Hệ thống tổng hợp điểm trung bình
+
+Hiển thị đánh giá trên tin đăng phòng
+
+12. Quản lý thông báo hệ thống (Notification Management)
+
+12.1. Gửi thông báo
+
+Các loại:
+
+Lịch xem
+
+Phòng trống/đã thuê
+
+Hợp đồng sắp hết hạn
+
+Tin đăng mới, nhắc thanh toán
+
+12.2. Quản lý trạng thái
+
+Người dùng xem thông báo
+
+Đánh dấu đã đọc/chưa đọc
+
+13. Quản lý báo cáo – thống kê (Reporting & Analytics)
+
+13.1. Thống kê
+
+Phòng trống, phòng đã thuê
+
+Doanh thu, số hợp đồng
+
+Lịch sử thuê, lịch xem phòng
+
+13.2. Xuất báo cáo
+
+Xuất ra file Excel/PDF
+
+Dùng cho Admin và Chủ nhà để quản lý, ra quyết định

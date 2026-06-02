@@ -1,0 +1,18 @@
+flowchart TD
+    A[Bắt đầu] --> B[Chủ nhà upload dữ liệu phòng &amp; tiện nghi]
+    B --> C{Định dạng &amp; dữ liệu hợp lệ?}
+
+    C -->|Không| D[Thông báo lỗi, yêu cầu chỉnh sửa]
+    D --> B
+
+    C -->|Có| E[Tự động phân loại phòng<br/>Loại - Tiện nghi - Khu vực - Giá]
+    E --> F[Tạo tiêu đề &amp; mô tả tin<br/>Template or AI]
+
+    F --> G{Kiểm tra trùng tin / dữ liệu thiếu?}
+    G -->|Có| H[Thông báo cảnh báo cho chủ nhà]
+    H --> B
+    G -->|Không| I[Cập nhật database<br/>Insert or Update]
+
+    I --> J[Đăng tin lên nền tảng web]
+    J --> K[Cập nhật trạng thái phòng liên quan]
+    K --> L[Kết thúc]

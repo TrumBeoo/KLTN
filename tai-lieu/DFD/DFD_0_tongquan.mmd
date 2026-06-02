@@ -1,0 +1,47 @@
+flowchart TB
+    %% Thực thể bên ngoài
+    CHU_NHA[Chủ nhà]
+    NGUOI_THUE[Người thuê]
+    QT[Quản trị viên]
+
+    %% Process chính
+    P1[Quản lý người dùng]
+    P2[Quản lý chung cư & phòng]
+    P3[Đăng tin cho thuê tự động]
+    P4[Tìm kiếm & đặt lịch xem phòng]
+    P5[Quản lý hợp đồng thuê]
+    P6[Tìm bạn ở ghép]
+    P7[Bản đồ & vị trí]
+
+    %% Quản lý người dùng
+    CHU_NHA --> P1
+    NGUOI_THUE --> P1
+    P1 --> CHU_NHA
+    P1 --> NGUOI_THUE
+
+    %% Quản lý chung cư & phòng
+    CHU_NHA --> P2
+    P2 --> CHU_NHA
+
+    %% Đăng tin tự động
+    P2 --> P3
+    P3 --> CHU_NHA
+    P3 --> NGUOI_THUE
+
+    %% Tìm kiếm & đặt lịch xem
+    NGUOI_THUE --> P4
+    CHU_NHA --> P4
+    P4 --> NGUOI_THUE
+    P4 --> CHU_NHA
+
+    %% Quản lý hợp đồng thuê
+    CHU_NHA --> P5
+    P5 --> CHU_NHA
+    P5 --> NGUOI_THUE
+
+    %% Tìm bạn ở ghép
+    NGUOI_THUE --> P6
+    P6 --> NGUOI_THUE
+
+    %% Bản đồ & vị trí
+    P7 --> NGUOI_THUE

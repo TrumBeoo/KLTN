@@ -1,0 +1,16 @@
+flowchart TD
+    ET1[Chủ nhà] --> P111[Thêm / Sửa / Xóa phòng]
+    P111 --> DS1[DB Phòng]
+    
+    ET1 --> P112[Gắn tiện nghi]
+    P112 --> DS1a[DB Tiện nghi]
+    P112 --> DS1[DB Phòng]
+    
+    ET1 --> P113[Cập nhật trạng thái phòng]
+    P113 --> DS1
+    
+    ET1 --> P114[Xem lịch sử phòng]
+    P114 --> DS4[DB Lịch sử thuê phòng]
+    DS4 --> ET1
+    DS1 --> ET1
+    DS1a --> ET1

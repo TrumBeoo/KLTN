@@ -1,0 +1,48 @@
+flowchart TB
+    A[Quản lý lịch xem phòng]
+
+    %% Cấp 1
+    A --> B[Đặt lịch xem]
+    A --> C[Duyệt lịch xem]
+    A --> D[Cập nhật trạng thái lịch & phòng]
+
+    %% 5.1 Đặt lịch xem
+    B --> B1[Chọn phòng cần xem]
+    B --> B2[Chọn thời gian xem]
+    B --> B3[Gửi yêu cầu đặt lịch]
+
+    B1 --> B11[Kiểm tra phòng còn hiệu lực]
+    B2 --> B21[Kiểm tra thời gian hợp lệ]
+    B3 --> B31[Lưu lịch ở trạng thái chờ duyệt]
+    B3 --> B32[Gửi thông báo cho chủ nhà]
+
+    %% 5.2 Duyệt lịch xem
+    C --> C1[Nhận thông báo lịch xem]
+    C --> C2[Xem chi tiết lịch]
+    C --> C3[Xác nhận lịch xem]
+    C --> C4[Từ chối lịch xem]
+
+    C2 --> C21[Thông tin người thuê]
+    C2 --> C22[Thông tin phòng]
+    C2 --> C23[Thời gian đề xuất]
+
+    C3 --> C31[Cập nhật trạng thái đã duyệt]
+    C3 --> C32[Gửi thông báo cho người thuê]
+
+    C4 --> C41[Cập nhật trạng thái từ chối]
+    C4 --> C42[Gửi thông báo từ chối]
+
+    %% 5.3 Cập nhật trạng thái
+    D --> D1[Cập nhật trạng thái lịch xem]
+    D --> D2[Cập nhật trạng thái phòng]
+    D --> D3[Kiểm tra trùng lịch]
+
+    D1 --> D11[Chờ duyệt]
+    D1 --> D12[Đã duyệt]
+    D1 --> D13[Đã từ chối]
+
+    D2 --> D21[Phòng đang đặt lịch xem]
+    D2 --> D22[Phòng trống]
+
+    D3 --> D31[So sánh thời gian]
+    D3 --> D32[Ngăn đặt lịch trùng]

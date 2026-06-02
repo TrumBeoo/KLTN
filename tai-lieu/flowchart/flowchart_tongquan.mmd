@@ -1,0 +1,65 @@
+flowchart TD
+    A([Bắt đầu]) --> B[Người dùng truy cập hệ thống]
+    B --> C{Đã có tài khoản?}
+
+    C -- Chưa --> D[Đăng ký tài khoản]
+    D --> E[Đăng nhập]
+    C -- Có --> E[Đăng nhập]
+
+    E --> F{Xác định vai trò}
+
+    %% ===== CHỦ NHÀ =====
+    F -- Chủ nhà --> CN1[Quản lý chung cư mini]
+    CN1 --> CN2[Quản lý phòng cho thuê]
+    CN2 --> CN3{Đăng tin thủ công hay tải dữ liệu?}
+
+    CN3 -- Tải dữ liệu --> CN4[Tải dữ liệu phòng]
+    CN4 --> CN5[Hệ thống tự động nhận diện & phân loại]
+    CN5 --> CN6[Tự động tạo tin đăng]
+
+    CN3 -- Thủ công --> CN6
+
+    CN6 --> CN7[Quản lý tin đăng]
+    CN7 --> CN8[Nhận yêu cầu xem phòng]
+    CN8 --> CN9{Có khách thuê?}
+
+    CN9 -- Có --> CN10[Tạo hợp đồng thuê]
+    CN10 --> CN11[Cập nhật trạng thái phòng]
+    CN11 --> END1([Kết thúc nhánh Chủ nhà])
+
+    CN9 -- Không --> CN2
+
+    %% ===== NGƯỜI THUÊ =====
+    F -- Người thuê --> NT1[Tìm kiếm phòng]
+    NT1 --> NT2[Xem chi tiết phòng]
+    NT2 --> NT3{Đặt lịch xem phòng?}
+
+    NT3 -- Có --> NT4[Đặt lịch xem phòng]
+    NT3 -- Không --> NT1
+
+    NT4 --> NT5{Có nhu cầu ở ghép?}
+    NT5 -- Có --> NT6[Tạo hồ sơ tìm ở ghép]
+    NT6 --> NT7[Hệ thống gợi ý bạn ở ghép]
+    NT7 --> NT8{Đồng ý ghép?}
+
+    NT8 -- Có --> NT9[Liên hệ & trao đổi]
+    NT8 -- Không --> NT1
+
+    NT5 -- Không --> NT10{Quyết định thuê phòng?}
+    NT9 --> NT10
+
+    NT10 -- Có --> NT11[Ký hợp đồng thuê]
+    NT11 --> END2([Kết thúc nhánh Người thuê])
+
+    NT10 -- Không --> END2
+
+    %% ===== QUẢN TRỊ =====
+    F -- Quản trị --> QT1[Quản lý người dùng]
+    QT1 --> QT2[Kiểm duyệt tin đăng]
+    QT2 --> QT3[Thống kê & báo cáo]
+    QT3 --> END3([Kết thúc nhánh Quản trị])
+
+    %% ===== KẾT THÚC =====
+    END1 --> Z([Kết thúc hệ thống])
+    END2 --> Z
+    END3 --> Z

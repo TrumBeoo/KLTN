@@ -1,0 +1,59 @@
+flowchart TB
+    A[Tự động hóa đăng tin cho thuê]
+
+    %% Cấp 1
+    A --> B[Tải dữ liệu phòng]
+    A --> C[Tạo tin đăng tự động]
+    A --> D[Đồng bộ trạng thái tin đăng]
+
+    %% 3.1 Tải dữ liệu phòng
+    B --> B1[Tải file Excel / CSV]
+    B --> B2[Đọc và phân tích dữ liệu]
+    B --> B3[Kiểm tra dữ liệu hợp lệ]
+    B --> B4[Báo lỗi dữ liệu]
+    B --> B5[Lưu dữ liệu phòng hợp lệ]
+
+    B1 --> B11[Chọn file từ thiết bị]
+    B1 --> B12[Xác nhận tải lên]
+
+    B2 --> B21[Đọc cấu trúc file]
+    B2 --> B22[Trích xuất thông tin phòng]
+
+    B3 --> B31[Kiểm tra định dạng file]
+    B3 --> B32[Kiểm tra giá trị dữ liệu]
+    B3 --> B33[Kiểm tra dữ liệu bắt buộc]
+
+    B4 --> B41[Thông báo lỗi chi tiết]
+    B4 --> B42[Yêu cầu chỉnh sửa file]
+
+    %% 3.2 Tạo tin đăng tự động
+    C --> C1[Lấy dữ liệu phòng]
+    C --> C2[Tổng hợp thông tin tin đăng]
+    C --> C3[Sinh tin đăng tự động]
+    C --> C4[Lưu tin đăng]
+
+    C1 --> C11[Thông tin phòng]
+    C1 --> C12[Tiện nghi phòng]
+    C1 --> C13[Hình ảnh phòng]
+    C1 --> C14[Vị trí phòng]
+
+    C2 --> C21[Tạo tiêu đề tin đăng]
+    C2 --> C22[Tạo mô tả chi tiết]
+
+    C3 --> C31[Gán chủ nhà]
+    C3 --> C32[Gán trạng thái ban đầu]
+
+    %% 3.3 Đồng bộ trạng thái
+    D --> D1[Theo dõi thay đổi trạng thái phòng]
+    D --> D2[Tự động cập nhật trạng thái tin đăng]
+    D --> D3[Đảm bảo đồng bộ dữ liệu]
+
+    D1 --> D11[Phòng được thuê]
+    D1 --> D12[Phòng trống]
+    D1 --> D13[Phòng bảo trì]
+
+    D2 --> D21[Cập nhật tin: Đã cho thuê]
+    D2 --> D22[Cập nhật tin: Còn trống]
+    D2 --> D23[Cập nhật tin: Tạm ngưng]
+
+    D3 --> D31[Tránh sai lệch dữ liệu]

@@ -1,0 +1,41 @@
+flowchart TD
+    CN[Chủ nhà]
+    WEB[Nền tảng web]
+
+    %% Processes
+    P41[Upload dữ liệu phòng & tiện nghi]
+    P42[Kiểm tra dữ liệu đầu vào]
+    P43[Phân loại phòng tự động]
+    P44[Cập nhật Database tự động]
+    P45[Sinh tiêu đề & mô tả tin]
+    P46[Đăng tin tự động]
+    P47[Cảnh báo lỗi / trùng dữ liệu]
+
+    %% Data Stores
+    DS1[DB Phòng]
+    DS2[DB Tiện nghi]
+    DS5[DB Tin đăng]
+    DS7[DB Thông báo]
+    DS9[DB Log Upload]
+
+    %% Flows
+    CN --> P41
+    P41 --> P42
+
+    P42 --> DS9
+    P42 --> P43
+    P42 --> P47
+
+    P43 --> P44
+    P44 --> DS1
+    P44 --> DS2
+
+    P43 --> P45
+    P45 --> DS5
+
+    P45 --> P46
+    P46 --> WEB
+    P46 --> CN
+
+    P47 --> DS7
+    DS7 --> CN

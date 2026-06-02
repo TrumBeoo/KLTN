@@ -1,0 +1,39 @@
+flowchart TB
+    %% Thuc the ben ngoai
+    NGUOI_THUE[Nguoi thue]
+
+    %% Kho du lieu
+    D_TINDANG[(Du lieu tin dang)]
+    D_PHONG[(Du lieu phong)]
+    D_VITRI[(Du lieu vi tri)]
+    D_HINHANH[(Du lieu hinh anh)]
+
+    %% Process chinh
+    P1[Hien thi danh sach tin dang]
+    P2[Tim kiem va loc phong]
+    P3[Xem chi tiet phong]
+    P4[Kiem tra trang thai phong]
+
+    %% Luong du lieu hien thi tin dang
+    D_TINDANG -->|Thong tin tin dang| P1
+    D_PHONG -->|Gia thue dien tich tien nghi| P1
+    D_VITRI -->|Thong tin vi tri| P1
+    P1 -->|Danh sach tin dang| NGUOI_THUE
+
+    %% Tim kiem va loc
+    NGUOI_THUE -->|Tieu chi tim kiem| P2
+    P2 -->|Truy van tin dang| D_TINDANG
+    P2 -->|Ket qua loc| P1
+
+    %% Xem chi tiet phong
+    NGUOI_THUE -->|Chon tin dang| P3
+    P3 -->|Thong tin phong| D_PHONG
+    P3 -->|Thong tin vi tri| D_VITRI
+    P3 -->|Hinh anh phong| D_HINHANH
+
+    %% Trang thai phong
+    D_PHONG -->|Trang thai phong| P4
+    P4 -->|Con trong hoac da thue| P3
+
+    %% Tra ket qua chi tiet
+    P3 -->|Chi tiet phong va hinh anh| NGUOI_THUE

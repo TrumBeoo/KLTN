@@ -1,0 +1,54 @@
+flowchart TB
+    A[Quản lý thông báo hệ thống]
+
+    %% Cấp 1
+    A --> B[Tạo và gửi thông báo]
+    A --> C[Phân phối thông báo]
+    A --> D[Quản lý trạng thái thông báo]
+
+    %% 12.1 Gửi thông báo
+    B --> B1[Xác định loại thông báo]
+    B --> B2[Tạo nội dung thông báo]
+    B --> B3[Gửi thông báo]
+
+    B1 --> B11[Lịch xem phòng]
+    B1 --> B12[Phòng trống hoặc da thue]
+    B1 --> B13[Hợp đồng sap het han]
+    B1 --> B14[Tin dang moi]
+    B1 --> B15[Nhac thanh toan]
+
+    B2 --> B21[Tieu de thong bao]
+    B2 --> B22[Noi dung chi tiet]
+    B2 --> B23[Thoi gian gui]
+
+    B3 --> B31[Gui trong he thong]
+    B3 --> B32[Gui qua email hoac sms]
+
+    %% Phân phối thông báo
+    C --> C1[Xac dinh nguoi nhan]
+    C --> C2[Phan loai thong bao]
+    C --> C3[Luu thong bao]
+
+    C1 --> C11[Chu nha]
+    C1 --> C12[Nguoi thue]
+    C1 --> C13[Quan tri vien]
+
+    C2 --> C21[Thong bao ca nhan]
+    C2 --> C22[Thong bao he thong]
+
+    C3 --> C31[Luu vao co so du lieu]
+    C3 --> C32[Gan cho nguoi dung]
+
+    %% 12.2 Quản lý trạng thái
+    D --> D1[Nguoi dung xem thong bao]
+    D --> D2[Cap nhat trang thai]
+    D --> D3[Thong ke thong bao]
+
+    D1 --> D11[Danh sach thong bao]
+    D1 --> D12[Chi tiet thong bao]
+
+    D2 --> D21[Danh dau da doc]
+    D2 --> D22[Danh dau chua doc]
+
+    D3 --> D31[So thong bao chua doc]
+    D3 --> D32[Lich su thong bao]

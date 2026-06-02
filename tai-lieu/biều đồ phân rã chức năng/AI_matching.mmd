@@ -1,0 +1,60 @@
+flowchart TB
+    A[Hỗ trợ tìm bạn ở ghép - AI Matching]
+
+    %% Cấp 1
+    A --> B[Khai báo nhu cầu ở ghép]
+    A --> C[Tìm kiếm thủ công]
+    A --> D[Gợi ý tự động bằng AI]
+
+    %% 8.1 Khai báo nhu cầu
+    B --> B1[Nhập thông tin cá nhân]
+    B --> B2[Nhập sở thích & thói quen]
+    B --> B3[Thiết lập ngân sách]
+    B --> B4[Thiết lập tiêu chí ở ghép]
+
+    B1 --> B11[Giới tính]
+    B1 --> B12[Độ tuổi]
+    B1 --> B13[Nghề nghiệp / Sinh viên]
+
+    B2 --> B21[Thói quen sinh hoạt]
+    B2 --> B22[Sở thích chung]
+    B2 --> B23[Giờ giấc sinh hoạt]
+
+    B3 --> B31[Ngân sách tối đa]
+    B3 --> B32[Chia tiền phòng]
+
+    B4 --> B41[Giới tính mong muốn]
+    B4 --> B42[Khoảng tuổi]
+    B4 --> B43[Mức độ tương thích]
+
+    %% 8.2 Tìm kiếm thủ công
+    C --> C1[Lọc theo tiêu chí]
+    C --> C2[Xem danh sách người phù hợp]
+    C --> C3[Chọn & liên hệ]
+
+    C1 --> C11[Ngân sách]
+    C1 --> C12[Giới tính]
+    C1 --> C13[Thói quen]
+
+    C2 --> C21[Hồ sơ người thuê]
+    C2 --> C22[Mức độ phù hợp]
+
+    C3 --> C31[Gửi yêu cầu kết nối]
+    C3 --> C32[Nhắn tin trao đổi]
+
+    %% 8.3 Gợi ý tự động (AI)
+    D --> D1[Phân tích dữ liệu]
+    D --> D2[Tính điểm tương thích]
+    D --> D3[Hiển thị kết quả gợi ý]
+
+    D1 --> D11[Dữ liệu người thuê]
+    D1 --> D12[Dữ liệu phòng]
+    D1 --> D13[Lịch sử tương tác]
+
+    D2 --> D21[So khớp sở thích]
+    D2 --> D22[So khớp thói quen]
+    D2 --> D23[So khớp ngân sách]
+
+    D3 --> D31[Danh sách gợi ý]
+    D3 --> D32[Điểm tương thích]
+    D3 --> D33[Lý do gợi ý]

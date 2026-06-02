@@ -1,0 +1,19 @@
+flowchart TD
+    A[Bắt đầu] --> B[Người thuê chọn phòng cần xem]
+    B --> C[Chọn thời gian mong muốn và gửi yêu cầu]
+    C --> D{Phòng trống & lịch không trùng?}
+
+    D -->|Không| E[Thông báo lịch trùng / không khả dụng]
+    E --> B
+
+    D -->|Có| F[Gửi yêu cầu đến chủ nhà]
+    F --> G{Chủ nhà duyệt yêu cầu?}
+
+    G -->|Duyệt| H[Cập nhật trạng thái phòng &quot;Đã đặt lịch&quot;]
+    H --> I[Gửi thông báo nhắc nhở cho người thuê & chủ nhà]
+    I --> J[Lưu lịch sử xem phòng]
+    J --> K[Kết thúc]
+
+    G -->|Từ chối| L[Cập nhật trạng thái phòng &quot;Trống&quot;]
+    L --> M[Thông báo từ chối cho người thuê]
+    M --> K
