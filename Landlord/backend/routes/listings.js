@@ -115,8 +115,8 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
         description: row['description'] || row['Mô tả'] || ''
       }
 
-      // Generate UploadDetailID (CHAR(10) max)
-      const uploadDetailId = 'UD' + String(index + 1).padStart(8, '0')
+      // Generate UploadDetailID (CHAR(10) max) - use unique timestamp-based counter to avoid duplicates
+      const uploadDetailId = 'UD' + String(Date.now() + index).padStart(8, '0')
 
       const [result] = await connection.query(`
         INSERT INTO UPLOAD_DETAIL (
@@ -202,8 +202,8 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
       const parsed = {
         roomCode: row['room_code'] || row['Mã phòng'],
         title: row['title'] || row['Tiêu đề'],
-        price: parseFloat(row['price'] || row['Giá']),
-        area: parseFloat(row['area'] || row['Diện tích']),
+        price: parseFloat(row['price'] || row['Giá']) || 0,
+        area: parseFloat(row['area'] || row['Diện tích']) || 20,
         maxPeople: parseInt(row['max_people'] || row['Số người tối đa']) || 1,
         district: row['district'] || row['Quận'],
         ward: row['ward'] || row['Phường'] || '',

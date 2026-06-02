@@ -391,9 +391,9 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     let uploadJobId;
     if (lastJob.length > 0) {
       const lastId = parseInt(lastJob[0].UploadJobID.substring(2));
-      uploadJobId = 'UJ' + String(lastId + 1).padStart(8, '0');
+      uploadJobId = 'UJ' + String(lastId + 1).padStart(5, '0');
     } else {
-      uploadJobId = 'UJ' + String(1).padStart(8, '0');
+      uploadJobId = 'UJ00001';
     }
 
     // Create upload job with BuildingID
@@ -441,7 +441,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       
       if (rowDistrict && normalizedBuildingDistrict && rowDistrict === normalizedBuildingDistrict) {
         // Generate UploadDetailID (CHAR(10) max)
-        const uploadDetailId = 'UD' + String(rowCounter).padStart(8, '0');
+        const uploadDetailId = 'UD' + String(rowCounter).padStart(5, '0');
         
         try {
           await connection.query(`
@@ -461,7 +461,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
           throw error;
         }
 
-        preview.push(parsed);
+        preview.push({ ...parsed, detailId: uploadDetailId });
         rowCounter++;
       } else {
         filteredCount++;
@@ -898,6 +898,8 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
         // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
+        console.log(`[BULK CREATE] Processing: ${detail.RoomCode}`);
+
         // Find or create location - use building's location
         let locationId = defaultLocationId;
 
@@ -921,7 +923,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
         `, [
           roomId, landlordId, buildingId, locationId, detail.RoomCode, detail.RoomType,
-          detail.Area, detail.Price, detail.MaxPeople, detail.Description,
+          detail.Area, detail.Price || 0, detail.MaxPeople || 1, detail.Description,
           detail.Furniture || '', detail.Amenities || '', detail.Service || '', detail.Rules || '', detail.FloorType || ''
         ]);
 
@@ -1047,10 +1049,15 @@ router.post('/bulk-create/:jobId', async (req, res) => {
           [roomId, detail.UploadDetailID]
         );
 
+        console.log(`[BULK CREATE] Successfully created ${detail.RoomCode} -> ${roomId}`);
         rooms.push({ roomId, roomCode: detail.RoomCode });
         successCount++;
       } catch (error) {
-        console.error('Create room error:', error);
+        console.error(`[BULK CREATE ERROR] RoomCode: ${detail.RoomCode}`);
+        console.error('Error:', error.message);
+        console.error('SQL State:', error.sqlState);
+        console.error('SQL Message:', error.sqlMessage);
+        console.error('Stack:', error.stack);
         await connection.query(
           'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
           [error.message, detail.UploadDetailID]
