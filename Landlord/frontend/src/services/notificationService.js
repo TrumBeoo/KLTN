@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api'
+// Production-ready: Always use environment variable
+const API_URL = import.meta.env.VITE_API_URL || 'https://backend-lanlord.onrender.com/api'
+// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api' // ← LOCALHOST FALLBACK (FOR DEV ONLY)
 
 class NotificationService {
   // Lấy danh sách thông báo

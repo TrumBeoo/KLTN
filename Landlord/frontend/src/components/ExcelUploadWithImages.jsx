@@ -67,7 +67,9 @@ export default function ExcelUploadWithImages() {
   const [selectedRoomForPOI, setSelectedRoomForPOI] = useState(null)
   const [roomPOIs, setRoomPOIs] = useState({})
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api'
+  // Production-ready: Always use environment variable
+  const API_URL = import.meta.env.VITE_API_URL || 'https://backend-lanlord.onrender.com/api'
+  // const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api' // ← LOCALHOST FALLBACK (FOR DEV ONLY)
   const token = localStorage.getItem('token')
 
   const steps = ['Upload Excel', 'Xem trước', 'Tạo phòng', 'Upload ảnh & Publish']
@@ -289,13 +291,27 @@ export default function ExcelUploadWithImages() {
       return
     }
 
+    console.log('=== ROOMS DATA DEBUG ===')
+    console.log('Total rooms:', roomsData.length)
+    console.log('Upload Job ID:', uploadJobId)
+    console.log('Rooms data:', roomsData)
+    console.log('=======================')
+
     setUploading(true)
     try {
       const createResponse = await fetch(`${API_URL}/bulk/bulk-create/${uploadJobId}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
+      
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text()
+        console.error('Create response error:', createResponse.status, errorText)
+        throw new Error(`Server error: ${createResponse.status}`)
+      }
+      
       const createData = await createResponse.json()
+      console.log('Create response:', createData)
 
       if (!createData.success) {
         showError('Lỗi!', createData.message)
@@ -313,7 +329,8 @@ export default function ExcelUploadWithImages() {
       setRoomsData(updatedRooms)
       showSuccess('Thành công!', `Đã tạo ${createData.data.successCount} phòng`)
     } catch (error) {
-      showError('Lỗi!', 'Không thể tạo phòng')
+      console.error('Create rooms error:', error)
+      showError('Lỗi!', 'Không thể tạo phòng: ' + error.message)
     } finally {
       setUploading(false)
     }

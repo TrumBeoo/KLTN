@@ -100,8 +100,14 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5555;
 
 app.listen(PORT, () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const apiUrl = isProduction 
+    ? `https://backend-lanlord.onrender.com/api`
+    : `http://localhost:${PORT}/api`;
+    
   console.log(`Server running on port ${PORT}`);
-  console.log(`API URL: http://localhost:${PORT}/api`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`API URL: ${apiUrl}`);
   console.log(`Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
   
   // Start contract notification service

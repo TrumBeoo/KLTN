@@ -385,6 +385,9 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = xlsx.utils.sheet_to_json(sheet);
 
+    console.log('[PREVIEW] Total rows from Excel:', data.length);
+    console.log('[PREVIEW] Building:', buildingName, 'District:', buildingDistrict);
+
     // Generate UploadJobID
     const [lastJob] = await connection.query(
       'SELECT UploadJobID FROM UPLOAD_JOB ORDER BY UploadJobID DESC LIMIT 1'
@@ -441,7 +444,11 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       const rowDistrict = (parsed.district || '').trim();
       const normalizedBuildingDistrict = (buildingDistrict || '').trim();
       
-      if (rowDistrict && normalizedBuildingDistrict && rowDistrict === normalizedBuildingDistrict) {
+      // Skip district filter if either is empty OR they match
+      // This allows importing rooms even if district info is missing in Excel
+      const shouldImport = !rowDistrict || !normalizedBuildingDistrict || rowDistrict === normalizedBuildingDistrict;
+      
+      if (shouldImport) {
         // Generate UploadDetailID (CHAR(10) max)
         const uploadDetailId = 'UD' + String(rowCounter).padStart(5, '0');
         
@@ -467,7 +474,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
         rowCounter++;
       } else {
         filteredCount++;
-        console.log('Filtered out row:', index + 1, 'district:', rowDistrict, 'building district:', normalizedBuildingDistrict);
+        console.log('[FILTER] Filtered out row:', index + 1, 'district:', rowDistrict, 'building district:', normalizedBuildingDistrict);
       }
     }
 
@@ -478,7 +485,10 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     );
 
     await connection.commit();
-    console.log('Transaction committed successfully. Filtered:', filteredCount, 'rows, Kept:', preview.length, 'rows');
+    console.log('[PREVIEW] Transaction committed successfully');
+    console.log('[PREVIEW] Total rows in Excel:', data.length);
+    console.log('[PREVIEW] Filtered out (district mismatch):', filteredCount);
+    console.log('[PREVIEW] Kept for import:', preview.length);
 
     res.json({
       success: true,
@@ -824,6 +834,9 @@ router.post('/bulk-create/:jobId', async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    console.log('[BULK CREATE] Starting for jobId:', req.params.jobId);
+    console.log('[BULK CREATE] Account ID:', req.user.accountId);
+
     const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
@@ -831,10 +844,12 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     if (landlords.length === 0) {
       await connection.rollback();
+      console.error('[BULK CREATE] Landlord not found for account:', req.user.accountId);
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' });
     }
 
     const landlordId = landlords[0].LandlordID;
+    console.log('[BULK CREATE] LandlordID:', landlordId);
 
     // Get upload job
     const [jobs] = await connection.query(
@@ -844,8 +859,11 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     if (jobs.length === 0) {
       await connection.rollback();
+      console.error('[BULK CREATE] Job not found:', req.params.jobId);
       return res.status(404).json({ success: false, message: 'Không tìm thấy job' });
     }
+
+    console.log('[BULK CREATE] Job found:', jobs[0].UploadJobID);
 
     // Get building from upload job
     const [jobInfo] = await connection.query(
@@ -877,6 +895,39 @@ router.post('/bulk-create/:jobId', async (req, res) => {
       'SELECT * FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = "pending" ORDER BY RowNumber',
       [req.params.jobId]
     );
+
+    console.log('[BULK CREATE] Found pending details:', details.length);
+    
+    // Debug: Check all details regardless of status
+    const [allDetails] = await connection.query(
+      'SELECT Status, COUNT(*) as count FROM UPLOAD_DETAIL WHERE UploadJobID = ? GROUP BY Status',
+      [req.params.jobId]
+    );
+    console.log('[BULK CREATE] All details by status:', allDetails);
+
+    if (details.length === 0) {
+      // Log more debug info
+      const [allJobDetails] = await connection.query(
+        'SELECT UploadDetailID, Status, RoomCode, ErrorMessage FROM UPLOAD_DETAIL WHERE UploadJobID = ?',
+        [req.params.jobId]
+      );
+      console.error('[BULK CREATE] No pending details found');
+      console.error('[BULK CREATE] All details for this job:', JSON.stringify(allJobDetails, null, 2));
+      
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Không có phòng nào để tạo. Có thể đã tạo hết rồi.',
+        debug: {
+          jobId: req.params.jobId,
+          totalDetails: allJobDetails.length,
+          statusBreakdown: allJobDetails.reduce((acc, d) => {
+            acc[d.Status] = (acc[d.Status] || 0) + 1;
+            return acc;
+          }, {})
+        }
+      });
+    }
 
     let successCount = 0;
     let failedCount = 0;

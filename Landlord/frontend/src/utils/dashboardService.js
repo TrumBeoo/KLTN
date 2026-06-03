@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api';
+// Production-ready: Always use environment variable  
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-lanlord.onrender.com/api';
+// const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'; // ← LOCALHOST FALLBACK (FOR DEV ONLY)
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
