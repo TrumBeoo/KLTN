@@ -1107,13 +1107,16 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         successCount++;
       } catch (error) {
         console.error(`[BULK CREATE ERROR] RoomCode: ${detail.RoomCode}`);
-        console.error('Error:', error.message);
-        console.error('SQL State:', error.sqlState);
-        console.error('SQL Message:', error.sqlMessage);
-        console.error('Stack:', error.stack);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          errno: error.errno,
+          sqlState: error.sqlState,
+          sqlMessage: error.sqlMessage
+        });
         await connection.query(
-          'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
-          [error.message, detail.UploadDetailID]
+          'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
+          ['failed', error.message + (error.sqlMessage ? ` | ${error.sqlMessage}` : ''), detail.UploadDetailID]
         );
         failedCount++;
       }
@@ -1134,7 +1137,23 @@ router.post('/bulk-create/:jobId', async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Bulk create rooms error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi tạo phòng' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      sql: error.sql
+    });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi khi tạo phòng',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      debug: process.env.NODE_ENV === 'development' ? {
+        sqlState: error.sqlState,
+        sqlMessage: error.sqlMessage
+      } : undefined
+    });
   } finally {
     connection.release();
   }
@@ -1640,3 +1659,63 @@ router.delete('/job/:jobId', async (req, res) => {
 });
 
 module.exports = router;
+
+// Debug endpoint - Kiểm tra chi tiết job và lỗi (không cần auth)
+router.get('/debug-job/:jobId', async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    const [jobs] = await connection.query(
+      'SELECT * FROM UPLOAD_JOB WHERE UploadJobID = ?',
+      [req.params.jobId]
+    );
+
+    if (jobs.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy job' });
+    }
+
+    const [details] = await connection.query(
+      'SELECT UploadDetailID, RowNumber, RoomCode, Price, Area, MaxPeople, BuildingID, Status, ErrorMessage, RoomID FROM UPLOAD_DETAIL WHERE UploadJobID = ? ORDER BY RowNumber',
+      [req.params.jobId]
+    );
+
+    // Check building
+    const buildingId = jobs[0].BuildingID;
+    let buildingInfo = null;
+    if (buildingId) {
+      const [buildings] = await connection.query(
+        'SELECT BuildingID, BuildingName, LocationID FROM BUILDING WHERE BuildingID = ?',
+        [buildingId]
+      );
+      buildingInfo = buildings[0] || { error: 'Building not found' };
+    }
+
+    // Group by status
+    const statusCount = details.reduce((acc, d) => {
+      acc[d.Status] = (acc[d.Status] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Get failed details
+    const failedDetails = details.filter(d => d.Status === 'failed').map(d => ({
+      roomCode: d.RoomCode,
+      error: d.ErrorMessage
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        job: jobs[0],
+        building: buildingInfo,
+        statusCount,
+        failedDetails,
+        totalDetails: details.length
+      }
+    });
+  } catch (error) {
+    console.error('Debug job error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy thông tin debug', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
