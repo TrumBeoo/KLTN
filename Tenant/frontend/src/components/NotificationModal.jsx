@@ -1,13 +1,15 @@
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box } from '@mui/material'
-import { CheckCircle as SuccessIcon, Error as ErrorIcon, Info as InfoIcon } from '@mui/icons-material'
+import { CheckCircle as SuccessIcon, Error as ErrorIcon, Info as InfoIcon, Warning as WarningIcon } from '@mui/icons-material'
 
-export default function NotificationModal({ open, onClose, type = 'info', title, message }) {
+export default function NotificationModal({ open, onClose, type = 'info', title, message, onConfirm, confirmText = 'Xác nhận', cancelText = 'Hủy' }) {
   const getIcon = () => {
     switch (type) {
       case 'success':
         return <SuccessIcon sx={{ color: 'success.main', fontSize: '3rem' }} />
       case 'error':
         return <ErrorIcon sx={{ color: 'error.main', fontSize: '3rem' }} />
+      case 'confirm':
+        return <WarningIcon sx={{ color: 'warning.main', fontSize: '3rem' }} />
       default:
         return <InfoIcon sx={{ color: 'info.main', fontSize: '3rem' }} />
     }
@@ -19,6 +21,8 @@ export default function NotificationModal({ open, onClose, type = 'info', title,
         return 'success.main'
       case 'error':
         return 'error.main'
+      case 'confirm':
+        return 'warning.main'
       default:
         return 'info.main'
     }
@@ -39,10 +43,21 @@ export default function NotificationModal({ open, onClose, type = 'info', title,
           {message}
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-        <Button variant="contained" onClick={onClose} sx={{ minWidth: 100 }}>
-          Đóng
-        </Button>
+      <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 1 }}>
+        {onConfirm ? (
+          <>
+            <Button variant="outlined" onClick={onClose} sx={{ minWidth: 100 }}>
+              {cancelText}
+            </Button>
+            <Button variant="contained" color="error" onClick={onConfirm} sx={{ minWidth: 100 }}>
+              {confirmText}
+            </Button>
+          </>
+        ) : (
+          <Button variant="contained" onClick={onClose} sx={{ minWidth: 100 }}>
+            Đóng
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   )
