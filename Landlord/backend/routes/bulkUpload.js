@@ -1328,12 +1328,12 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
     }
 
     // Check if all details are completed
-    const [allDetails] = await connection.query(
+    const [completionCheck] = await connection.query(
       'SELECT COUNT(*) as total, SUM(CASE WHEN ListingID IS NOT NULL THEN 1 ELSE 0 END) as published FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND RoomID IS NOT NULL',
       [req.params.jobId]
     );
 
-    if (allDetails[0].total === allDetails[0].published) {
+    if (completionCheck[0].total === completionCheck[0].published) {
       await connection.query(
         'UPDATE UPLOAD_JOB SET Status = ?, CompletedAt = NOW() WHERE UploadJobID = ?',
         ['completed', req.params.jobId]
