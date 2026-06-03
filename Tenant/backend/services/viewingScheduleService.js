@@ -73,9 +73,11 @@ class ViewingScheduleService {
       console.log('DateTime:', viewingDateTime);
       console.log('API URL:', LANDLORD_API_URL);
       
-      const time = new Date(viewingDateTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-      const date = new Date(viewingDateTime).toLocaleDateString('vi-VN');
-      const content = `${tenantName} đã đặt lịch xem "${roomName}" vào ${time} ngày ${date}`;
+      const date = new Date(viewingDateTime);
+      // Hiển thị giờ Việt Nam (UTC+7) trong thông báo
+      const time = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' });
+      const dateStr = date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      const content = `${tenantName} đã đặt lịch xem "${roomName}" vào ${time} ngày ${dateStr}`;
       const link = `/viewing-schedules`;
       
       const response = await axios.post(`${LANDLORD_API_URL}/notifications/create`, {

@@ -578,7 +578,7 @@ export default function RoomDetailPage() {
                       <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.5 }}>
                         <ClockIcon sx={{ fontSize: 14, color: T.muted }} />
                         <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>
-                          {new Date(userSchedule.DateTime).toLocaleString('vi-VN')}
+                          {new Date(userSchedule.DateTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}
                         </Typography>
                       </Stack>
                       <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>
@@ -777,7 +777,7 @@ export default function RoomDetailPage() {
           {userSchedule && (
             <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px', fontSize: '0.857rem' }}>
               <Typography sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.857rem' }}>Thông tin lịch xem</Typography>
-              <Typography sx={{ fontSize: '0.857rem' }}>⏰ {new Date(userSchedule.DateTime).toLocaleString('vi-VN')}</Typography>
+              <Typography sx={{ fontSize: '0.857rem' }}>⏰ {new Date(userSchedule.DateTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })}</Typography>
             </Alert>
           )}
           <Stack direction="row" spacing={1.5}>

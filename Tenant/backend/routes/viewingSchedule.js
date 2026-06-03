@@ -141,8 +141,8 @@ router.post('/schedule', authMiddleware, async (req, res) => {
       });
     }
 
-    // Combine date and time
-    const dateTime = new Date(`${date}T${time}`);
+    // Combine date and time (chuyển về UTC+7 để lưu đúng)
+    const dateTime = new Date(`${date}T${time}:00+07:00`);
 
     // Kiểm tra khung giờ còn trống
     const availableSlots = await viewingScheduleService.getAvailableTimeSlots(roomId, date);

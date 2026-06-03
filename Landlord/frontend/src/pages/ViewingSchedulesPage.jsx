@@ -148,8 +148,19 @@ export default function ViewingSchedulesPage() {
   const approved = schedules.filter(s => s.Status === 'Đã duyệt')
   const rejected = schedules.filter(s => s.Status === 'Từ chối')
 
-  const fmtDate = (s) => new Date(s).toLocaleDateString('vi-VN')
-  const fmtTime = (s) => new Date(s).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const fmtDate = (s) => {
+    const date = new Date(s)
+    // Chuyển sang giờ Việt Nam (UTC+7)
+    const vnDate = new Date(date.getTime())
+    return vnDate.toLocaleDateString('vi-VN')
+  }
+  
+  const fmtTime = (s) => {
+    const date = new Date(s)
+    // Chuyển sang giờ Việt Nam (UTC+7)
+    const vnDate = new Date(date.getTime())
+    return vnDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
 
   if (loading) return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 360 }}>

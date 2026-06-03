@@ -201,7 +201,10 @@ class ViewingScheduleService {
       console.log('DateTime:', viewingDateTime);
       console.log('API URL:', TENANT_API_URL);
       
-      const content = `Lịch xem phòng "${roomName}" vào lúc ${new Date(viewingDateTime).toLocaleString('vi-VN')} đã được chủ nhà duyệt.`;
+      const date = new Date(viewingDateTime);
+      // Hiển thị giờ Việt Nam (UTC+7) trong thông báo
+      const dateTimeStr = date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+      const content = `Lịch xem phòng "${roomName}" vào lúc ${dateTimeStr} đã được chủ nhà duyệt.`;
       
       const response = await axios.post(`${TENANT_API_URL}/notifications/create`, {
         targetId: tenantId,
@@ -226,7 +229,10 @@ class ViewingScheduleService {
       console.log('DateTime:', viewingDateTime);
       console.log('API URL:', TENANT_API_URL);
       
-      const content = `Lịch xem phòng "${roomName}" vào lúc ${new Date(viewingDateTime).toLocaleString('vi-VN')} đã bị từ chối.`;
+      const date = new Date(viewingDateTime);
+      // Hiển thị giờ Việt Nam (UTC+7) trong thông báo
+      const dateTimeStr = date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+      const content = `Lịch xem phòng "${roomName}" vào lúc ${dateTimeStr} đã bị từ chối.`;
       
       const response = await axios.post(`${TENANT_API_URL}/notifications/create`, {
         targetId: tenantId,
