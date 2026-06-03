@@ -461,7 +461,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
           `, [
             uploadDetailId, uploadJobId, buildingId, buildingName, rowCounter, parsed.roomCode, parsed.title, parsed.price,
             parsed.area, parsed.maxPeople, parsed.address, parsed.roomType, parsed.description,
-            parsed.furniture, parsed.amenities, parsed.service, parsed.rules, parsed.floorType
+            parsed.furniture, parsed.amenities, parsed.service, parsed.rules, parsed.floorType, 'pending'
           ]);
           console.log('Created UPLOAD_DETAIL:', uploadDetailId, 'BuildingName:', buildingName);
         } catch (error) {
