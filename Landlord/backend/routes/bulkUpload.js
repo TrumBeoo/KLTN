@@ -184,7 +184,7 @@ router.post('/publish-draft/:roomId', async (req, res) => {
     await connection.query(`
       UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
       WHERE RoomID = ?
-    `, ['published', title, room.RoomID]);
+    `, [title, 'published', room.RoomID]);
 
     await connection.commit();
 
@@ -1167,6 +1167,8 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    console.log('[BULK PUBLISH] Starting for jobId:', req.params.jobId);
+
     const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
       [req.user.accountId]
@@ -1178,6 +1180,14 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
     }
 
     const landlordId = landlords[0].LandlordID;
+    console.log('[BULK PUBLISH] LandlordID:', landlordId);
+
+    // Debug: Check all upload details first
+    const [allDetails] = await connection.query(
+      'SELECT UploadDetailID, RoomCode, RoomID, ListingID, Status FROM UPLOAD_DETAIL WHERE UploadJobID = ?',
+      [req.params.jobId]
+    );
+    console.log('[BULK PUBLISH] All details:', JSON.stringify(allDetails, null, 2));
 
     // Get details with RoomID (both newly created and linked to existing)
     const [details] = await connection.query(
@@ -1185,9 +1195,23 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
       [req.params.jobId]
     );
 
+    console.log('[BULK PUBLISH] Found details to publish:', details.length);
+    if (details.length > 0) {
+      console.log('[BULK PUBLISH] First detail:', JSON.stringify(details[0], null, 2));
+    }
+
     if (details.length === 0) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Không có phòng nào để publish' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Không có phòng nào để publish',
+        debug: {
+          totalDetails: allDetails.length,
+          withRoomID: allDetails.filter(d => d.RoomID).length,
+          withListingID: allDetails.filter(d => d.ListingID).length,
+          withoutListingID: allDetails.filter(d => d.RoomID && !d.ListingID).length
+        }
+      });
     }
 
     let successCount = 0;
@@ -1239,7 +1263,7 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
           await connection.query(`
             UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
             WHERE RoomID = ?
-          `, ['published', title, detail.RoomID]);
+          `, [title, 'published', detail.RoomID]);
 
           await connection.query(
             'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1289,7 +1313,7 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
         await connection.query(`
           UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
             WHERE RoomID = ?
-          `, ['published', title, detail.RoomID]);
+          `, [title, 'published', detail.RoomID]);
 
         await connection.query(
           'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1414,7 +1438,7 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
       await connection.query(`
         UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
             WHERE RoomID = ?
-          `, ['published', title, detail.RoomID]);
+          `, [title, 'published', detail.RoomID]);
 
       await connection.query(
         'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1487,7 +1511,7 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
     await connection.query(`
       UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
             WHERE RoomID = ?
-          `, ['published', title, detail.RoomID]);
+          `, [title, 'published', detail.RoomID]);
 
     await connection.query(
       'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
