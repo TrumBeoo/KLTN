@@ -137,8 +137,8 @@ router.post('/publish-draft/:roomId', async (req, res) => {
 
     // Get room
     const [rooms] = await connection.query(
-      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ? AND DraftStatus = "draft"',
-      [req.params.roomId, landlordId]
+      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ? AND DraftStatus = ?',
+      [req.params.roomId, landlordId, 'draft']
     );
 
     if (rooms.length === 0) {
@@ -182,9 +182,9 @@ router.post('/publish-draft/:roomId', async (req, res) => {
 
     // Đồng bộ Title sang bảng ROOM
     await connection.query(`
-      UPDATE ROOM SET Title = ?, DraftStatus = "published", UpdatedAt = NOW()
+      UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
       WHERE RoomID = ?
-    `, [title, room.RoomID]);
+    `, ['published', title, room.RoomID]);
 
     await connection.commit();
 
@@ -221,8 +221,8 @@ router.delete('/draft/:roomId', async (req, res) => {
 
     // Verify ownership and draft status
     const [rooms] = await connection.query(
-      'SELECT RoomID FROM ROOM WHERE RoomID = ? AND LandlordID = ? AND DraftStatus = "draft"',
-      [req.params.roomId, landlords[0].LandlordID]
+      'SELECT RoomID FROM ROOM WHERE RoomID = ? AND LandlordID = ? AND DraftStatus = ?',
+      [req.params.roomId, landlords[0].LandlordID, 'draft']
     );
 
     if (rooms.length === 0) {
@@ -273,8 +273,8 @@ router.get('/current-job', async (req, res) => {
 
     // Get latest pending/processing job
     const [jobs] = await connection.query(
-      'SELECT * FROM UPLOAD_JOB WHERE LandlordID = ? AND Status IN ("pending", "processing") ORDER BY CreatedAt DESC LIMIT 1',
-      [landlords[0].LandlordID]
+      'SELECT * FROM UPLOAD_JOB WHERE LandlordID = ? AND Status IN (?, ?) ORDER BY CreatedAt DESC LIMIT 1',
+      [landlords[0].LandlordID, 'pending', 'processing']
     );
 
     if (jobs.length === 0) {
@@ -405,8 +405,8 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     try {
       await connection.query(`
         INSERT INTO UPLOAD_JOB (UploadJobID, LandlordID, BuildingID, Mode, FileName, TotalRows, Status)
-        VALUES (?, ?, ?, 'single_building', ?, ?, 'pending')
-      `, [uploadJobId, landlordId, buildingId, req.file.originalname, data.length]);
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [uploadJobId, landlordId, buildingId, 'single_building', req.file.originalname, data.length, 'pending']);
       console.log('Created UPLOAD_JOB:', uploadJobId);
     } catch (error) {
       console.error('Error creating UPLOAD_JOB:', error);
@@ -457,7 +457,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
             INSERT INTO UPLOAD_DETAIL (
               UploadDetailID, UploadJobID, BuildingID, BuildingName, RowNumber, RoomCode, Title, Price, Area, MaxPeople,
               Address, RoomType, Description, Furniture, Amenities, Service, Rules, FloorType, Status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             uploadDetailId, uploadJobId, buildingId, buildingName, rowCounter, parsed.roomCode, parsed.title, parsed.price,
             parsed.area, parsed.maxPeople, parsed.address, parsed.roomType, parsed.description,
@@ -681,7 +681,7 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
       INSERT INTO ROOM (
         RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
         MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, Status, DraftStatus, CreatedAt, UpdatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [
       roomId, landlordId, buildingId, locationId, detail.RoomCode, 
       detail.RoomType || 'Phòng trọ',
@@ -693,7 +693,8 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
       detail.Amenities || '',
       detail.Service || '',
       detail.Rules || '',
-      detail.FloorType || ''
+      detail.FloorType || '',
+      'available', 'draft'
     ]);
 
     // Insert into relational tables
@@ -807,8 +808,8 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
 
     // Update upload detail
     await connection.query(
-      'UPDATE UPLOAD_DETAIL SET Status = "success", RoomID = ? WHERE UploadDetailID = ?',
-      [roomId, detail.UploadDetailID]
+      'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ? WHERE UploadDetailID = ?',
+      ['success', roomId, detail.UploadDetailID]
     );
 
     await connection.commit();
@@ -892,8 +893,8 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     // Get pending details
     const [details] = await connection.query(
-      'SELECT * FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = "pending" ORDER BY RowNumber',
-      [req.params.jobId]
+      'SELECT * FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = ? ORDER BY RowNumber',
+      [req.params.jobId, 'pending']
     );
 
     console.log('[BULK CREATE] Found pending details:', details.length);
@@ -934,16 +935,16 @@ router.post('/bulk-create/:jobId', async (req, res) => {
     const rooms = [];
 
     await connection.query(
-      'UPDATE UPLOAD_JOB SET Status = "processing" WHERE UploadJobID = ?',
-      [req.params.jobId]
+      'UPDATE UPLOAD_JOB SET Status = ? WHERE UploadJobID = ?',
+      ['processing', req.params.jobId]
     );
 
     for (const detail of details) {
       try {
         if (!detail.RoomCode) {
           await connection.query(
-            'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
-            ['Thiếu mã phòng', detail.UploadDetailID]
+            'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
+            ['failed', 'Thiếu mã phòng', detail.UploadDetailID]
           );
           failedCount++;
           continue;
@@ -1098,8 +1099,8 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         }
 
         await connection.query(
-          'UPDATE UPLOAD_DETAIL SET Status = "success", RoomID = ? WHERE UploadDetailID = ?',
-          [roomId, detail.UploadDetailID]
+          'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ? WHERE UploadDetailID = ?',
+          ['success', roomId, detail.UploadDetailID]
         );
 
         console.log(`[BULK CREATE] Successfully created ${detail.RoomCode} -> ${roomId}`);
@@ -1123,8 +1124,8 @@ router.post('/bulk-create/:jobId', async (req, res) => {
     }
 
     await connection.query(
-      'UPDATE UPLOAD_JOB SET Status = "processing", SuccessRows = ?, FailedRows = ? WHERE UploadJobID = ?',
-      [successCount, failedCount, req.params.jobId]
+      'UPDATE UPLOAD_JOB SET Status = ?, SuccessRows = ?, FailedRows = ? WHERE UploadJobID = ?',
+      ['processing', successCount, failedCount, req.params.jobId]
     );
 
     await connection.commit();
@@ -1236,9 +1237,9 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
 
           // Đồng bộ Title sang bảng ROOM
           await connection.query(`
-            UPDATE ROOM SET Title = ?, DraftStatus = "published", UpdatedAt = NOW()
+            UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
             WHERE RoomID = ?
-          `, [title, detail.RoomID]);
+          `, ['published', title, detail.RoomID]);
 
           await connection.query(
             'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1256,8 +1257,8 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
             [existingListings[0].ListingID, detail.UploadDetailID]
           );
           await connection.query(
-            'UPDATE ROOM SET DraftStatus = "published" WHERE RoomID = ?',
-            [detail.RoomID]
+            'UPDATE ROOM SET DraftStatus = ? WHERE RoomID = ?',
+            ['published', detail.RoomID]
           );
           successCount++;
           continue;
@@ -1286,9 +1287,9 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
 
         // Đồng bộ Title sang bảng ROOM
         await connection.query(`
-          UPDATE ROOM SET Title = ?, DraftStatus = "published", UpdatedAt = NOW()
-          WHERE RoomID = ?
-        `, [title, detail.RoomID]);
+          UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
+            WHERE RoomID = ?
+          `, ['published', title, detail.RoomID]);
 
         await connection.query(
           'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1310,8 +1311,8 @@ router.post('/bulk-publish/:jobId', async (req, res) => {
 
     if (allDetails[0].total === allDetails[0].published) {
       await connection.query(
-        'UPDATE UPLOAD_JOB SET Status = "completed", CompletedAt = NOW() WHERE UploadJobID = ?',
-        [req.params.jobId]
+        'UPDATE UPLOAD_JOB SET Status = ?, CompletedAt = NOW() WHERE UploadJobID = ?',
+        ['completed', req.params.jobId]
       );
     }
 
@@ -1411,9 +1412,9 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
 
       // Đồng bộ Title sang bảng ROOM
       await connection.query(`
-        UPDATE ROOM SET Title = ?, DraftStatus = "published", UpdatedAt = NOW()
-        WHERE RoomID = ?
-      `, [title, detail.RoomID]);
+        UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
+            WHERE RoomID = ?
+          `, ['published', title, detail.RoomID]);
 
       await connection.query(
         'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1484,9 +1485,9 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
 
     // Đồng bộ Title sang bảng ROOM
     await connection.query(`
-      UPDATE ROOM SET Title = ?, DraftStatus = "published", UpdatedAt = NOW()
-      WHERE RoomID = ?
-    `, [title, detail.RoomID]);
+      UPDATE ROOM SET Title = ?, DraftStatus = ?, UpdatedAt = NOW()
+            WHERE RoomID = ?
+          `, ['published', title, detail.RoomID]);
 
     await connection.query(
       'UPDATE UPLOAD_DETAIL SET ListingID = ? WHERE UploadDetailID = ?',
@@ -1501,8 +1502,8 @@ router.post('/publish-single/:jobId/:detailId', async (req, res) => {
 
     if (allDetails[0].total === allDetails[0].published) {
       await connection.query(
-        'UPDATE UPLOAD_JOB SET Status = "completed", CompletedAt = NOW() WHERE UploadJobID = ?',
-        [req.params.jobId]
+        'UPDATE UPLOAD_JOB SET Status = ?, CompletedAt = NOW() WHERE UploadJobID = ?',
+        ['completed', req.params.jobId]
       );
     }
 
@@ -1578,8 +1579,8 @@ router.post('/unpublish-single/:jobId/:detailId', async (req, res) => {
 
     // Xóa Title trong ROOM và update back to draft
     await connection.query(
-      'UPDATE ROOM SET Title = NULL, DraftStatus = "draft", UpdatedAt = NOW() WHERE RoomID = ?',
-      [detail.RoomID]
+      'UPDATE ROOM SET Title = NULL, DraftStatus = ?, UpdatedAt = NOW() WHERE RoomID = ?',
+      ['draft', detail.RoomID]
     );
 
     // Clear ListingID from upload detail
