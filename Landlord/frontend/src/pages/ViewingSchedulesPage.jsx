@@ -223,7 +223,7 @@ export default function ViewingSchedulesPage() {
                     </TableCell>
                     <TableCell>
                       <Typography sx={{ fontSize: '0.8125rem', fontFamily: 'ui-monospace, monospace', color: '#5E6AD2', fontWeight: 590 }}>
-                        {s.RoomID}
+                        {s.RoomDisplay || s.RoomCode || s.RoomID}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -321,7 +321,7 @@ export default function ViewingSchedulesPage() {
                       <Typography sx={{ fontSize: '0.8125rem', fontWeight: 510, color: '#0F1011' }}>{s.TenantName}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography sx={{ fontSize: '0.8125rem', fontFamily: 'ui-monospace, monospace', color: '#5E6AD2', fontWeight: 590 }}>{s.RoomID}</Typography>
+                      <Typography sx={{ fontSize: '0.8125rem', fontFamily: 'ui-monospace, monospace', color: '#5E6AD2', fontWeight: 590 }}>{s.RoomDisplay || s.RoomCode || s.RoomID}</Typography>
                     </TableCell>
                     <TableCell>
                       <Typography sx={{ fontSize: '0.8125rem', color: '#0F1011' }}>{fmtDate(s.DateTime)}</Typography>
@@ -363,7 +363,7 @@ export default function ViewingSchedulesPage() {
             >
               {[
                 { label: 'Người thuê', val: selectedSchedule.TenantName },
-                { label: 'Phòng', val: selectedSchedule.RoomID },
+                { label: 'Phòng', val: selectedSchedule.RoomDisplay || selectedSchedule.RoomCode || selectedSchedule.RoomID },
                 { label: 'Thời gian', val: `${fmtDate(selectedSchedule.DateTime)} lúc ${fmtTime(selectedSchedule.DateTime)}` }
               ].map((r, i) => (
                 <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.625 }}>

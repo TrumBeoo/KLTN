@@ -18,7 +18,10 @@ class ViewingScheduleService {
         t.Phone as TenantPhone,
         t.Email as TenantEmail,
         r.Price,
-        r.Status as RoomStatus
+        r.Status as RoomStatus,
+        r.RoomCode,
+        r.RoomType,
+        CONCAT(r.RoomType, ' - ', r.RoomCode) as RoomDisplay
        FROM VIEWING_SCHEDULE vs
        JOIN TENANT t ON vs.TenantID = t.TenantID
        JOIN ROOM r ON vs.RoomID = r.RoomID

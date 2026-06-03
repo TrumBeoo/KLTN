@@ -35,7 +35,9 @@ import {
   AddCircle as AddIcon,
   Logout as LogoutIcon,
   Menu as MenuIcon,
-  FiberManualRecord as DotIcon
+  FiberManualRecord as DotIcon,
+  Delete as DeleteIcon,
+  DeleteSweep as DeleteAllIcon
 } from '@mui/icons-material'
 
 import notificationService from '../services/notificationService'
@@ -167,6 +169,38 @@ export default function LandlordLayout() {
     fetchNotifications()
   }
   const handleNotificationClose = () => setNotificationAnchor(null)
+
+  const handleDeleteNotification = async (notificationId, e) => {
+    e.stopPropagation()
+    try {
+      await notificationService.deleteNotification(notificationId)
+      fetchNotifications()
+      fetchUnreadCount()
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
+    }
+  }
+
+  const handleDeleteAllNotifications = async () => {
+    if (!window.confirm('Bạn có chắc muốn xóa tất cả thông báo?')) return
+    try {
+      await notificationService.deleteAllNotifications()
+      fetchNotifications()
+      fetchUnreadCount()
+    } catch (error) {
+      console.error('Failed to delete all notifications:', error)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      fetchNotifications()
+      fetchUnreadCount()
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+    }
+  }
 
   const SidebarContent = (
     <Box
@@ -497,21 +531,53 @@ export default function LandlordLayout() {
                 <Typography sx={{ fontWeight: 590, fontSize: '0.875rem', color: '#0F1011' }}>
                   Thông báo
                 </Typography>
-                {unreadCount > 0 && (
-                  <Box
-                    sx={{
-                      fontSize: '0.6875rem',
-                      fontWeight: 590,
-                      color: '#5E6AD2',
-                      backgroundColor: 'rgba(94,106,210,0.1)',
-                      px: 0.75,
-                      py: 0.25,
-                      borderRadius: '4px'
-                    }}
-                  >
-                    {unreadCount} chưa đọc
-                  </Box>
-                )}
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  {unreadCount > 0 && (
+                    <>
+                      <Box
+                        sx={{
+                          fontSize: '0.6875rem',
+                          fontWeight: 590,
+                          color: '#5E6AD2',
+                          backgroundColor: 'rgba(94,106,210,0.1)',
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: '4px'
+                        }}
+                      >
+                        {unreadCount} chưa đọc
+                      </Box>
+                      <Tooltip title="Đánh dấu tất cả đã đọc">
+                        <IconButton
+                          size="small"
+                          onClick={handleMarkAllAsRead}
+                          sx={{
+                            color: '#5E6AD2',
+                            p: 0.5,
+                            '&:hover': { backgroundColor: 'rgba(94,106,210,0.1)' }
+                          }}
+                        >
+                          <NotificationsIcon sx={{ fontSize: '0.875rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                  {notifications.length > 0 && (
+                    <Tooltip title="Xóa tất cả">
+                      <IconButton
+                        size="small"
+                        onClick={handleDeleteAllNotifications}
+                        sx={{
+                          color: '#E5484D',
+                          p: 0.5,
+                          '&:hover': { backgroundColor: 'rgba(229,72,77,0.1)' }
+                        }}
+                      >
+                        <DeleteAllIcon sx={{ fontSize: '0.875rem' }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
               </Box>
 
               {loadingNotifications ? (
@@ -559,27 +625,41 @@ export default function LandlordLayout() {
                           {notif.Type} · {new Date(notif.CreatedAt).toLocaleString('vi-VN')}
                         </Typography>
                       </Box>
-                      {notif.Status === 'Chưa đọc' && (
-                        <Button
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            notificationService.markAsRead(notif.NotificationID)
-                              .then(() => fetchNotifications())
-                              .catch(err => console.error(err))
-                          }}
-                          sx={{
-                            minWidth: 'auto',
-                            px: 1,
-                            py: 0.25,
-                            fontSize: '0.6875rem',
-                            color: '#5E6AD2',
-                            flexShrink: 0
-                          }}
-                        >
-                          Đọc
-                        </Button>
-                      )}
+                      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+                        {notif.Status === 'Chưa đọc' && (
+                          <Tooltip title="Đánh dấu đã đọc">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                notificationService.markAsRead(notif.NotificationID)
+                                  .then(() => { fetchNotifications(); fetchUnreadCount() })
+                                  .catch(err => console.error(err))
+                              }}
+                              sx={{
+                                color: '#5E6AD2',
+                                p: 0.5,
+                                '&:hover': { backgroundColor: 'rgba(94,106,210,0.1)' }
+                              }}
+                            >
+                              <NotificationsIcon sx={{ fontSize: '0.75rem' }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Xóa">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleDeleteNotification(notif.NotificationID, e)}
+                            sx={{
+                              color: '#E5484D',
+                              p: 0.5,
+                              '&:hover': { backgroundColor: 'rgba(229,72,77,0.1)' }
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: '0.75rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </Box>
                   ))}
                 </Box>
