@@ -31,6 +31,9 @@ import {
   AddBox as AddIcon,
   Login as LoginIcon,
   LocalShipping as LocalShippingIcon,
+  Delete as DeleteIcon,
+  DeleteSweep as DeleteAllIcon,
+  CheckCircle as CheckIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 import { useAuth } from '../hooks/useAuth'
@@ -116,8 +119,47 @@ export default function Navbar() {
   }
   const fetchNotifications = async () => {
     setLoadingNotif(true)
-    try { const d = await notificationService.getNotifications(50, 0); setNotifications(d.data || []) } catch {}
+    try { const d = await notificationService.getNotifications(50, 0); setNotifications(d.data || []); fetchUnreadCount() } catch {}
     finally { setLoadingNotif(false) }
+  }
+
+  const handleMarkAsRead = async (notificationId, e) => {
+    e.stopPropagation()
+    try {
+      await notificationService.markAsRead(notificationId)
+      fetchNotifications()
+    } catch (error) {
+      console.error('Failed to mark as read:', error)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      fetchNotifications()
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+    }
+  }
+
+  const handleDeleteNotification = async (notificationId, e) => {
+    e.stopPropagation()
+    try {
+      await notificationService.deleteNotification(notificationId)
+      fetchNotifications()
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
+    }
+  }
+
+  const handleDeleteAllNotifications = async () => {
+    if (!window.confirm('Bạn có chắc muốn xóa tất cả thông báo?')) return
+    try {
+      await notificationService.deleteAllNotifications()
+      fetchNotifications()
+    } catch (error) {
+      console.error('Failed to delete all notifications:', error)
+    }
   }
 
   const handleFilterApply = (filters) => {
@@ -322,9 +364,33 @@ export default function Navbar() {
       >
         <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: '#1a1a1a' }}>Thông báo</Typography>
-          {unreadCount > 0 && (
-            <Chip label={`${unreadCount} mới`} size="small" sx={{ backgroundColor: '#e8f2ff', color: BLUE, fontWeight: 700, height: '20px', fontSize: '0.714rem' }} />
-          )}
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            {unreadCount > 0 && (
+              <>
+                <Chip label={`${unreadCount} mới`} size="small" sx={{ backgroundColor: '#e8f2ff', color: BLUE, fontWeight: 700, height: '20px', fontSize: '0.714rem' }} />
+                <Tooltip title="Đánh dấu tất cả đã đọc">
+                  <IconButton
+                    size="small"
+                    onClick={handleMarkAllAsRead}
+                    sx={{ color: BLUE, p: 0.5, '&:hover': { backgroundColor: '#e8f2ff' } }}
+                  >
+                    <CheckIcon sx={{ fontSize: '0.875rem' }} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            {notifications.length > 0 && (
+              <Tooltip title="Xóa tất cả">
+                <IconButton
+                  size="small"
+                  onClick={handleDeleteAllNotifications}
+                  sx={{ color: '#d32f2f', p: 0.5, '&:hover': { backgroundColor: '#ffebee' } }}
+                >
+                  <DeleteAllIcon sx={{ fontSize: '0.875rem' }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
         {loadingNotif ? (
           <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
@@ -341,15 +407,42 @@ export default function Navbar() {
                   backgroundColor: n.Status === 'Chưa đọc' ? '#f0f6ff' : 'transparent',
                   '&:hover': { backgroundColor: '#f9fafb' },
                   cursor: 'pointer',
+                  display: 'flex',
+                  gap: 1.5,
+                  alignItems: 'flex-start',
                 }}
                 onClick={() => { if (n.Link) navigate(n.Link); setNotifAnchor(null) }}
               >
-                <Typography variant="body2" sx={{ fontWeight: n.Status === 'Chưa đọc' ? 700 : 400, color: '#1a1a1a', mb: 0.25, fontSize: '0.857rem' }}>
-                  {n.Content}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#595959' }}>
-                  {n.Type} · {new Date(n.CreatedAt).toLocaleString('vi-VN')}
-                </Typography>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: n.Status === 'Chưa đọc' ? 700 : 400, color: '#1a1a1a', mb: 0.25, fontSize: '0.857rem' }}>
+                    {n.Content}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#595959' }}>
+                    {n.Type} · {new Date(n.CreatedAt).toLocaleString('vi-VN')}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, alignItems: 'center' }}>
+                  {n.Status === 'Chưa đọc' && (
+                    <Tooltip title="Đánh dấu đã đọc">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMarkAsRead(n.NotificationID, e)}
+                        sx={{ color: BLUE, p: 0.5, '&:hover': { backgroundColor: '#e8f2ff' } }}
+                      >
+                        <CheckIcon sx={{ fontSize: '0.75rem' }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="Xóa">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleDeleteNotification(n.NotificationID, e)}
+                      sx={{ color: '#d32f2f', p: 0.5, '&:hover': { backgroundColor: '#ffebee' } }}
+                    >
+                      <DeleteIcon sx={{ fontSize: '0.75rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
             ))}
           </Box>
