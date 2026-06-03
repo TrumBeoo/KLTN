@@ -677,18 +677,20 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     }
 
     // Create room with LocationID
+    const roomType = detail.RoomType || 'Phòng trọ';
+    const area = detail.Area || 20;
+    const price = detail.Price || 0;
+    const maxPeople = detail.MaxPeople || 1;
+    const description = detail.Description || '';
+
     await connection.query(`
       INSERT INTO ROOM (
         RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
         MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, Status, DraftStatus, CreatedAt, UpdatedAt
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
     `, [
-      roomId, landlordId, buildingId, locationId, detail.RoomCode, 
-      detail.RoomType || 'Phòng trọ',
-      detail.Area || 20, 
-      detail.Price || 0, 
-      detail.MaxPeople || 1, 
-      detail.Description || '',
+      roomId, landlordId, buildingId, locationId, detail.RoomCode, roomType,
+      area, price, maxPeople, description,
       detail.Furniture || '',
       detail.Amenities || '',
       detail.Service || '',
@@ -701,8 +703,7 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     if (detail.Furniture) {
       const furnitureItems = detail.Furniture.split(',').map(f => f.trim()).filter(f => f);
       for (const item of furnitureItems) {
-        // Giới hạn độ dài tối đa 100 ký tự cho Name
-        const furnitureName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+        const furnitureName = item.length > 95 ? item.substring(0, 95).trim() : item;
         
         // Check if furniture exists
         const [existingFurniture] = await connection.query(
@@ -739,8 +740,7 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     if (detail.Service) {
       const serviceItems = detail.Service.split(',').map(s => s.trim()).filter(s => s);
       for (const item of serviceItems) {
-        // Giới hạn độ dài tối đa 100 ký tự cho Name
-        const serviceName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+        const serviceName = item.length > 95 ? item.substring(0, 95).trim() : item;
         
         const [existingService] = await connection.query(
           'SELECT ServiceID FROM SERVICE WHERE Name = ?',
@@ -774,8 +774,7 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     if (detail.Rules) {
       const ruleItems = detail.Rules.split(',').map(r => r.trim()).filter(r => r);
       for (const item of ruleItems) {
-        // Giới hạn độ dài tối đa 100 ký tự cho Name
-        const ruleName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+        const ruleName = item.length > 95 ? item.substring(0, 95).trim() : item;
         
         const [existingRule] = await connection.query(
           'SELECT RuleID FROM RULE WHERE Name = ?',
@@ -890,6 +889,16 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     const defaultLocationId = buildings[0].LocationID;
 
+    // Validate LocationID exists
+    if (!defaultLocationId) {
+      await connection.rollback();
+      console.error('[BULK CREATE] Building không có LocationID:', buildingId);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tòa nhà chưa có thông tin vị trí. Vui lòng cập nhật LocationID cho tòa nhà trước.' 
+      });
+    }
+
     // Get pending details
     const [details] = await connection.query(
       'SELECT * FROM UPLOAD_DETAIL WHERE UploadJobID = ? AND Status = "pending" ORDER BY RowNumber',
@@ -940,10 +949,43 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     for (const detail of details) {
       try {
-        if (!detail.RoomCode) {
+        // Validate required fields
+        if (!detail.RoomCode || detail.RoomCode.trim() === '') {
           await connection.query(
             'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
             ['Thiếu mã phòng', detail.UploadDetailID]
+          );
+          failedCount++;
+          continue;
+        }
+
+        // Validate Price, Area, MaxPeople
+        const price = detail.Price || 0;
+        const area = detail.Area || 20;
+        const maxPeople = detail.MaxPeople || 1;
+
+        if (price < 0) {
+          await connection.query(
+            'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
+            ['Giá không hợp lệ (< 0)', detail.UploadDetailID]
+          );
+          failedCount++;
+          continue;
+        }
+
+        if (area <= 0) {
+          await connection.query(
+            'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
+            ['Diện tích không hợp lệ (<= 0)', detail.UploadDetailID]
+          );
+          failedCount++;
+          continue;
+        }
+
+        if (maxPeople <= 0) {
+          await connection.query(
+            'UPDATE UPLOAD_DETAIL SET Status = "failed", ErrorMessage = ? WHERE UploadDetailID = ?',
+            ['Số người không hợp lệ (<= 0)', detail.UploadDetailID]
           );
           failedCount++;
           continue;
@@ -975,8 +1017,8 @@ router.post('/bulk-create/:jobId', async (req, res) => {
             MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, Status, DraftStatus, CreatedAt, UpdatedAt
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
         `, [
-          roomId, landlordId, buildingId, locationId, detail.RoomCode, detail.RoomType,
-          detail.Area, detail.Price || 0, detail.MaxPeople || 1, detail.Description,
+          roomId, landlordId, buildingId, locationId, detail.RoomCode, detail.RoomType || 'Phòng trọ',
+          area, price, maxPeople, detail.Description || '',
           detail.Furniture || '', detail.Amenities || '', detail.Service || '', detail.Rules || '', detail.FloorType || ''
         ]);
 
@@ -985,7 +1027,8 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         if (detail.Furniture) {
           const furnitureItems = detail.Furniture.split(',').map(f => f.trim()).filter(f => f);
           for (const item of furnitureItems) {
-            const furnitureName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+            // Giới hạn 95 ký tự để tránh conflict với UNIQUE constraint
+            const furnitureName = item.length > 95 ? item.substring(0, 95).trim() : item;
             const [existingFurniture] = await connection.query(
               'SELECT FurnitureID FROM FURNITURE WHERE Name = ?', [furnitureName]
             );
@@ -1014,7 +1057,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         if (detail.Service) {
           const serviceItems = detail.Service.split(',').map(s => s.trim()).filter(s => s);
           for (const item of serviceItems) {
-            const serviceName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+            const serviceName = item.length > 95 ? item.substring(0, 95).trim() : item;
             const [existingService] = await connection.query(
               'SELECT ServiceID FROM SERVICE WHERE Name = ?', [serviceName]
             );
@@ -1043,7 +1086,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         if (detail.Rules) {
           const ruleItems = detail.Rules.split(',').map(r => r.trim()).filter(r => r);
           for (const item of ruleItems) {
-            const ruleName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+            const ruleName = item.length > 95 ? item.substring(0, 95).trim() : item;
             const [existingRule] = await connection.query(
               'SELECT RuleID FROM RULE WHERE Name = ?', [ruleName]
             );
@@ -1072,7 +1115,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         if (detail.Amenities) {
           const amenityItems = detail.Amenities.split(',').map(a => a.trim()).filter(a => a);
           for (const item of amenityItems) {
-            const amenityName = item.length > 50 ? item.substring(0, 47) + '...' : item;
+            const amenityName = item.length > 95 ? item.substring(0, 95).trim() : item;
             const [existingAmenity] = await connection.query(
               'SELECT AmenityID FROM AMENITY WHERE Name = ?', [amenityName]
             );
@@ -1084,7 +1127,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
                 'SELECT AmenityID FROM AMENITY ORDER BY AmenityID DESC LIMIT 1'
               );
               const lastId = lastAmenity.length > 0 ? parseInt(lastAmenity[0].AmenityID.substring(2)) : 0;
-              amenityId = 'AM' + String(lastId + 1).padStart(3, '0');
+              amenityId = 'AM' + String(lastId + 1).padStart(8, '0');
               await connection.query(
                 'INSERT INTO AMENITY (AmenityID, Name) VALUES (?, ?)',
                 [amenityId, amenityName]
