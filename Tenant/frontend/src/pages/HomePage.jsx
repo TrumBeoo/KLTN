@@ -1082,7 +1082,12 @@ export default function HomePage() {
       </Tooltip>
 
       {chatOpen && (
-        <Box sx={{ position: 'fixed', bottom: 80, right: 90, zIndex: 9999 }}>
+        <Box sx={{ 
+          position: 'fixed', 
+          bottom: { xs: 100, sm: 63 }, 
+          right: { xs: 20, sm: 32, md: 90 }, 
+          zIndex: 9999 
+        }}>
           <AIChatWidget
             apiUrl={import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'}
             tenantBackendUrl={API_URL}

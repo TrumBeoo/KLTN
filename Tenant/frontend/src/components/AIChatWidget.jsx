@@ -80,7 +80,7 @@ const cardSlide = keyframes`
 `
 
 // ─── Styled components ────────────────────────────────────────────────────────
-const ChatWindow = styled(Paper)({
+const ChatWindow = styled(Paper)(({ theme }) => ({
   width: 380,
   height: 560,
   borderRadius: '12px',
@@ -92,7 +92,13 @@ const ChatWindow = styled(Paper)({
   border: `1px solid ${T.border}`,
   position: 'relative',
   zIndex: 10000,
-})
+  [theme.breakpoints.down('sm')]: {
+    width: 'calc(100vw - 40px)',
+    maxWidth: 380,
+    height: 'calc(100vh - 120px)',
+    maxHeight: 560,
+  },
+}))
 
 const MessageBubble = styled(Box)(({ role }) => ({
   maxWidth: '82%',
