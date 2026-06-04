@@ -636,11 +636,7 @@ export default function AIChatWidget({
   const [loading, setLoading]           = useState(false)
   const [suggestions, setSuggestions]   = useState(QUICK_PROMPTS)
   const [history, setHistory]           = useState([])
-  const [sessionId, setSessionId]       = useState(() => {
-    // Khôi phục sessionId từ localStorage khi mount
-    const stored = localStorage.getItem('ai_chat_session_id')
-    return stored || null
-  })
+  const [sessionId, setSessionId]       = useState(null) // Không lưu vào localStorage cho anonymous
   const [pendingSlots, setPendingSlots] = useState(null) // { slots, message_id }
   const [roomCodeMap, setRoomCodeMap]   = useState({}) // Map: RoomCode -> RoomID
   const messagesEndRef = useRef(null)
@@ -672,67 +668,124 @@ export default function AIChatWidget({
     fetchRoomCodeMap()
   }, [tenantBackendUrl])
 
-  // ── Lưu sessionId vào localStorage khi thay đổi ───────────────────────────────────────
+  // ── Lưu sessionId vào localStorage CHỈ KHI đã đăng nhập ───────────────────────────────────────
   useEffect(() => {
-    if (sessionId) {
-      localStorage.setItem('ai_chat_session_id', sessionId)
-      console.log('[AIChatWidget] Session saved to localStorage:', sessionId)
-    } else {
-      localStorage.removeItem('ai_chat_session_id')
+    // CHỈ lưu nếu user đã đăng nhập (có userId và authToken)
+    if (userId && authToken && sessionId) {
+      const storageKey = `ai_chat_session_${userId}`
+      localStorage.setItem(storageKey, sessionId)
+      console.log('[AIChatWidget] Session saved for user:', userId, 'sessionId:', sessionId)
+    } else if (!userId || !authToken) {
+      // Không có userId hoặc authToken - không lưu vào localStorage
+      // Xóa session cũ nếu có
+      if (userId) {
+        localStorage.removeItem(`ai_chat_session_${userId}`)
+      }
     }
-  }, [sessionId])
+  }, [sessionId, userId, authToken])
 
-  // ── Load chat history khi có sessionId ────────────────────────────────────────
+  // ── Load chat history CHỈ KHI đã đăng nhập ────────────────────────────────────────
   useEffect(() => {
     const loadChatHistory = async () => {
-      if (!sessionId) return
+      // KIỂM TRA CHẶT CHẼ: Chỉ load khi đã đăng nhập
+      if (!userId || !authToken) {
+        console.log('[AIChatWidget] No userId/authToken - skipping history load')
+        // Hiện welcome message cho anonymous user
+        setMessages([{
+          id: 'welcome', role: 'assistant', timestamp: new Date(),
+          text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\n⚠️ **Lưu ý:** Đăng nhập để lưu lịch sử chat và đặt lịch xem phòng!',
+        }])
+        setTimeout(() => inputRef.current?.focus(), 350)
+        return
+      }
+
+      // Kiểm tra sessionId từ localStorage cho user này
+      const storageKey = `ai_chat_session_${userId}`
+      const storedSessionId = localStorage.getItem(storageKey)
+      
+      if (storedSessionId && !sessionId) {
+        console.log('[AIChatWidget] Found stored session for user:', userId)
+        setSessionId(storedSessionId)
+      }
+      
+      // Nếu có sessionId (từ state hoặc localStorage), load history
+      const targetSessionId = sessionId || storedSessionId
+      if (!targetSessionId) {
+        console.log('[AIChatWidget] No session to load - starting fresh')
+        setMessages([{
+          id: 'welcome', role: 'assistant', timestamp: new Date(),
+          text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+        }])
+        setTimeout(() => inputRef.current?.focus(), 350)
+        return
+      }
       
       try {
-        const res = await fetch(`${apiUrl}/chat/session/${sessionId}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.success && data.data && data.data.length > 0) {
-            // Convert DB messages to frontend format
-            const loadedMessages = data.data.map(msg => ({
-              id: msg.MessageID,
-              role: msg.Role,
-              text: msg.Content,
-              timestamp: new Date(msg.CreatedAt),
-              intent: msg.Intent,
-              data: msg.ResponseData ? JSON.parse(msg.ResponseData) : null,
-            }))
-            
-            setMessages(loadedMessages)
-            
-            // Rebuild history for AI context
-            const loadedHistory = data.data.map(msg => ({
-              role: msg.Role,
-              content: msg.Content
-            }))
-            setHistory(loadedHistory)
-            
-            console.log('[AIChatWidget] Loaded', loadedMessages.length, 'messages from session:', sessionId)
-          }
+        console.log('[AIChatWidget] Loading history for session:', targetSessionId)
+        const res = await fetch(`${apiUrl}/chat/session/${targetSessionId}`)
+        
+        if (!res.ok) {
+          console.warn('[AIChatWidget] Failed to load session:', res.status)
+          // Xóa sessionId không hợp lệ
+          localStorage.removeItem(storageKey)
+          setSessionId(null)
+          setMessages([{
+            id: 'welcome', role: 'assistant', timestamp: new Date(),
+            text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+          }])
+          return
+        }
+        
+        const data = await res.json()
+        if (data.success && data.data && data.data.length > 0) {
+          // Convert DB messages to frontend format
+          const loadedMessages = data.data.map(msg => ({
+            id: msg.MessageID,
+            role: msg.Role,
+            text: msg.Content,
+            timestamp: new Date(msg.CreatedAt),
+            intent: msg.Intent,
+            data: msg.ResponseData ? JSON.parse(msg.ResponseData) : null,
+          }))
+          
+          setMessages(loadedMessages)
+          
+          // Rebuild history for AI context
+          const loadedHistory = data.data.map(msg => ({
+            role: msg.Role,
+            content: msg.Content
+          }))
+          setHistory(loadedHistory)
+          
+          console.log('[AIChatWidget] Loaded', loadedMessages.length, 'messages from session:', targetSessionId)
+        } else {
+          console.log('[AIChatWidget] No messages in session')
+          setMessages([{
+            id: 'welcome', role: 'assistant', timestamp: new Date(),
+            text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+          }])
         }
       } catch (err) {
         console.error('[AIChatWidget] Failed to load chat history:', err)
+        // Xóa sessionId lỗi
+        localStorage.removeItem(storageKey)
+        setSessionId(null)
+        setMessages([{
+          id: 'welcome', role: 'assistant', timestamp: new Date(),
+          text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+        }])
       }
+      
+      setTimeout(() => inputRef.current?.focus(), 350)
     }
     
     loadChatHistory()
-  }, [sessionId, apiUrl])
+  }, [userId, authToken, apiUrl])
 
   // ── On mount ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Nếu có sessionId từ localStorage, không hiện welcome
-    if (sessionId) return
-    
-    // Chỉ hiện welcome nếu không có sessionId
-    setMessages([{
-      id: 'welcome', role: 'assistant', timestamp: new Date(),
-      text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
-    }])
-    setTimeout(() => inputRef.current?.focus(), 350)
+    // useEffect load history sẽ xử lý việc hiện thị welcome message
+    // Không cần làm gì ở đây
   }, [])
 
   useEffect(() => {
@@ -746,6 +799,13 @@ export default function AIChatWidget({
     setSuggestions(QUICK_PROMPTS)
     setSessionId(null)
     setPendingSlots(null)
+    
+    // Xóa localStorage cho user hiện tại
+    if (userId) {
+      localStorage.removeItem(`ai_chat_session_${userId}`)
+      console.log('[AIChatWidget] Cleared session for user:', userId)
+    }
+    
     setTimeout(() => setMessages([{
       id: 'reset', role: 'assistant', timestamp: new Date(),
       text: '🔄 Cuộc trò chuyện mới! Mình có thể giúp gì cho bạn?',
