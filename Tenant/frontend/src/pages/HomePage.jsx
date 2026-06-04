@@ -69,13 +69,22 @@ const T = {
 // ─── Styled ────────────────────────────────────────────────────────────────
 
 /** Hero: search-bar style with background image */
-const HeroSection = styled(Box)({
+const HeroSection = styled(Box)(({ theme }) => ({
   backgroundImage: 'url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&q=80)',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
-  padding: '48px 0 56px',
+  minHeight: 'auto',
+  padding: '80px 0 64px',
   position: 'relative',
   overflow: 'hidden',
+  display: 'flex',
+  alignItems: 'center',
+  [theme.breakpoints.down('md')]: {
+    padding: '60px 0 48px',
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: '48px 0 40px',
+  },
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -87,20 +96,30 @@ const HeroSection = styled(Box)({
     position: 'absolute',
     bottom: 0, left: 0, right: 0, height: 8,
     background: T.yellow,
+    [theme.breakpoints.down('sm')]: {
+      height: 4,
+    },
   },
-})
+}))
 
-const HeroSearchBar = styled(Box)({
+const HeroSearchBar = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'stretch',
+  flexDirection: 'row',
   borderRadius: '12px',
   overflow: 'hidden',
   backgroundColor: T.white,
-  boxShadow: 'rgba(0,0,0,0.15) 0px 8px 32px',
+  boxShadow: 'rgba(0,0,0,0.2) 0px 8px 32px',
   border: '1px solid rgba(255,255,255,0.3)',
-})
+  maxWidth: '100%',
+  [theme.breakpoints.down('md')]: {
+    flexDirection: 'column',
+    borderRadius: '8px',
+    boxShadow: 'rgba(0,0,0,0.15) 0px 4px 16px',
+  },
+}))
 
-const SearchSegment = styled(Box)({
+const SearchSegment = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   backgroundColor: T.white,
@@ -109,6 +128,7 @@ const SearchSegment = styled(Box)({
   minWidth: 0,
   height: '64px',
   position: 'relative',
+  cursor: 'pointer',
   transition: 'background-color 120ms ease',
   '&:not(:last-child)::after': {
     content: '""',
@@ -119,11 +139,27 @@ const SearchSegment = styled(Box)({
     width: '1px',
     height: '32px',
     backgroundColor: '#e0e0e0',
+    [theme.breakpoints.down('md')]: {
+      width: 'calc(100% - 32px)',
+      height: '1px',
+      top: 'auto',
+      bottom: 0,
+      left: '16px',
+      transform: 'none',
+    },
   },
   '&:hover': {
     backgroundColor: '#f8f9fa',
   },
-})
+  [theme.breakpoints.down('md')]: {
+    height: '56px',
+    padding: '0 16px',
+  },
+  [theme.breakpoints.down('sm')]: {
+    height: '52px',
+    padding: '0 12px',
+  },
+}))
 
 /** Room card — list style (horizontal on md+) */
 const RoomCard = styled(Box)({
@@ -451,27 +487,48 @@ export default function HomePage() {
 
       {/* ─── Hero ─────────────────────────────────────────────────────────── */}
       <HeroSection role="banner" aria-label="Hero section">
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, py: { xs: 2, sm: 3, md: 4 } }}>
           <Typography
             variant="h1"
             sx={{
               color: T.white, textAlign: 'center', mb: 1,
-              fontSize: { xs: '1.429rem', md: '2rem' },
-              textShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              fontSize: { xs: '1.714rem', sm: '2rem', md: '2.286rem' },
+              fontWeight: 700,
+              lineHeight: 1.2,
+              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
             }}
           >
             Tìm phòng trọ/CCMN lý tưởng tại Hà Nội
           </Typography>
-          <Typography sx={{ color: 'rgba(255,255,255,0.9)', textAlign: 'center', mb: 3, fontSize: '0.929rem' }}>
+          <Typography sx={{ 
+            color: 'rgba(255,255,255,0.9)', 
+            textAlign: 'center', 
+            mb: { xs: 2.5, sm: 3, md: 3.5 }, 
+            fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' },
+            maxWidth: '600px',
+            mx: 'auto',
+          }}>
             Xem bản đồ · Đặt lịch xem · Tìm bạn ở ghép thông minh
           </Typography>
 
-          {/* Search bar — Modern redesign */}
+          {/* Search bar - Multi-layout responsive */}
           <HeroSearchBar role="search" aria-label="Tìm kiếm phòng">
-            <SearchSegment sx={{ flex: 2 }}>
-              <LocationIcon sx={{ fontSize: 24, color: T.blue, mr: 1.5, flexShrink: 0 }} />
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.2, mb: 0.25, fontWeight: 500 }}>Địa điểm</Typography>
+            <SearchSegment 
+              sx={{ 
+                flex: { xs: 1, md: 2 },
+                '&::after': { display: { xs: 'block', md: 'block' } }
+              }}
+            >
+              <LocationIcon sx={{ fontSize: { xs: 18, sm: 20, md: 24 }, color: T.blue, mr: { xs: 1, md: 1.5 }, flexShrink: 0 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ 
+                  fontSize: { xs: '0.688rem', sm: '0.714rem', md: '0.75rem' }, 
+                  color: T.muted, 
+                  lineHeight: 1.2, 
+                  mb: 0.25, 
+                  fontWeight: 500,
+                  letterSpacing: '0.01em'
+                }}>Địa điểm</Typography>
                 <Autocomplete
                   value={searchDistrict}
                   onChange={(e, newValue) => setSearchDistrict(newValue)}
@@ -485,7 +542,18 @@ export default function HomePage() {
                       InputProps={{
                         ...params.InputProps,
                         disableUnderline: true,
-                        sx: { fontSize: '1rem', fontWeight: 600, color: T.text }
+                        sx: { 
+                          fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' }, 
+                          fontWeight: 600, 
+                          color: T.text,
+                          '& input': {
+                            padding: 0,
+                            '&::placeholder': {
+                              color: T.muted,
+                              opacity: 0.6,
+                            }
+                          }
+                        }
                       }}
                     />
                   )}
@@ -496,28 +564,71 @@ export default function HomePage() {
                 />
               </Box>
             </SearchSegment>
-            <SearchSegment sx={{ flex: 1.2 }}>
-              <CalendarIcon sx={{ fontSize: 24, color: T.blue, mr: 1.5, flexShrink: 0 }} />
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.2, mb: 0.25, fontWeight: 500 }}>Xem phòng</Typography>
+
+            <SearchSegment 
+              sx={{ 
+                flex: { xs: 1, md: 1.2 },
+                '&::after': { display: { xs: 'block', md: 'block' } }
+              }}
+            >
+              <CalendarIcon sx={{ fontSize: { xs: 18, sm: 20, md: 24 }, color: T.blue, mr: { xs: 1, md: 1.5 }, flexShrink: 0 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ 
+                  fontSize: { xs: '0.688rem', sm: '0.714rem', md: '0.75rem' }, 
+                  color: T.muted, 
+                  lineHeight: 1.2, 
+                  mb: 0.25, 
+                  fontWeight: 500,
+                  letterSpacing: '0.01em'
+                }}>Xem phòng</Typography>
                 <TextField
                   type="date"
                   value={searchDate}
                   onChange={e => setSearchDate(e.target.value)}
                   variant="standard"
                   fullWidth
-                  InputProps={{ disableUnderline: true, sx: { fontSize: '1rem', fontWeight: 600, color: T.text } }}
+                  InputProps={{ 
+                    disableUnderline: true, 
+                    sx: { 
+                      fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' }, 
+                      fontWeight: 600, 
+                      color: T.text,
+                      '& input': {
+                        padding: 0,
+                        cursor: 'pointer',
+                      }
+                    } 
+                  }}
                   inputProps={{ min: new Date().toISOString().split('T')[0] }}
                 />
               </Box>
             </SearchSegment>
-            <SearchSegment sx={{ flex: 1, cursor: 'pointer' }} onClick={e => setGuestAnchor(e.currentTarget)}>
-              <PeopleIcon sx={{ fontSize: 24, color: T.blue, mr: 1.5, flexShrink: 0 }} />
+
+            <SearchSegment 
+              sx={{ 
+                flex: { xs: 1, md: 1 },
+                '&::after': { display: 'none' }
+              }} 
+              onClick={e => setGuestAnchor(e.currentTarget)}
+            >
+              <PeopleIcon sx={{ fontSize: { xs: 18, sm: 20, md: 24 }, color: T.blue, mr: { xs: 1, md: 1.5 }, flexShrink: 0 }} />
               <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.2, mb: 0.25, fontWeight: 500 }}>Số người</Typography>
-                <Typography sx={{ fontSize: '1rem', color: T.text, fontWeight: 600 }}>{guestCount} người</Typography>
+                <Typography sx={{ 
+                  fontSize: { xs: '0.688rem', sm: '0.714rem', md: '0.75rem' }, 
+                  color: T.muted, 
+                  lineHeight: 1.2, 
+                  mb: 0.25, 
+                  fontWeight: 500,
+                  letterSpacing: '0.01em'
+                }}>Số người</Typography>
+                <Typography sx={{ 
+                  fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' }, 
+                  color: T.text, 
+                  fontWeight: 600 
+                }}>{guestCount} người</Typography>
               </Box>
             </SearchSegment>
+
             <Button
               onClick={() => {
                 const params = new URLSearchParams()
@@ -532,15 +643,23 @@ export default function HomePage() {
                 backgroundColor: T.blue,
                 color: T.white,
                 borderRadius: 0,
-                px: 4,
-                height: '64px',
-                fontSize: '1rem',
+                px: { xs: 3, sm: 3.5, md: 4 },
+                height: { xs: '52px', sm: '56px', md: '64px' },
+                fontSize: { xs: '0.929rem', sm: '1rem', md: '1rem' },
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                minWidth: '140px',
+                minWidth: { xs: '100%', md: '140px' },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: { xs: 0.5, md: 1 },
+                transition: 'background-color 120ms ease, transform 120ms ease',
                 '&:hover': {
                   backgroundColor: T.blueDk,
+                },
+                '&:active': {
+                  transform: 'translateY(1px)',
                 },
                 '&:focus-visible': {
                   outline: `3px solid ${T.yellow}`,
@@ -548,8 +667,8 @@ export default function HomePage() {
                 },
               }}
             >
-              <SearchIcon sx={{ mr: 1, fontSize: 22 }} />
-              Tìm
+              <SearchIcon sx={{ fontSize: { xs: 20, sm: 22, md: 24 } }} />
+              <Box component="span">Tìm</Box>
             </Button>
           </HeroSearchBar>
 
@@ -575,7 +694,17 @@ export default function HomePage() {
           </Popover>
 
           {/* Quick filter chips */}
-          <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'center', flexWrap: 'wrap', gap: '8px !important' }}>
+          <Stack 
+            direction="row" 
+            spacing={1} 
+            sx={{ 
+              mt: { xs: 2, sm: 2.5, md: 3 }, 
+              justifyContent: 'center', 
+              flexWrap: 'wrap', 
+              gap: { xs: '6px !important', sm: '8px !important' },
+              px: { xs: 2, sm: 0 }
+            }}
+          >
             {[
               { label: 'Gần trường ĐH', filter: 'nearUniversity=true' },
               { label: 'Dưới 3 triệu', filter: 'maxPrice=3000000' },
@@ -589,12 +718,24 @@ export default function HomePage() {
                 onClick={() => navigate(`/listings?${filter}`)}
                 aria-label={`Lọc: ${label}`}
                 sx={{
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  backdropFilter: 'blur(4px)',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  color: T.white, fontSize: '0.786rem', fontWeight: 600,
-                  height: '28px', borderRadius: '20px',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.35)',
+                  color: T.white, 
+                  fontSize: { xs: '0.714rem', sm: '0.786rem' }, 
+                  fontWeight: 600,
+                  height: { xs: '26px', sm: '28px' }, 
+                  borderRadius: '20px',
+                  px: { xs: 1, sm: 1.5 },
+                  transition: 'all 120ms ease',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.28)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
                   '&:focus-visible': { outline: '2px solid #febb02', outlineOffset: '2px' },
                 }}
               />
