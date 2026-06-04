@@ -14,6 +14,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box, IconButton, Typography, TextField, Stack,
   CircularProgress, Chip, Avatar, Tooltip, Paper, Button,
@@ -595,13 +596,18 @@ function formatMessage(text, roomData = null) {
 
   // Link room codes in text
   if (roomData && Array.isArray(roomData)) {
-    const codes = new Set(roomData.map(r => r.RoomCode).filter(Boolean))
-    codes.forEach(code => {
-      const regex = new RegExp(`\\b(${code})\\b`, 'g')
-      html = html.replace(regex, `<a href="/room/${code}" class="room-link" data-code="${code}">${code}</a>`)
+    roomData.forEach(room => {
+      const code = room.RoomCode
+      const id = room.RoomID // Use RoomID if available
+      if (code) {
+        const regex = new RegExp(`\\b(${code})\\b`, 'g')
+        // Use RoomID in href if available, otherwise fallback to code
+        const href = id ? `/room/${id}` : `/room/${code}`
+        html = html.replace(regex, `<a href="${href}" class="room-link" data-code="${code}" data-id="${id || ''}">${code}</a>`)
+      }
     })
   }
-  // Also auto-link any ROM##### pattern
+  // Also auto-link any ROM##### pattern (will need to be resolved by click handler)
   html = html.replace(/\b(ROM\d{5,})\b(?![^<]*>)/g,
     `<a href="/room/$1" class="room-link" data-code="$1">$1</a>`)
 
@@ -624,18 +630,104 @@ export default function AIChatWidget({
   userId    = null,
   authToken = null,
 }) {
+  const navigate = useNavigate()
   const [input, setInput]               = useState('')
   const [messages, setMessages]         = useState([])
   const [loading, setLoading]           = useState(false)
   const [suggestions, setSuggestions]   = useState(QUICK_PROMPTS)
   const [history, setHistory]           = useState([])
-  const [sessionId, setSessionId]       = useState(null)
+  const [sessionId, setSessionId]       = useState(() => {
+    // Khôi phục sessionId từ localStorage khi mount
+    const stored = localStorage.getItem('ai_chat_session_id')
+    return stored || null
+  })
   const [pendingSlots, setPendingSlots] = useState(null) // { slots, message_id }
+  const [roomCodeMap, setRoomCodeMap]   = useState({}) // Map: RoomCode -> RoomID
   const messagesEndRef = useRef(null)
   const inputRef       = useRef(null)
 
+  // ── Fetch room code mapping on mount ───────────────────────────────────
+  useEffect(() => {
+    const fetchRoomCodeMap = async () => {
+      try {
+        const API_URL = tenantBackendUrl.replace('/api', '')
+        const res = await fetch(`${API_URL}/api/rooms?limit=1000`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success && Array.isArray(data.data)) {
+            const map = {}
+            data.data.forEach(room => {
+              if (room.RoomCode && room.RoomID) {
+                map[room.RoomCode] = room.RoomID
+              }
+            })
+            setRoomCodeMap(map)
+            console.log('[AIChatWidget] Room code map loaded:', Object.keys(map).length, 'rooms')
+          }
+        }
+      } catch (err) {
+        console.error('[AIChatWidget] Failed to load room code map:', err)
+      }
+    }
+    fetchRoomCodeMap()
+  }, [tenantBackendUrl])
+
+  // ── Lưu sessionId vào localStorage khi thay đổi ───────────────────────────────────────
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('ai_chat_session_id', sessionId)
+      console.log('[AIChatWidget] Session saved to localStorage:', sessionId)
+    } else {
+      localStorage.removeItem('ai_chat_session_id')
+    }
+  }, [sessionId])
+
+  // ── Load chat history khi có sessionId ────────────────────────────────────────
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!sessionId) return
+      
+      try {
+        const res = await fetch(`${apiUrl}/chat/session/${sessionId}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success && data.data && data.data.length > 0) {
+            // Convert DB messages to frontend format
+            const loadedMessages = data.data.map(msg => ({
+              id: msg.MessageID,
+              role: msg.Role,
+              text: msg.Content,
+              timestamp: new Date(msg.CreatedAt),
+              intent: msg.Intent,
+              data: msg.ResponseData ? JSON.parse(msg.ResponseData) : null,
+            }))
+            
+            setMessages(loadedMessages)
+            
+            // Rebuild history for AI context
+            const loadedHistory = data.data.map(msg => ({
+              role: msg.Role,
+              content: msg.Content
+            }))
+            setHistory(loadedHistory)
+            
+            console.log('[AIChatWidget] Loaded', loadedMessages.length, 'messages from session:', sessionId)
+          }
+        }
+      } catch (err) {
+        console.error('[AIChatWidget] Failed to load chat history:', err)
+      }
+    }
+    
+    loadChatHistory()
+  }, [sessionId, apiUrl])
+
   // ── On mount ───────────────────────────────────────────────────────────────
   useEffect(() => {
+    // Nếu có sessionId từ localStorage, không hiện welcome
+    if (sessionId) return
+    
+    // Chỉ hiện welcome nếu không có sessionId
     setMessages([{
       id: 'welcome', role: 'assistant', timestamp: new Date(),
       text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
@@ -717,6 +809,18 @@ export default function AIChatWidget({
       // Persist session
       if (data.session_id && !sessionId) setSessionId(data.session_id)
 
+      // ── Enrich room data with RoomID if only RoomCode is present ──
+      let enrichedData = data.data
+      if (data.data && Array.isArray(data.data)) {
+        enrichedData = data.data.map(room => {
+          // If room has RoomCode but no RoomID, use roomCodeMap
+          if (room.RoomCode && !room.RoomID && roomCodeMap[room.RoomCode]) {
+            return { ...room, RoomID: roomCodeMap[room.RoomCode] }
+          }
+          return room
+        })
+      }
+
       const botMsgId = `a-${Date.now()}`
 
       // ── If AI returned a booking_card → add it as a special message ──
@@ -724,7 +828,7 @@ export default function AIChatWidget({
         const cardMsg = {
           id: botMsgId, role: 'assistant', timestamp: new Date(),
           text: data.reply || 'Kiểm tra thông tin và xác nhận nhé! 👇',
-          data: data.data,
+          data: enrichedData,
           intent: data.intent,
           booking_card: data.booking_card,            // ← structured payload
           booking_state: data.booking_state,
@@ -737,7 +841,7 @@ export default function AIChatWidget({
         const slotMsg = {
           id: botMsgId, role: 'assistant', timestamp: new Date(),
           text: data.reply,
-          data: data.data,
+          data: enrichedData,
           intent: data.intent,
           booking_state: data.booking_state,
         }
@@ -750,7 +854,7 @@ export default function AIChatWidget({
         const botMsg = {
           id: botMsgId, role: 'assistant', timestamp: new Date(),
           text: data.reply || 'Xin lỗi, có lỗi xảy ra.',
-          data: data.data,
+          data: enrichedData,
           intent: data.intent,
         }
         setMessages(prev => [...prev, botMsg])
@@ -768,18 +872,39 @@ export default function AIChatWidget({
     } finally {
       setLoading(false)
     }
-  }, [input, history, userId, sessionId, apiUrl])
+  }, [input, history, userId, sessionId, apiUrl, tenantBackendUrl, roomCodeMap])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
-  const handleRoomLinkClick = (e) => {
+  const handleRoomLinkClick = async (e) => {
     const link = e.target.closest('.room-link')
     if (link) {
       e.preventDefault()
+      
+      // Try to get RoomID from data-id attribute first
+      const roomId = link.getAttribute('data-id')
+      if (roomId && roomId !== '' && roomId !== 'undefined' && roomId !== 'null') {
+        navigate(`/room/${roomId}`)
+        onClose?.() 
+        return
+      }
+      
+      // Fallback: get RoomCode and lookup from roomCodeMap
       const code = link.getAttribute('data-code')
-      if (code) window.open(`/room/${code}`, '_blank')
+      if (code && roomCodeMap[code]) {
+        navigate(`/room/${roomCodeMap[code]}`)
+        onClose?.()
+        return
+      }
+      
+      // Last fallback: navigate with code (might fail with 404)
+      if (code) {
+        console.warn('[AIChatWidget] No RoomID found for code:', code)
+        navigate(`/room/${code}`)
+        onClose?.()
+      }
     }
   }
 
