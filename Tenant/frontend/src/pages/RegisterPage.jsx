@@ -69,7 +69,7 @@ export default function RegisterPage() {
   }
 
   const handleGoogleSignup = () => {
-    window.location.href = 'http://localhost:5000/api/auth/google'
+    window.location.href = 'https://kltn-1o6k.onrender.com/api/auth/google/callback'
   }
 
   const fields = [
