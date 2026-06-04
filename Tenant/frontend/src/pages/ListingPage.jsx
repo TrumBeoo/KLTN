@@ -51,7 +51,7 @@ const T = {
 // ─── Styled ──────────────────────────────────────────────────────────────
 
 /** Horizontal listing card — Booking.com hotel-card style */
-const ListingCard = styled(Box)({
+const ListingCard = styled(Box)(({ theme }) => ({
   backgroundColor: T.white,
   borderRadius: '8px',
   border: `1px solid ${T.border}`,
@@ -59,10 +59,14 @@ const ListingCard = styled(Box)({
   overflow: 'hidden',
   cursor: 'pointer',
   display: 'flex',
+  flexDirection: 'row',
   transition: `box-shadow ${T.motion} ease`,
   '&:hover': { boxShadow: 'rgba(26,26,26,0.24) 0px 4px 16px' },
   '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
-})
+  [theme.breakpoints.down('md')]: {
+    flexDirection: 'column',
+  },
+}))
 
 const ScoreBadge = styled(Box)({
   backgroundColor: '#003580',
@@ -110,8 +114,23 @@ const statusLabel = { available: 'Còn trống', pending: 'Chờ duyệt', booke
 
 function SkeletonCard() {
   return (
-    <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, display: 'flex', overflow: 'hidden' }}>
-      <Skeleton variant="rectangular" width={220} height={160} animation="wave" sx={{ flexShrink: 0 }} />
+    <Box sx={{ 
+      backgroundColor: T.white, 
+      borderRadius: '8px', 
+      border: `1px solid ${T.border}`, 
+      display: 'flex',
+      flexDirection: { xs: 'column', md: 'row' },
+      overflow: 'hidden' 
+    }}>
+      <Skeleton 
+        variant="rectangular" 
+        sx={{ 
+          width: { xs: '100%', md: 220 },
+          height: { xs: 200, md: 160 },
+          flexShrink: 0 
+        }} 
+        animation="wave" 
+      />
       <Box sx={{ flex: 1, p: 2 }}>
         <Skeleton variant="text" width="70%" height={22} />
         <Skeleton variant="text" width="50%" height={16} />
@@ -560,182 +579,22 @@ export default function ListingPage() {
           </Box>
         ) : (
           <Grid container spacing={3}>
-            {/* ─── Left: listings ─────────────────────────────────────────── */}
-            <Grid item xs={12} lg={8}>
-              <Stack spacing={2}>
-                {loading
-                  ? [1,2,3,4,5].map(i => <SkeletonCard key={i} />)
-                  : paginated.length === 0
-                    ? (
-                      <Box sx={{ textAlign: 'center', py: 8 }}>
-                        <Typography sx={{ color: T.muted }}>Không có phòng nào</Typography>
-                      </Box>
-                    )
-                    : paginated.map(listing => (
-                        <ListingCard
-                          key={listing.id}
-                          onClick={() => navigate(`/room/${listing.id}`)}
-                          tabIndex={0} role="article"
-                          aria-label={`${listing.title}, ${fmt(listing.price)}đ/tháng, ${statusLabel[listing.status]}`}
-                          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
-                        >
-                          {/* Image */}
-                          <Box sx={{ width: 260, height: 250, position: 'relative', flexShrink: 0, backgroundColor: T.bg }}>
-                            {listing.image ? (
-                              <Box
-                                component="img" src={listing.image} alt={listing.title} loading="lazy"
-                                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                                  transition: 'transform 300ms ease',
-                                  '&:hover': { transform: 'scale(1.04)' },
-                                }}
-                                onError={e => { e.target.style.display = 'none' }}
-                              />
-                            ) : (
-                              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <NoImageIcon sx={{ fontSize: 40, color: T.border }} />
-                              </Box>
-                            )}
-                            {/* Fav */}
-                            <IconButton
-                              size="small"
-                              onClick={e => toggleFav(listing.id, e)}
-                              disabled={favLoading[listing.id]}
-                              aria-label={favorites[listing.id] ? 'Bỏ lưu' : 'Lưu phòng'}
-                              sx={{
-                                position: 'absolute', top: 8, right: 8,
-                                backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
-                                color: favorites[listing.id] ? '#e91e63' : '#595959', p: '4px',
-                                '&:hover': { backgroundColor: T.white, color: '#e91e63' },
-                                '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
-                                '&:disabled': { opacity: 0.6 },
-                              }}
-                            >
-                              {favorites[listing.id] ? <FavoriteIcon sx={{ fontSize: 16 }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
-                            </IconButton>
-                            {/* Views */}
-                            <Box sx={{
-                              position: 'absolute', bottom: 8, left: 8,
-                              display: 'flex', alignItems: 'center', gap: 0.5,
-                              backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: '4px',
-                              px: 0.75, py: 0.25,
-                            }}>
-                              <EyeIcon sx={{ fontSize: 12, color: T.white }} />
-                              <Typography sx={{ fontSize: '0.714rem', color: T.white, fontWeight: 600 }}>{listing.views}</Typography>
-                            </Box>
-                          </Box>
-
-                          {/* Content */}
-                          <Box sx={{ flex: 1, p: 2, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                            {/* Title row */}
-                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.5 }}>
-                              <Typography sx={{
-                                fontWeight: 700, fontSize: '0.957rem', color: T.blue,
-                                flex: 1, mr: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                '&:hover': { textDecoration: 'underline' },
-                              }}>
-                                {listing.title}
-                              </Typography>
-                              {/* Score */}
-                              <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
-                                <Box sx={{ textAlign: 'right' }}>
-                                  <Typography sx={{ fontSize: '0.714rem', color: T.muted, lineHeight: 1 }}>
-                                    {listing.reviews} đánh giá
-                                  </Typography>
-                                  <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>Rất tốt</Typography>
-                                </Box>
-                                <ScoreBadge>{listing.rating}</ScoreBadge>
-                              </Box>
-                            </Stack>
-
-                            {/* Location */}
-                            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.75 }}>
-                              <LocationIcon sx={{ fontSize: 14, color: T.muted }} />
-                              <Typography sx={{ fontSize: '0.857rem', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {listing.buildingName || 'Chưa cập nhật'}
-                              </Typography>
-                            </Stack>
-
-                            {/* Status */}
-                            <StatusBadge status={listing.status} sx={{ mb: 1, alignSelf: 'flex-start' }}>
-                              <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'currentColor' }} />
-                              {statusLabel[listing.status]}
-                            </StatusBadge>
-
-                            {/* Specs */}
-                            <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
-                              <Stack direction="row" alignItems="center" spacing={0.5}>
-                                <RulerIcon sx={{ fontSize: 14, color: T.muted }} />
-                                <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>{listing.area}m²</Typography>
-                              </Stack>
-                              {listing.maxPeople && (
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <GroupIcon sx={{ fontSize: 14, color: T.muted }} />
-                                  <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>{listing.maxPeople} người</Typography>
-                                </Stack>
-                              )}
-                            </Stack>
-
-                            {/* Amenities */}
-                            {listing.amenities.length > 0 && (
-                              <Stack direction="row" spacing={0.75} sx={{ mb: 1.5, flexWrap: 'wrap', gap: '4px !important' }}>
-                                {listing.amenities.slice(0, 4).map(a => <AmenityTag key={a} amenity={a} />)}
-                              </Stack>
-                            )}
-
-                            {/* Price + CTA */}
-                            <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mt: 'auto' }}>
-                              <Box>
-                                <Typography sx={{ fontWeight: 800, fontSize: '1.143rem', color: T.text }}>
-                                  {fmt(listing.price)}đ
-                                </Typography>
-                                <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>mỗi tháng</Typography>
-                              </Box>
-                              <Button
-                                size="small" variant="contained" endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
-                                onClick={e => { e.stopPropagation(); navigate(`/room/${listing.id}`) }}
-                                aria-label={`Xem chi tiết ${listing.title}`}
-                                sx={{
-                                  backgroundColor: T.blue, borderRadius: '4px', fontWeight: 700,
-                                  fontSize: '0.857rem', px: 2, py: 0.75,
-                                  '&:hover': { backgroundColor: T.blueDk },
-                                  '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
-                                }}
-                              >
-                                Xem phòng
-                              </Button>
-                            </Box>
-                          </Box>
-                        </ListingCard>
-                      ))
-                }
-              </Stack>
-
-              {/* Pagination */}
-              {!loading && totalPages > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                  <Pagination
-                    count={totalPages} page={page}
-                    onChange={(_, v) => { setPage(v); window.scrollTo(0, 0) }}
-                    color="primary"
-                    sx={{
-                      '& .MuiPaginationItem-root': {
-                        borderRadius: '4px', fontSize: '0.857rem',
-                        '&.Mui-selected': { backgroundColor: T.blue, color: T.white, fontWeight: 700 },
-                        '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
-                      },
-                    }}
-                  />
-                </Box>
-              )}
-            </Grid>
-
-            {/* ─── Right sidebar ───────────────────────────────────────────── */}
-            <Grid item xs={12} lg={4}>
-              <Box sx={{ position: 'sticky', top: 92, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* ─── Right sidebar (mobile: on top, desktop: right side) ─────── */}
+            <Grid item xs={12} lg={4} sx={{ order: { xs: 1, lg: 2 } }}>
+              <Box sx={{ 
+                position: { xs: 'static', lg: 'sticky' }, 
+                top: { lg: 92 }, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 2 
+              }}>
                 {/* Map */}
                 <Box sx={{
-                  borderRadius: '8px', overflow: 'hidden', height: 320,
-                  border: `1px solid ${T.border}`, boxShadow: T.shadow1,
+                  borderRadius: '8px', 
+                  overflow: 'hidden', 
+                  height: { xs: 280, sm: 320, lg: 320 },
+                  border: `1px solid ${T.border}`, 
+                  boxShadow: T.shadow1,
                 }}>
                   {mapRooms.length > 0 ? (
                     <RoomMap rooms={mapRooms} onMarkerClick={r => navigate(`/room/${r.id}`)} />
@@ -746,8 +605,15 @@ export default function ListingPage() {
                   )}
                 </Box>
 
-                {/* Latest listings sidebar */}
-                <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, boxShadow: T.shadow1, p: 2 }}>
+                {/* Latest listings sidebar - hidden on mobile */}
+                <Box sx={{ 
+                  backgroundColor: T.white, 
+                  borderRadius: '8px', 
+                  border: `1px solid ${T.border}`, 
+                  boxShadow: T.shadow1, 
+                  p: 2,
+                  display: { xs: 'none', lg: 'block' }
+                }}>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 1.5, pb: 1, borderBottom: `1px solid ${T.border}` }}>
                     Phòng mới đăng (10 tin)
                   </Typography>
@@ -796,6 +662,223 @@ export default function ListingPage() {
                   </Stack>
                 </Box>
               </Box>
+            </Grid>
+
+            {/* ─── Left: listings (mobile: below map, desktop: left side) ─── */}
+            <Grid item xs={12} lg={8} sx={{ order: { xs: 2, lg: 1 } }}>
+              <Stack spacing={2}>
+                {loading
+                  ? [1,2,3,4,5].map(i => <SkeletonCard key={i} />)
+                  : paginated.length === 0
+                    ? (
+                      <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <Typography sx={{ color: T.muted }}>Không có phòng nào</Typography>
+                      </Box>
+                    )
+                    : paginated.map(listing => (
+                        <ListingCard
+                          key={listing.id}
+                          onClick={() => navigate(`/room/${listing.id}`)}
+                          tabIndex={0} role="article"
+                          aria-label={`${listing.title}, ${fmt(listing.price)}đ/tháng, ${statusLabel[listing.status]}`}
+                          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/room/${listing.id}`)}
+                        >
+                          {/* Image */}
+                          <Box sx={{ 
+                            width: { xs: '100%', md: 260 }, 
+                            height: { xs: 200, sm: 220, md: 250 }, 
+                            position: 'relative', 
+                            flexShrink: 0, 
+                            backgroundColor: T.bg 
+                          }}>
+                            {listing.image ? (
+                              <Box
+                                component="img" src={listing.image} alt={listing.title} loading="lazy"
+                                sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                                  transition: 'transform 300ms ease',
+                                  '&:hover': { transform: 'scale(1.04)' },
+                                }}
+                                onError={e => { e.target.style.display = 'none' }}
+                              />
+                            ) : (
+                              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <NoImageIcon sx={{ fontSize: 40, color: T.border }} />
+                              </Box>
+                            )}
+                            {/* Fav */}
+                            <IconButton
+                              size="small"
+                              onClick={e => toggleFav(listing.id, e)}
+                              disabled={favLoading[listing.id]}
+                              aria-label={favorites[listing.id] ? 'Bỏ lưu' : 'Lưu phòng'}
+                              sx={{
+                                position: 'absolute', top: 8, right: 8,
+                                backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
+                                color: favorites[listing.id] ? '#e91e63' : '#595959', p: '4px',
+                                '&:hover': { backgroundColor: T.white, color: '#e91e63' },
+                                '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                                '&:disabled': { opacity: 0.6 },
+                              }}
+                            >
+                              {favorites[listing.id] ? <FavoriteIcon sx={{ fontSize: 16 }} /> : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
+                            </IconButton>
+                            {/* Views */}
+                            <Box sx={{
+                              position: 'absolute', bottom: 8, left: 8,
+                              display: 'flex', alignItems: 'center', gap: 0.5,
+                              backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: '4px',
+                              px: 0.75, py: 0.25,
+                            }}>
+                              <EyeIcon sx={{ fontSize: 12, color: T.white }} />
+                              <Typography sx={{ fontSize: '0.714rem', color: T.white, fontWeight: 600 }}>{listing.views}</Typography>
+                            </Box>
+                          </Box>
+
+                          {/* Content */}
+                          <Box sx={{ 
+                            flex: 1, 
+                            p: { xs: 1.5, sm: 2 }, 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            minWidth: 0 
+                          }}>
+                            {/* Title row */}
+                            <Stack 
+                              direction={{ xs: 'column', sm: 'row' }} 
+                              justifyContent="space-between" 
+                              alignItems={{ xs: 'flex-start', sm: 'flex-start' }} 
+                              sx={{ mb: 0.5, gap: { xs: 0.5, sm: 0 } }}
+                            >
+                              <Typography sx={{
+                                fontWeight: 700, 
+                                fontSize: { xs: '0.929rem', sm: '0.957rem' }, 
+                                color: T.blue,
+                                flex: 1, 
+                                mr: { xs: 0, sm: 1 }, 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis', 
+                                whiteSpace: 'nowrap',
+                                '&:hover': { textDecoration: 'underline' },
+                              }}>
+                                {listing.title}
+                              </Typography>
+                              {/* Score */}
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'flex-end', 
+                                gap: 0.5, 
+                                flexShrink: 0 
+                              }}>
+                                <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+                                  <Typography sx={{ fontSize: '0.714rem', color: T.muted, lineHeight: 1 }}>
+                                    {listing.reviews} đánh giá
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>Rất tốt</Typography>
+                                </Box>
+                                <ScoreBadge>{listing.rating}</ScoreBadge>
+                              </Box>
+                            </Stack>
+
+                            {/* Location */}
+                            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.75 }}>
+                              <LocationIcon sx={{ fontSize: 14, color: T.muted }} />
+                              <Typography sx={{ fontSize: '0.857rem', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {listing.buildingName || 'Chưa cập nhật'}
+                              </Typography>
+                            </Stack>
+
+                            {/* Status */}
+                            <StatusBadge status={listing.status} sx={{ mb: 1, alignSelf: 'flex-start' }}>
+                              <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'currentColor' }} />
+                              {statusLabel[listing.status]}
+                            </StatusBadge>
+
+                            {/* Specs */}
+                            <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
+                              <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <RulerIcon sx={{ fontSize: 14, color: T.muted }} />
+                                <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>{listing.area}m²</Typography>
+                              </Stack>
+                              {listing.maxPeople && (
+                                <Stack direction="row" alignItems="center" spacing={0.5}>
+                                  <GroupIcon sx={{ fontSize: 14, color: T.muted }} />
+                                  <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>{listing.maxPeople} người</Typography>
+                                </Stack>
+                              )}
+                            </Stack>
+
+                            {/* Amenities */}
+                            {listing.amenities.length > 0 && (
+                              <Stack direction="row" spacing={0.75} sx={{ mb: 1.5, flexWrap: 'wrap', gap: '4px !important' }}>
+                                {listing.amenities.slice(0, 4).map(a => <AmenityTag key={a} amenity={a} />)}
+                              </Stack>
+                            )}
+
+                            {/* Price + CTA */}
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: { xs: 'row', sm: 'row' },
+                              alignItems: { xs: 'center', sm: 'flex-end' }, 
+                              justifyContent: 'space-between', 
+                              mt: 'auto',
+                              gap: 1,
+                            }}>
+                              <Box>
+                                <Typography sx={{ 
+                                  fontWeight: 800, 
+                                  fontSize: { xs: '1rem', sm: '1.143rem' }, 
+                                  color: T.text 
+                                }}>
+                                  {fmt(listing.price)}đ
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>mỗi tháng</Typography>
+                              </Box>
+                              <Button
+                                size="small" 
+                                variant="contained" 
+                                endIcon={<ArrowForwardIcon sx={{ fontSize: 14, display: { xs: 'none', sm: 'block' } }} />}
+                                onClick={e => { e.stopPropagation(); navigate(`/room/${listing.id}`) }}
+                                aria-label={`Xem chi tiết ${listing.title}`}
+                                sx={{
+                                  backgroundColor: T.blue, 
+                                  borderRadius: '4px', 
+                                  fontWeight: 700,
+                                  fontSize: { xs: '0.786rem', sm: '0.857rem' }, 
+                                  px: { xs: 1.5, sm: 2 }, 
+                                  py: { xs: 0.5, sm: 0.75 },
+                                  flexShrink: 0,
+                                  transition: 'all 120ms ease',
+                                  '&:hover': { backgroundColor: T.blueDk },
+                                  '&:active': { transform: 'translateY(1px)' },
+                                  '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                                }}
+                              >
+                                Xem phòng
+                              </Button>
+                            </Box>
+                          </Box>
+                        </ListingCard>
+                      ))
+                }
+              </Stack>
+
+              {/* Pagination */}
+              {!loading && totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={totalPages} page={page}
+                    onChange={(_, v) => { setPage(v); window.scrollTo(0, 0) }}
+                    color="primary"
+                    sx={{
+                      '& .MuiPaginationItem-root': {
+                        borderRadius: '4px', fontSize: '0.857rem',
+                        '&.Mui-selected': { backgroundColor: T.blue, color: T.white, fontWeight: 700 },
+                        '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
+                      },
+                    }}
+                  />
+                </Box>
+              )}
             </Grid>
           </Grid>
         )}
