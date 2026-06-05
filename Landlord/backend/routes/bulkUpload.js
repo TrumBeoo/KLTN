@@ -419,6 +419,10 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
     let filteredCount = 0;
     let rowCounter = 1;
 
+    // Tracking for duplicate detection
+    const roomCodeMap = new Map(); // roomCode -> array of room details
+    const duplicates = [];
+
     for (let index = 0; index < data.length; index++) {
       const row = data[index];
       
@@ -449,6 +453,18 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       const shouldImport = !rowDistrict || !normalizedBuildingDistrict || rowDistrict === normalizedBuildingDistrict;
       
       if (shouldImport) {
+        // Track room code for duplicate detection
+        if (!roomCodeMap.has(parsed.roomCode)) {
+          roomCodeMap.set(parsed.roomCode, []);
+        }
+        roomCodeMap.get(parsed.roomCode).push({
+          rowNumber: index + 1,
+          address: parsed.address,
+          price: parsed.price,
+          area: parsed.area,
+          district: parsed.district,
+          ward: parsed.ward
+        });
         // Generate UploadDetailID (CHAR(10) max)
         const uploadDetailId = 'UD' + String(rowCounter).padStart(5, '0');
         
@@ -476,6 +492,96 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
         filteredCount++;
         console.log('[FILTER] Filtered out row:', index + 1, 'district:', rowDistrict, 'building district:', normalizedBuildingDistrict);
       }
+    }
+
+    // Check for duplicates with different details
+    for (const [roomCode, rooms] of roomCodeMap.entries()) {
+      if (rooms.length > 1) {
+        // Check if rooms have different address or price
+        const uniqueAddresses = new Set(rooms.map(r => (r.address || '').toLowerCase().trim()));
+        const uniquePrices = new Set(rooms.map(r => r.price));
+        const uniqueAreas = new Set(rooms.map(r => r.area));
+        
+        if (uniqueAddresses.size > 1 || uniquePrices.size > 1 || uniqueAreas.size > 1) {
+          duplicates.push({
+            roomCode,
+            count: rooms.length,
+            rows: rooms.map(r => r.rowNumber),
+            variations: rooms.map(r => ({
+              row: r.rowNumber,
+              address: r.address || 'Không có',
+              price: r.price,
+              area: r.area,
+              district: r.district || 'Không có',
+              ward: r.ward || 'Không có'
+            }))
+          });
+        }
+      }
+    }
+
+    // Check for existing rooms in database
+    const existingRooms = [];
+    const roomCodesToCheck = Array.from(roomCodeMap.keys());
+    
+    if (roomCodesToCheck.length > 0) {
+      const placeholders = roomCodesToCheck.map(() => '?').join(',');
+      const [dbRooms] = await connection.query(
+        `SELECT RoomCode, RoomID, Price, Area, Address, BuildingID 
+         FROM ROOM 
+         WHERE LandlordID = ? AND RoomCode IN (${placeholders})`,
+        [landlordId, ...roomCodesToCheck]
+      );
+      
+      for (const dbRoom of dbRooms) {
+        const uploadedRooms = roomCodeMap.get(dbRoom.RoomCode);
+        for (const uploadedRoom of uploadedRooms) {
+          // Check if different from existing room
+          const priceDiff = Math.abs(dbRoom.Price - uploadedRoom.price) > 0.01;
+          const areaDiff = Math.abs(dbRoom.Area - uploadedRoom.area) > 0.01;
+          const addressDiff = (dbRoom.Address || '').toLowerCase().trim() !== (uploadedRoom.address || '').toLowerCase().trim();
+          
+          if (priceDiff || areaDiff || addressDiff) {
+            existingRooms.push({
+              roomCode: dbRoom.RoomCode,
+              roomId: dbRoom.RoomID,
+              buildingId: dbRoom.BuildingID,
+              rowNumber: uploadedRoom.rowNumber,
+              existing: {
+                price: dbRoom.Price,
+                area: dbRoom.Area,
+                address: dbRoom.Address || 'Không có'
+              },
+              uploaded: {
+                price: uploadedRoom.price,
+                area: uploadedRoom.area,
+                address: uploadedRoom.address || 'Không có'
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // If duplicates found, rollback and return error
+    if (duplicates.length > 0 || existingRooms.length > 0) {
+      await connection.rollback();
+      console.log('[PREVIEW] Duplicates found:', duplicates.length);
+      console.log('[PREVIEW] Existing rooms conflict:', existingRooms.length);
+      return res.status(400).json({
+        success: false,
+        message: 'Phát hiện phòng trùng lặp với thông tin khác nhau',
+        duplicates: {
+          inFile: duplicates,
+          inDatabase: existingRooms
+        },
+        stats: {
+          totalRows: data.length,
+          filteredRows: filteredCount,
+          duplicatesInFile: duplicates.length,
+          conflictsWithDatabase: existingRooms.length
+        }
+      });
     }
 
     // Update UPLOAD_JOB with actual filtered rows count
