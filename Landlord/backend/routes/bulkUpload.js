@@ -952,7 +952,10 @@ router.post('/bulk-create/:jobId', async (req, res) => {
               furnitureMap.set(name, id);
               newFurniture.push([id, name]);
             }
-            roomFurnitureLinks.push([roomId, furnitureMap.get(name)]);
+            const furnitureId = furnitureMap.get(name);
+            if (!roomFurnitureLinks.find(link => link[0] === roomId && link[1] === furnitureId)) {
+              roomFurnitureLinks.push([roomId, furnitureId]);
+            }
           }
         }
 
@@ -967,7 +970,10 @@ router.post('/bulk-create/:jobId', async (req, res) => {
               serviceMap.set(name, id);
               newServices.push([id, name]);
             }
-            roomServiceLinks.push([roomId, serviceMap.get(name)]);
+            const serviceId = serviceMap.get(name);
+            if (!roomServiceLinks.find(link => link[0] === roomId && link[1] === serviceId)) {
+              roomServiceLinks.push([roomId, serviceId]);
+            }
           }
         }
 
@@ -982,7 +988,10 @@ router.post('/bulk-create/:jobId', async (req, res) => {
               ruleMap.set(name, id);
               newRules.push([id, name]);
             }
-            roomRuleLinks.push([roomId, ruleMap.get(name)]);
+            const ruleId = ruleMap.get(name);
+            if (!roomRuleLinks.find(link => link[0] === roomId && link[1] === ruleId)) {
+              roomRuleLinks.push([roomId, ruleId]);
+            }
           }
         }
 
@@ -997,7 +1006,10 @@ router.post('/bulk-create/:jobId', async (req, res) => {
               amenityMap.set(name, id);
               newAmenities.push([id, name]);
             }
-            roomAmenityLinks.push([roomId, amenityMap.get(name)]);
+            const amenityId = amenityMap.get(name);
+            if (!roomAmenityLinks.find(link => link[0] === roomId && link[1] === amenityId)) {
+              roomAmenityLinks.push([roomId, amenityId]);
+            }
           }
         }
 
