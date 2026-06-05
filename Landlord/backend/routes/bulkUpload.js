@@ -661,20 +661,7 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
       locationId = buildings[0].LocationID;
     }
 
-    // Kiểm tra phòng đã tồn tại trong cùng tòa nhà
-    const [existingRoom] = await connection.query(
-      'SELECT RoomID, RoomCode FROM ROOM WHERE RoomCode = ? AND BuildingID = ?',
-      [detail.RoomCode, buildingId]
-    );
-
-    if (existingRoom.length > 0) {
-      await connection.rollback();
-      return res.status(400).json({ 
-        success: false, 
-        message: `Phòng ${detail.RoomCode} đã tồn tại trong tòa nhà này. Vui lòng kiểm tra lại.`,
-        data: { existingRoomId: existingRoom[0].RoomID }
-      });
-    }
+    // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
     // Generate RoomID
     const [lastRoom] = await connection.query(
@@ -963,21 +950,7 @@ router.post('/bulk-create/:jobId', async (req, res) => {
           continue;
         }
 
-        // Kiểm tra phòng đã tồn tại trong cùng tòa nhà
-        const [existingRoom] = await connection.query(
-          'SELECT RoomID, RoomCode FROM ROOM WHERE RoomCode = ? AND BuildingID = ?',
-          [detail.RoomCode, buildingId]
-        );
-
-        if (existingRoom.length > 0) {
-          await connection.query(
-            'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
-            ['failed', `Phòng ${detail.RoomCode} đã tồn tại trong tòa nhà`, detail.UploadDetailID]
-          );
-          console.log(`[BULK CREATE] Skipped duplicate: ${detail.RoomCode}`);
-          failedCount++;
-          continue;
-        }
+        // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
         console.log(`[BULK CREATE] Processing: ${detail.RoomCode}`);
 
