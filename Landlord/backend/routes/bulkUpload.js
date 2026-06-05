@@ -828,14 +828,15 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
   }
 });
 
-// Bulk create rooms from upload job - OPTIMIZED VERSION
+// Bulk create rooms from upload job
 router.post('/bulk-create/:jobId', async (req, res) => {
-  const startTime = Date.now();
   const connection = await db.getConnection();
   
   try {
     await connection.beginTransaction();
-    console.log('[BULK CREATE OPTIMIZED] Starting for jobId:', req.params.jobId);
+
+    console.log('[BULK CREATE] Starting for jobId:', req.params.jobId);
+    console.log('[BULK CREATE] Account ID:', req.user.accountId);
 
     const [landlords] = await connection.query(
       'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
@@ -844,25 +845,51 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     if (landlords.length === 0) {
       await connection.rollback();
+      console.error('[BULK CREATE] Landlord not found for account:', req.user.accountId);
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chủ nhà' });
     }
 
     const landlordId = landlords[0].LandlordID;
+    console.log('[BULK CREATE] LandlordID:', landlordId);
 
-    // Get job with building info in single query
-    const [jobs] = await connection.query(`
-      SELECT uj.*, b.LocationID 
-      FROM UPLOAD_JOB uj 
-      JOIN BUILDING b ON uj.BuildingID = b.BuildingID 
-      WHERE uj.UploadJobID = ? AND uj.LandlordID = ?
-    `, [req.params.jobId, landlordId]);
+    // Get upload job
+    const [jobs] = await connection.query(
+      'SELECT * FROM UPLOAD_JOB WHERE UploadJobID = ? AND LandlordID = ?',
+      [req.params.jobId, landlordId]
+    );
 
     if (jobs.length === 0) {
       await connection.rollback();
+      console.error('[BULK CREATE] Job not found:', req.params.jobId);
       return res.status(404).json({ success: false, message: 'Không tìm thấy job' });
     }
 
-    const { BuildingID: buildingId, LocationID: locationId } = jobs[0];
+    console.log('[BULK CREATE] Job found:', jobs[0].UploadJobID);
+
+    // Get building from upload job
+    const [jobInfo] = await connection.query(
+      'SELECT BuildingID FROM UPLOAD_JOB WHERE UploadJobID = ? AND LandlordID = ?',
+      [req.params.jobId, landlordId]
+    );
+
+    if (jobInfo.length === 0 || !jobInfo[0].BuildingID) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Không tìm thấy thông tin tòa nhà' });
+    }
+
+    const buildingId = jobInfo[0].BuildingID;
+
+    const [buildings] = await connection.query(
+      'SELECT BuildingID, LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [buildingId, landlordId]
+    );
+
+    if (buildings.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Không tìm thấy tòa nhà' });
+    }
+
+    const defaultLocationId = buildings[0].LocationID;
 
     // Get pending details
     const [details] = await connection.query(
@@ -870,227 +897,230 @@ router.post('/bulk-create/:jobId', async (req, res) => {
       [req.params.jobId, 'pending']
     );
 
+    console.log('[BULK CREATE] Found pending details:', details.length);
+    
+    // Debug: Check all details regardless of status
+    const [allDetails] = await connection.query(
+      'SELECT Status, COUNT(*) as count FROM UPLOAD_DETAIL WHERE UploadJobID = ? GROUP BY Status',
+      [req.params.jobId]
+    );
+    console.log('[BULK CREATE] All details by status:', allDetails);
+
     if (details.length === 0) {
+      // Log more debug info
+      const [allJobDetails] = await connection.query(
+        'SELECT UploadDetailID, Status, RoomCode, ErrorMessage FROM UPLOAD_DETAIL WHERE UploadJobID = ?',
+        [req.params.jobId]
+      );
+      console.error('[BULK CREATE] No pending details found');
+      console.error('[BULK CREATE] All details for this job:', JSON.stringify(allJobDetails, null, 2));
+      
       await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Không có phòng nào để tạo' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Không có phòng nào để tạo. Có thể đã tạo hết rồi.',
+        debug: {
+          jobId: req.params.jobId,
+          totalDetails: allJobDetails.length,
+          statusBreakdown: allJobDetails.reduce((acc, d) => {
+            acc[d.Status] = (acc[d.Status] || 0) + 1;
+            return acc;
+          }, {})
+        }
+      });
     }
 
-    console.log('[OPTIMIZED] Processing', details.length, 'rooms');
+    let successCount = 0;
+    let failedCount = 0;
+    const rooms = [];
 
     await connection.query(
       'UPDATE UPLOAD_JOB SET Status = ? WHERE UploadJobID = ?',
       ['processing', req.params.jobId]
     );
 
-    // Pre-fetch all existing items
-    console.log('[OPTIMIZED] Pre-fetching existing items...');
-    const [existingFurniture] = await connection.query('SELECT FurnitureID, Name FROM FURNITURE');
-    const [existingServices] = await connection.query('SELECT ServiceID, Name FROM SERVICE');
-    const [existingRules] = await connection.query('SELECT RuleID, Name FROM RULE');
-    const [existingAmenities] = await connection.query('SELECT AmenityID, Name FROM AMENITY');
-
-    const furnitureMap = new Map(existingFurniture.map(f => [f.Name, f.FurnitureID]));
-    const serviceMap = new Map(existingServices.map(s => [s.Name, s.ServiceID]));
-    const ruleMap = new Map(existingRules.map(r => [r.Name, r.RuleID]));
-    const amenityMap = new Map(existingAmenities.map(a => [a.Name, a.AmenityID]));
-
-    let maxFurnitureId = existingFurniture.length > 0 ? Math.max(...existingFurniture.map(f => parseInt(f.FurnitureID.substring(3)))) : 0;
-    let maxServiceId = existingServices.length > 0 ? Math.max(...existingServices.map(s => parseInt(s.ServiceID.substring(3)))) : 0;
-    let maxRuleId = existingRules.length > 0 ? Math.max(...existingRules.map(r => parseInt(r.RuleID.substring(3)))) : 0;
-    let maxAmenityId = existingAmenities.length > 0 ? Math.max(...existingAmenities.map(a => parseInt(a.AmenityID.substring(2)))) : 0;
-
-    const [lastRoom] = await connection.query('SELECT RoomID FROM ROOM ORDER BY RoomID DESC LIMIT 1');
-    let roomIdCounter = lastRoom.length > 0 ? parseInt(lastRoom[0].RoomID.substring(3)) : 0;
-
-    // Prepare batch data
-    console.log('[OPTIMIZED] Preparing batch data...');
-    const roomBatch = [];
-    const newFurniture = [];
-    const newServices = [];
-    const newRules = [];
-    const newAmenities = [];
-    const roomFurnitureLinks = [];
-    const roomServiceLinks = [];
-    const roomRuleLinks = [];
-    const roomAmenityLinks = [];
-    const updateDetailQueries = [];
-    const rooms = [];
-
-    let successCount = 0;
-    let failedCount = 0;
-
     for (const detail of details) {
       try {
         if (!detail.RoomCode) {
+          await connection.query(
+            'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
+            ['failed', 'Thiếu mã phòng', detail.UploadDetailID]
+          );
           failedCount++;
-          updateDetailQueries.push({
-            query: 'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
-            params: ['failed', 'Thiếu mã phòng', detail.UploadDetailID]
-          });
           continue;
         }
 
-        roomIdCounter++;
-        const roomId = 'ROM' + String(roomIdCounter).padStart(5, '0');
+        // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
-        roomBatch.push([
-          roomId, landlordId, buildingId, locationId, detail.RoomCode, 
-          detail.RoomType || 'Phòng trọ',
-          detail.Area || 20, detail.Price || 0, detail.MaxPeople || 1, 
-          detail.Description || '',
+        console.log(`[BULK CREATE] Processing: ${detail.RoomCode}`);
+
+        // Find or create location - use building's location
+        let locationId = defaultLocationId;
+
+        // Generate RoomID
+        const [lastRoom] = await connection.query(
+          'SELECT RoomID FROM ROOM ORDER BY RoomID DESC LIMIT 1'
+        );
+        
+        let roomId;
+        if (lastRoom.length > 0) {
+          const lastId = parseInt(lastRoom[0].RoomID.substring(3));
+          roomId = 'ROM' + String(lastId + 1).padStart(5, '0');
+        } else {
+          roomId = 'ROM00001';
+        }
+
+        await connection.query(`
+          INSERT INTO ROOM (
+            RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
+            MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, Status, DraftStatus, CreatedAt, UpdatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
+        `, [
+          roomId, landlordId, buildingId, locationId, detail.RoomCode, detail.RoomType,
+          detail.Area, detail.Price || 0, detail.MaxPeople || 1, detail.Description,
           detail.Furniture || '', detail.Amenities || '', detail.Service || '', detail.Rules || '', detail.FloorType || ''
         ]);
 
-        // Process Furniture
+        // Insert into relational tables
+        // 1. Furniture
         if (detail.Furniture) {
-          const items = detail.Furniture.split(',').map(f => f.trim()).filter(f => f);
-          for (const item of items) {
-            const name = item.length > 100 ? item.substring(0, 97) + '...' : item;
-            if (!furnitureMap.has(name)) {
-              maxFurnitureId++;
-              const id = 'FUR' + String(maxFurnitureId).padStart(7, '0');
-              furnitureMap.set(name, id);
-              newFurniture.push([id, name]);
+          const furnitureItems = detail.Furniture.split(',').map(f => f.trim()).filter(f => f);
+          for (const item of furnitureItems) {
+            const furnitureName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+            const [existingFurniture] = await connection.query(
+              'SELECT FurnitureID FROM FURNITURE WHERE Name = ?', [furnitureName]
+            );
+            let furnitureId;
+            if (existingFurniture.length > 0) {
+              furnitureId = existingFurniture[0].FurnitureID;
+            } else {
+              const [lastFurniture] = await connection.query(
+                'SELECT FurnitureID FROM FURNITURE ORDER BY FurnitureID DESC LIMIT 1'
+              );
+              const lastId = lastFurniture.length > 0 ? parseInt(lastFurniture[0].FurnitureID.substring(3)) : 0;
+              furnitureId = 'FUR' + String(lastId + 1).padStart(7, '0');
+              await connection.query(
+                'INSERT INTO FURNITURE (FurnitureID, Name, CreatedAt) VALUES (?, ?, NOW())',
+                [furnitureId, furnitureName]
+              );
             }
-            const furnitureId = furnitureMap.get(name);
-            if (!roomFurnitureLinks.find(link => link[0] === roomId && link[1] === furnitureId)) {
-              roomFurnitureLinks.push([roomId, furnitureId]);
-            }
+            await connection.query(
+              'INSERT IGNORE INTO ROOM_FURNITURE (RoomID, FurnitureID) VALUES (?, ?)',
+              [roomId, furnitureId]
+            );
           }
         }
 
-        // Process Services
+        // 2. Service
         if (detail.Service) {
-          const items = detail.Service.split(',').map(s => s.trim()).filter(s => s);
-          for (const item of items) {
-            const name = item.length > 100 ? item.substring(0, 97) + '...' : item;
-            if (!serviceMap.has(name)) {
-              maxServiceId++;
-              const id = 'SRV' + String(maxServiceId).padStart(7, '0');
-              serviceMap.set(name, id);
-              newServices.push([id, name]);
+          const serviceItems = detail.Service.split(',').map(s => s.trim()).filter(s => s);
+          for (const item of serviceItems) {
+            const serviceName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+            const [existingService] = await connection.query(
+              'SELECT ServiceID FROM SERVICE WHERE Name = ?', [serviceName]
+            );
+            let serviceId;
+            if (existingService.length > 0) {
+              serviceId = existingService[0].ServiceID;
+            } else {
+              const [lastService] = await connection.query(
+                'SELECT ServiceID FROM SERVICE ORDER BY ServiceID DESC LIMIT 1'
+              );
+              const lastId = lastService.length > 0 ? parseInt(lastService[0].ServiceID.substring(3)) : 0;
+              serviceId = 'SRV' + String(lastId + 1).padStart(7, '0');
+              await connection.query(
+                'INSERT INTO SERVICE (ServiceID, Name, CreatedAt) VALUES (?, ?, NOW())',
+                [serviceId, serviceName]
+              );
             }
-            const serviceId = serviceMap.get(name);
-            if (!roomServiceLinks.find(link => link[0] === roomId && link[1] === serviceId)) {
-              roomServiceLinks.push([roomId, serviceId]);
-            }
+            await connection.query(
+              'INSERT IGNORE INTO ROOM_SERVICE (RoomID, ServiceID) VALUES (?, ?)',
+              [roomId, serviceId]
+            );
           }
         }
 
-        // Process Rules
+        // 3. Rules
         if (detail.Rules) {
-          const items = detail.Rules.split(',').map(r => r.trim()).filter(r => r);
-          for (const item of items) {
-            const name = item.length > 100 ? item.substring(0, 97) + '...' : item;
-            if (!ruleMap.has(name)) {
-              maxRuleId++;
-              const id = 'RUL' + String(maxRuleId).padStart(7, '0');
-              ruleMap.set(name, id);
-              newRules.push([id, name]);
+          const ruleItems = detail.Rules.split(',').map(r => r.trim()).filter(r => r);
+          for (const item of ruleItems) {
+            const ruleName = item.length > 100 ? item.substring(0, 97) + '...' : item;
+            const [existingRule] = await connection.query(
+              'SELECT RuleID FROM RULE WHERE Name = ?', [ruleName]
+            );
+            let ruleId;
+            if (existingRule.length > 0) {
+              ruleId = existingRule[0].RuleID;
+            } else {
+              const [lastRule] = await connection.query(
+                'SELECT RuleID FROM RULE ORDER BY RuleID DESC LIMIT 1'
+              );
+              const lastId = lastRule.length > 0 ? parseInt(lastRule[0].RuleID.substring(3)) : 0;
+              ruleId = 'RUL' + String(lastId + 1).padStart(7, '0');
+              await connection.query(
+                'INSERT INTO RULE (RuleID, Name, CreatedAt) VALUES (?, ?, NOW())',
+                [ruleId, ruleName]
+              );
             }
-            const ruleId = ruleMap.get(name);
-            if (!roomRuleLinks.find(link => link[0] === roomId && link[1] === ruleId)) {
-              roomRuleLinks.push([roomId, ruleId]);
-            }
+            await connection.query(
+              'INSERT IGNORE INTO ROOM_RULE (RoomID, RuleID) VALUES (?, ?)',
+              [roomId, ruleId]
+            );
           }
         }
 
-        // Process Amenities
+        // 4. Amenities
         if (detail.Amenities) {
-          const items = detail.Amenities.split(',').map(a => a.trim()).filter(a => a);
-          for (const item of items) {
-            const name = item.length > 50 ? item.substring(0, 47) + '...' : item;
-            if (!amenityMap.has(name)) {
-              maxAmenityId++;
-              const id = 'AM' + String(maxAmenityId).padStart(3, '0');
-              amenityMap.set(name, id);
-              newAmenities.push([id, name]);
+          const amenityItems = detail.Amenities.split(',').map(a => a.trim()).filter(a => a);
+          for (const item of amenityItems) {
+            const amenityName = item.length > 50 ? item.substring(0, 47) + '...' : item;
+            const [existingAmenity] = await connection.query(
+              'SELECT AmenityID FROM AMENITY WHERE Name = ?', [amenityName]
+            );
+            let amenityId;
+            if (existingAmenity.length > 0) {
+              amenityId = existingAmenity[0].AmenityID;
+            } else {
+              const [lastAmenity] = await connection.query(
+                'SELECT AmenityID FROM AMENITY ORDER BY AmenityID DESC LIMIT 1'
+              );
+              const lastId = lastAmenity.length > 0 ? parseInt(lastAmenity[0].AmenityID.substring(2)) : 0;
+              amenityId = 'AM' + String(lastId + 1).padStart(3, '0');
+              await connection.query(
+                'INSERT INTO AMENITY (AmenityID, Name) VALUES (?, ?)',
+                [amenityId, amenityName]
+              );
             }
-            const amenityId = amenityMap.get(name);
-            if (!roomAmenityLinks.find(link => link[0] === roomId && link[1] === amenityId)) {
-              roomAmenityLinks.push([roomId, amenityId]);
-            }
+            await connection.query(
+              'INSERT IGNORE INTO ROOM_AMENITY (RoomID, AmenityID) VALUES (?, ?)',
+              [roomId, amenityId]
+            );
           }
         }
 
-        updateDetailQueries.push({
-          query: 'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ? WHERE UploadDetailID = ?',
-          params: ['success', roomId, detail.UploadDetailID]
-        });
+        await connection.query(
+          'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ? WHERE UploadDetailID = ?',
+          ['success', roomId, detail.UploadDetailID]
+        );
 
+        console.log(`[BULK CREATE] Successfully created ${detail.RoomCode} -> ${roomId}`);
         rooms.push({ roomId, roomCode: detail.RoomCode });
         successCount++;
-
       } catch (error) {
-        console.error(`[PREP ERROR] ${detail.RoomCode}:`, error.message);
-        failedCount++;
-        updateDetailQueries.push({
-          query: 'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
-          params: ['failed', error.message, detail.UploadDetailID]
+        console.error(`[BULK CREATE ERROR] RoomCode: ${detail.RoomCode}`);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          errno: error.errno,
+          sqlState: error.sqlState,
+          sqlMessage: error.sqlMessage
         });
+        await connection.query(
+          'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
+          ['failed', error.message + (error.sqlMessage ? ` | ${error.sqlMessage}` : ''), detail.UploadDetailID]
+        );
+        failedCount++;
       }
-    }
-
-    // Execute batch inserts
-    console.log('[OPTIMIZED] Executing batch inserts...');
-    const now = new Date();
-    
-    if (newFurniture.length > 0) {
-      await connection.query(
-        'INSERT INTO FURNITURE (FurnitureID, Name, CreatedAt) VALUES ?',
-        [newFurniture.map(f => [...f, now])]
-      );
-    }
-
-    if (newServices.length > 0) {
-      await connection.query(
-        'INSERT INTO SERVICE (ServiceID, Name, CreatedAt) VALUES ?',
-        [newServices.map(s => [...s, now])]
-      );
-    }
-
-    if (newRules.length > 0) {
-      await connection.query(
-        'INSERT INTO RULE (RuleID, Name, CreatedAt) VALUES ?',
-        [newRules.map(r => [...r, now])]
-      );
-    }
-
-    if (newAmenities.length > 0) {
-      await connection.query(
-        'INSERT INTO AMENITY (AmenityID, Name) VALUES ?',
-        [newAmenities]
-      );
-    }
-
-    if (roomBatch.length > 0) {
-      await connection.query(`
-        INSERT INTO ROOM (
-          RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
-          MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, 
-          Status, DraftStatus, CreatedAt, UpdatedAt
-        ) VALUES ?
-      `, [roomBatch.map(r => [...r, 'available', 'draft', now, now])]);
-    }
-
-    if (roomFurnitureLinks.length > 0) {
-      await connection.query('INSERT IGNORE INTO ROOM_FURNITURE (RoomID, FurnitureID) VALUES ?', [roomFurnitureLinks]);
-    }
-
-    if (roomServiceLinks.length > 0) {
-      await connection.query('INSERT IGNORE INTO ROOM_SERVICE (RoomID, ServiceID) VALUES ?', [roomServiceLinks]);
-    }
-
-    if (roomRuleLinks.length > 0) {
-      await connection.query('INSERT IGNORE INTO ROOM_RULE (RoomID, RuleID) VALUES ?', [roomRuleLinks]);
-    }
-
-    if (roomAmenityLinks.length > 0) {
-      await connection.query('INSERT IGNORE INTO ROOM_AMENITY (RoomID, AmenityID) VALUES ?', [roomAmenityLinks]);
-    }
-
-    for (const update of updateDetailQueries) {
-      await connection.query(update.query, update.params);
     }
 
     await connection.query(
@@ -1100,29 +1130,30 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
     await connection.commit();
 
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[OPTIMIZED] Completed in ${duration}s (${(successCount / parseFloat(duration)).toFixed(1)} rooms/sec)`);
-
     res.json({
       success: true,
       message: `Hoàn thành: ${successCount} thành công, ${failedCount} thất bại`,
-      data: { 
-        successCount, 
-        failedCount, 
-        rooms,
-        performance: {
-          duration: `${duration}s`,
-          roomsPerSecond: (successCount / parseFloat(duration)).toFixed(1)
-        }
-      }
+      data: { successCount, failedCount, rooms }
     });
-
   } catch (error) {
     await connection.rollback();
-    console.error('[OPTIMIZED] Bulk create error:', error);
+    console.error('Bulk create rooms error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      sql: error.sql
+    });
     res.status(500).json({ 
       success: false, 
-      message: 'Lỗi khi tạo phòng: ' + error.message
+      message: 'Lỗi khi tạo phòng',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      debug: process.env.NODE_ENV === 'development' ? {
+        sqlState: error.sqlState,
+        sqlMessage: error.sqlMessage
+      } : undefined
     });
   } finally {
     connection.release();
