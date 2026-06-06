@@ -614,6 +614,101 @@ router.post('/:id/images', authMiddleware, upload.array('images', 10), async (re
   }
 });
 
+// Update room images (replace image list)
+router.put('/:id/images', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    const roomId = req.params.id;
+    const { images } = req.body; // Comma-separated URLs or empty string
+    
+    await connection.beginTransaction();
+
+    // Get LandlordID from AccountID
+    const [landlords] = await connection.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin chủ nhà'
+      });
+    }
+
+    const landlordId = landlords[0].LandlordID;
+
+    // Check if room belongs to landlord
+    const [rooms] = await connection.query(
+      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ?',
+      [roomId, landlordId]
+    );
+
+    if (rooms.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy phòng'
+      });
+    }
+
+    // Get current images from database
+    const [currentImages] = await connection.query(
+      'SELECT ImageURL, PublicID FROM ROOM_IMAGE WHERE RoomID = ?',
+      [roomId]
+    );
+
+    // Parse new image URLs
+    const newImageUrls = images ? images.split(',').map(url => url.trim()).filter(url => url) : [];
+    const currentImageUrls = currentImages.map(img => img.ImageURL);
+
+    // Find images to delete (in DB but not in new list)
+    const imagesToDelete = currentImages.filter(img => !newImageUrls.includes(img.ImageURL));
+
+    // Delete removed images from Cloudinary and database
+    for (const image of imagesToDelete) {
+      if (image.PublicID) {
+        try {
+          await cloudinaryService.deleteFile(image.PublicID, 'image');
+        } catch (cloudinaryError) {
+          console.error('Failed to delete from Cloudinary:', cloudinaryError.message);
+        }
+      }
+      await connection.query(
+        'DELETE FROM ROOM_IMAGE WHERE RoomID = ? AND ImageURL = ?',
+        [roomId, image.ImageURL]
+      );
+    }
+
+    // Update display order for remaining images
+    for (let i = 0; i < newImageUrls.length; i++) {
+      const url = newImageUrls[i];
+      await connection.query(
+        'UPDATE ROOM_IMAGE SET DisplayOrder = ?, IsPrimary = ? WHERE RoomID = ? AND ImageURL = ?',
+        [i + 1, i === 0, roomId, url]
+      );
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Đã cập nhật danh sách ảnh phòng'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Update images error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server: ' + error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 // Delete room image
 router.delete('/:id/images/:imageId', authMiddleware, async (req, res) => {
   try {

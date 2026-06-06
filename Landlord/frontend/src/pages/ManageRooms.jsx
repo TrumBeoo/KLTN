@@ -339,8 +339,16 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
   }
 
   const handleRemoveImage = (index) => {
+    const imageToRemove = images[index]
     setImages(prev => prev.filter((_, i) => i !== index))
-    setImageFiles(prev => prev.filter((_, i) => i !== index))
+    
+    // Only remove from imageFiles if it's a new file (has 'file' property)
+    if (imageToRemove.file) {
+      const fileIndex = imageFiles.findIndex(f => f === imageToRemove.file)
+      if (fileIndex !== -1) {
+        setImageFiles(prev => prev.filter((_, i) => i !== fileIndex))
+      }
+    }
   }
 
   const handleSubmit = async () => {
@@ -395,7 +403,31 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         }
       }
       
-      // Upload images if any
+      // Handle image updates for existing rooms
+      if (room && roomId) {
+        // Get current image URLs (excluding new files)
+        const existingImageUrls = images
+          .filter(img => !img.file)
+          .map(img => img.url)
+          .join(',')
+        
+        // Update room images in database
+        const updateImagesResponse = await fetch(`${API_URL}/rooms/${roomId}/images`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ images: existingImageUrls })
+        })
+        
+        const updateImagesData = await updateImagesResponse.json()
+        if (!updateImagesData.success) {
+          showError('Lỗi!', 'Cập nhật danh sách ảnh thất bại: ' + updateImagesData.message)
+        }
+      }
+      
+      // Upload new images if any
       if (imageFiles.length > 0 && roomId) {
         const formDataImg = new FormData()
         imageFiles.forEach(file => {
@@ -414,7 +446,7 @@ const RoomForm = ({ open, onClose, room = null, buildings = [], onSubmit }) => {
         } else {
           showSuccess('Thành công!', `Đã lưu phòng và upload ${imageFiles.length} ảnh`)
         }
-      } else {
+      } else if (!imageFiles.length) {
         showSuccess('Thành công!', 'Đã lưu phòng')
       }
       
