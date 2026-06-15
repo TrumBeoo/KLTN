@@ -37,7 +37,9 @@ import {
   Menu as MenuIcon,
   FiberManualRecord as DotIcon,
   Delete as DeleteIcon,
-  DeleteSweep as DeleteAllIcon
+  DeleteSweep as DeleteAllIcon,
+  People as PeopleIcon,
+  AccessTime as AccessTimeIcon
 } from '@mui/icons-material'
 
 import notificationService from '../services/notificationService'
@@ -50,7 +52,9 @@ const menuItems = [
   { label: 'Chung cư', icon: ApartmentIcon, path: '/manage-buildings' },
   { label: 'Phòng & Tin đăng', icon: DoorIcon, path: '/manage-rooms' },
   { label: 'Lịch xem phòng', icon: CalendarIcon, path: '/viewing-schedules' },
-  { label: 'Hợp đồng', icon: ContractIcon, path: '/contracts' }
+  { label: 'Hợp đồng', icon: ContractIcon, path: '/contracts' },
+  { label: 'Người thuê', icon: PeopleIcon, path: '/tenants' },
+  { label: 'Nhắc hết hạn HĐ', icon: AccessTimeIcon, path: '/contract-notifications' }
 ]
 
 const bottomMenuItems = [
@@ -379,6 +383,8 @@ export default function LandlordLayout() {
     '/manage-rooms': 'Quản lý phòng & Tin đăng',
     '/viewing-schedules': 'Lịch xem phòng',
     '/contracts': 'Hợp đồng',
+    '/tenants': 'Quản lý người thuê',
+    '/contract-notifications': 'Nhắc hết hạn hợp đồng',
     '/profile': 'Hồ sơ của tôi',
     '/reports': 'Báo cáo'
   }

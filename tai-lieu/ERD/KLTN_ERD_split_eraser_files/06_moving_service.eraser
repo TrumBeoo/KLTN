@@ -1,0 +1,140 @@
+// ERD 06 - Moving Service Marketplace
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Account {
+  AccountID string pk
+  Username string
+  Password string
+  GoogleID string
+  Role string
+  Status string
+  AvatarURL string
+  AvatarPublicID string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Tenant {
+  TenantID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Gender string
+  Birthday datetime
+  AvatarURL string
+  AvatarPublicID string
+  Bio string
+  University string
+  Job string
+  Phone string
+  Email string
+  BudgetMin decimal
+  BudgetMax decimal
+  PreferredDistrict string
+  Latitude float
+  Longitude float
+  IsVerified boolean
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+MovingProvider {
+  ProviderID string pk
+  AccountID string fk
+  Name string
+  Phone string
+  Email string
+  Address string
+  Rating decimal
+  TotalReviews int
+  VerifiedStatus string
+  VerifiedAt datetime
+  VerifiedBy string
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+ServiceCategory {
+  CategoryID string pk
+  Name string
+  Description string
+  Icon string
+  Thumbnail string
+  SortOrder int
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+MovingService {
+  ServiceID string pk
+  ProviderID string fk
+  CategoryID string fk
+  Name string
+  Description string
+  Thumbnail string
+  BasePrice decimal
+  PricePerKm decimal
+  FreeDistanceKm float
+  MaxDistanceKm float
+  ExtraFloorPrice decimal
+  OvertimePrice decimal
+  VehicleType string
+  EstimatedDuration int
+  MaxItems int
+  Features string
+  IsPopular boolean
+  IsActive boolean
+  SortOrder int
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+MovingBooking {
+  BookingID string pk
+  TenantID string fk
+  ServiceID string fk
+  PickupAddress string
+  DestinationAddress string
+  PickupLatitude float
+  PickupLongitude float
+  DestinationLatitude float
+  DestinationLongitude float
+  DistanceKm float
+  MovingDate datetime
+  MovingTime datetime
+  FloorFrom int
+  FloorTo int
+  HasElevator boolean
+  Note string
+  BasePriceSnapshot decimal
+  DistancePriceSnapshot decimal
+  ExtraFeeSnapshot decimal
+  FinalPrice decimal
+  Status string
+  ActualStartTime datetime
+  ActualEndTime datetime
+  StaffNote string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+MovingReview {
+  ReviewID string pk
+  BookingID string fk
+  TenantID string fk
+  Rating int
+  Comment string
+  CreatedAt datetime
+}
+
+// Relationships
+Account.AccountID < MovingProvider.AccountID
+MovingProvider.ProviderID < MovingService.ProviderID
+ServiceCategory.CategoryID < MovingService.CategoryID
+Tenant.TenantID < MovingBooking.TenantID
+MovingService.ServiceID < MovingBooking.ServiceID
+MovingBooking.BookingID < MovingReview.BookingID
+Tenant.TenantID < MovingReview.TenantID

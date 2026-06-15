@@ -116,6 +116,7 @@ const HeroSearchBar = styled(Box)(({ theme }) => ({
     flexDirection: 'column',
     borderRadius: '8px',
     boxShadow: 'rgba(0,0,0,0.15) 0px 4px 16px',
+    gap: 0,
   },
 }))
 
@@ -152,12 +153,12 @@ const SearchSegment = styled(Box)(({ theme }) => ({
     backgroundColor: '#f8f9fa',
   },
   [theme.breakpoints.down('md')]: {
-    height: '56px',
-    padding: '0 16px',
+    height: '60px',
+    padding: '12px 16px',
   },
   [theme.breakpoints.down('sm')]: {
-    height: '52px',
-    padding: '0 12px',
+    height: '56px',
+    padding: '10px 16px',
   },
 }))
 
@@ -519,13 +520,18 @@ export default function HomePage() {
                 '&::after': { display: { xs: 'block', md: 'block' } }
               }}
             >
-              <LocationIcon sx={{ fontSize: { xs: 18, sm: 20, md: 24 }, color: T.blue, mr: { xs: 1, md: 1.5 }, flexShrink: 0 }} />
+              <LocationIcon sx={{ 
+                fontSize: { xs: 20, sm: 22, md: 24 }, 
+                color: T.blue, 
+                mr: { xs: 1.5, md: 1.5 }, 
+                flexShrink: 0 
+              }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.688rem', sm: '0.714rem', md: '0.75rem' }, 
+                  fontSize: { xs: '0.75rem', sm: '0.786rem', md: '0.75rem' }, 
                   color: T.muted, 
-                  lineHeight: 1.2, 
-                  mb: 0.25, 
+                  lineHeight: 1.3, 
+                  mb: { xs: 0.5, md: 0.25 }, 
                   fontWeight: 500,
                   letterSpacing: '0.01em'
                 }}>Địa điểm</Typography>
@@ -543,7 +549,7 @@ export default function HomePage() {
                         ...params.InputProps,
                         disableUnderline: true,
                         sx: { 
-                          fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' }, 
+                          fontSize: { xs: '0.929rem', sm: '0.929rem', md: '1rem' }, 
                           fontWeight: 600, 
                           color: T.text,
                           '& input': {
@@ -571,13 +577,18 @@ export default function HomePage() {
                 '&::after': { display: { xs: 'block', md: 'block' } }
               }}
             >
-              <CalendarIcon sx={{ fontSize: { xs: 18, sm: 20, md: 24 }, color: T.blue, mr: { xs: 1, md: 1.5 }, flexShrink: 0 }} />
+              <CalendarIcon sx={{ 
+                fontSize: { xs: 20, sm: 22, md: 24 }, 
+                color: T.blue, 
+                mr: { xs: 1.5, md: 1.5 }, 
+                flexShrink: 0 
+              }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.688rem', sm: '0.714rem', md: '0.75rem' }, 
+                  fontSize: { xs: '0.75rem', sm: '0.786rem', md: '0.75rem' }, 
                   color: T.muted, 
-                  lineHeight: 1.2, 
-                  mb: 0.25, 
+                  lineHeight: 1.3, 
+                  mb: { xs: 0.5, md: 0.25 }, 
                   fontWeight: 500,
                   letterSpacing: '0.01em'
                 }}>Xem phòng</Typography>
@@ -590,7 +601,7 @@ export default function HomePage() {
                   InputProps={{ 
                     disableUnderline: true, 
                     sx: { 
-                      fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' }, 
+                      fontSize: { xs: '0.929rem', sm: '0.929rem', md: '1rem' }, 
                       fontWeight: 600, 
                       color: T.text,
                       '& input': {
@@ -611,18 +622,23 @@ export default function HomePage() {
               }} 
               onClick={e => setGuestAnchor(e.currentTarget)}
             >
-              <PeopleIcon sx={{ fontSize: { xs: 18, sm: 20, md: 24 }, color: T.blue, mr: { xs: 1, md: 1.5 }, flexShrink: 0 }} />
+              <PeopleIcon sx={{ 
+                fontSize: { xs: 20, sm: 22, md: 24 }, 
+                color: T.blue, 
+                mr: { xs: 1.5, md: 1.5 }, 
+                flexShrink: 0 
+              }} />
               <Box sx={{ flex: 1 }}>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.688rem', sm: '0.714rem', md: '0.75rem' }, 
+                  fontSize: { xs: '0.75rem', sm: '0.786rem', md: '0.75rem' }, 
                   color: T.muted, 
-                  lineHeight: 1.2, 
-                  mb: 0.25, 
+                  lineHeight: 1.3, 
+                  mb: { xs: 0.5, md: 0.25 }, 
                   fontWeight: 500,
                   letterSpacing: '0.01em'
                 }}>Số người</Typography>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.857rem', sm: '0.929rem', md: '1rem' }, 
+                  fontSize: { xs: '0.929rem', sm: '0.929rem', md: '1rem' }, 
                   color: T.text, 
                   fontWeight: 600 
                 }}>{guestCount} người</Typography>
@@ -642,10 +658,10 @@ export default function HomePage() {
               sx={{
                 backgroundColor: T.blue,
                 color: T.white,
-                borderRadius: 0,
+                borderRadius: { xs: 0, md: 0 },
                 px: { xs: 3, sm: 3.5, md: 4 },
-                height: { xs: '52px', sm: '56px', md: '64px' },
-                fontSize: { xs: '0.929rem', sm: '1rem', md: '1rem' },
+                height: { xs: '56px', sm: '56px', md: '64px' },
+                fontSize: { xs: '1rem', sm: '1rem', md: '1rem' },
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,

@@ -1,0 +1,72 @@
+flowchart TD
+    A([Bắt đầu]) --> B[Chủ nhà truy cập]
+    B --> C{Chọn chức năng?}
+    
+    %% Nhánh đăng tin
+    C -- Đăng tin --> D[Chọn phòng cần đăng]
+    D --> E{Phòng đã có tin đăng?}
+    
+    E -- Có --> F[Hiển thị tin đăng hiện tại]
+    F --> G{Chỉnh sửa hay tạo mới?}
+    
+    G -- Chỉnh sửa --> H[Cập nhật tin đăng]
+    G -- Tạo mới --> I[Tạo tin đăng mới]
+    
+    E -- Chưa --> I
+    
+    I --> J[Lấy thông tin từ phòng]
+    J --> J1[Diện tích / Giá]
+    J --> J2[Tiện nghi]
+    J --> J3[Hình ảnh]
+    J --> J4[Vị trí]
+    
+    J1 --> K[Nhập tiêu đề và mô tả]
+    J2 --> K
+    J3 --> K
+    J4 --> K
+    
+    K --> L{Kiểm tra dữ liệu đầy đủ?}
+    
+    L -- Không --> M[Hiển thị lỗi thiếu thông tin]
+    M --> K
+    
+    L -- Có --> N[Xem trước tin đăng]
+    N --> O{Xác nhận đăng?}
+    
+    O -- Không --> K
+    O -- Có --> P[Lưu tin đăng]
+    P --> Q[Đồng bộ trạng thái phòng]
+    Q --> R[Hiển thị tin đăng công khai]
+    R --> Z([Kết thúc])
+    
+    H --> K
+    
+    %% Nhánh quản lý tiện nghi
+    C -- Quản lý tiện nghi --> S{Chọn thao tác?}
+    
+    S -- Thêm tiện nghi --> T[Nhập tên tiện nghi]
+    T --> U[Chọn icon / mô tả]
+    U --> V[Lưu tiện nghi mới]
+    V --> Z
+    
+    S -- Sửa tiện nghi --> W[Chọn tiện nghi cần sửa]
+    W --> X[Cập nhật thông tin]
+    X --> Y[Lưu thay đổi]
+    Y --> Z
+    
+    S -- Xóa tiện nghi --> AA{Tiện nghi có đang dùng?}
+    AA -- Có --> AB[Hiển thị cảnh báo]
+    AB --> AC{Xác nhận xóa?}
+    AC -- Không --> Z
+    AC -- Có --> AD[Gỡ khỏi các phòng]
+    AD --> AE[Xóa tiện nghi]
+    AE --> Z
+    
+    AA -- Không --> AE
+    
+    S -- Gán tiện nghi cho phòng --> AF[Chọn phòng]
+    AF --> AG[Hiển thị danh sách tiện nghi]
+    AG --> AH[Chọn tiện nghi cần gán]
+    AH --> AI[Lưu vào CSDL]
+    AI --> AJ[Cập nhật tin đăng]
+    AJ --> Z

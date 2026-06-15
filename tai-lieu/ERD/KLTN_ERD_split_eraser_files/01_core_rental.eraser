@@ -1,0 +1,143 @@
+// ERD 01 - Core Rental / Account / Contract
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Account {
+  AccountID string pk
+  Username string
+  Password string
+  GoogleID string
+  Role string
+  Status string
+  AvatarURL string
+  AvatarPublicID string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Landlord {
+  LandlordID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Phone string
+  Email string
+  Address string
+  City string
+  District string
+  Ward string
+  AvatarURL string
+  AvatarPublicID string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Tenant {
+  TenantID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Gender string
+  Birthday datetime
+  AvatarURL string
+  AvatarPublicID string
+  Bio string
+  University string
+  Job string
+  Phone string
+  Email string
+  BudgetMin decimal
+  BudgetMax decimal
+  PreferredDistrict string
+  Latitude float
+  Longitude float
+  IsVerified boolean
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Location {
+  LocationID string pk
+  City string
+  District string
+  Ward string
+  Street string
+  Address string
+  Latitude decimal
+  Longitude decimal
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Building {
+  BuildingID string pk
+  LandlordID string fk
+  LocationID string fk
+  BuildingName string
+  Address string
+  District string
+  Ward string
+  Floors int
+  NumberRooms int
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Contract {
+  ContractID string pk
+  TenantID string fk
+  RoomID string fk
+  StartDate datetime
+  EndDate datetime
+  Status string
+  TotalPrice decimal
+  Deposit decimal
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Payment {
+  PaymentID string pk
+  ContractID string fk
+  PaymentDate datetime
+  Amount decimal
+  Method string
+  Status string
+}
+
+// Relationships
+Account.AccountID < Landlord.AccountID
+Account.AccountID < Tenant.AccountID
+Landlord.LandlordID < Building.LandlordID
+Location.LocationID < Building.LocationID
+Landlord.LandlordID < Room.LandlordID
+Building.BuildingID < Room.BuildingID
+Location.LocationID < Room.LocationID
+Tenant.TenantID < Contract.TenantID
+Room.RoomID < Contract.RoomID
+Contract.ContractID < Payment.ContractID

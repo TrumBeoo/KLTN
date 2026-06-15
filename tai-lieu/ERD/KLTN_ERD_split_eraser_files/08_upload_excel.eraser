@@ -1,0 +1,117 @@
+// ERD 08 - Bulk Upload / Excel Import
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Landlord {
+  LandlordID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Phone string
+  Email string
+  Address string
+  City string
+  District string
+  Ward string
+  AvatarURL string
+  AvatarPublicID string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Building {
+  BuildingID string pk
+  LandlordID string fk
+  LocationID string fk
+  BuildingName string
+  Address string
+  District string
+  Ward string
+  Floors int
+  NumberRooms int
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Listing {
+  ListingID string pk
+  RoomID string fk
+  LandlordID string fk
+  Title string
+  Description string
+  IsVisible boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+UploadJob {
+  UploadJobID string pk
+  LandlordID string fk
+  Mode string
+  BuildingID string fk
+  FileName string
+  TotalRows int
+  SuccessRows int
+  FailedRows int
+  Status string
+  CreatedAt datetime
+  CompletedAt datetime
+}
+
+UploadDetail {
+  UploadDetailID string pk
+  UploadJobID string fk
+  RowNumber int
+  BuildingName string
+  BuildingID string fk
+  RoomCode string
+  Title string
+  Price decimal
+  Area float
+  MaxPeople int
+  Address string
+  RoomType string
+  Description string
+  Furniture string
+  Amenities string
+  Service string
+  Rules string
+  FloorType string
+  Status string
+  ErrorMessage string
+  RoomID string fk
+  ListingID string fk
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+// Relationships
+Landlord.LandlordID < UploadJob.LandlordID
+Building.BuildingID < UploadJob.BuildingID
+UploadJob.UploadJobID < UploadDetail.UploadJobID
+Building.BuildingID < UploadDetail.BuildingID
+Room.RoomID < UploadDetail.RoomID
+Listing.ListingID < UploadDetail.ListingID

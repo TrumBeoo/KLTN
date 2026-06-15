@@ -1,0 +1,113 @@
+flowchart TB
+    A[Hệ thống quản lý cho thuê chung cư mini]
+
+    %% ===== CẤP 1: CÁC MODULE CHÍNH =====
+    
+    A --> M1[1. Quản lý người dùng]
+    A --> M2[2. Quản lý chung cư và phòng]
+    A --> M3[3. Tự động hóa đăng tin]
+    A --> M4[4. Quản lý tin đăng và tìm kiếm]
+    A --> M5[5. Quản lý lịch xem phòng]
+    A --> M6[6. Quản lý hợp đồng]
+    A --> M7[7. Quản lý thanh toán]
+    A --> M8[8. AI Matching - Tìm bạn ở ghép]
+    A --> M9[9. Quản lý bản đồ và vị trí]
+    A --> M10[10. Quản lý tiện nghi]
+    A --> M11[11. Quản lý đánh giá]
+    A --> M12[12. Quản lý thông báo]
+    A --> M13[13. Báo cáo và thống kê]
+
+    %% ===== CẤP 2: CHI TIẾT MODULE =====
+
+    %% 1. Quản lý người dùng
+    M1 --> M1_1[1.1 Đăng ký tài khoản]
+    M1 --> M1_2[1.2 Đăng nhập]
+    M1 --> M1_3[1.3 Cập nhật thông tin]
+    M1 --> M1_4[1.4 Khóa/Mở tài khoản]
+    M1 --> M1_5[1.5 Phân quyền người dùng]
+
+    %% 2. Quản lý chung cư và phòng
+    M2 --> M2_1[2.1 Khai báo chung cư]
+    M2 --> M2_2[2.2 Thêm phòng]
+    M2 --> M2_3[2.3 Sửa/Xóa phòng]
+    M2 --> M2_4[2.4 Quản lý trạng thái phòng]
+    M2 --> M2_5[2.5 Quản lý hình ảnh phòng]
+
+    %% 3. Tự động hóa đăng tin
+    M3 --> M3_1[3.1 Tải dữ liệu phòng]
+    M3 --> M3_2[3.2 Tự động nhận diện]
+    M3 --> M3_3[3.3 Tạo tin đăng tự động]
+    M3 --> M3_4[3.4 Đồng bộ trạng thái]
+
+    %% 4. Quản lý tin đăng và tìm kiếm
+    M4 --> M4_1[4.1 Hiển thị tin đăng]
+    M4 --> M4_2[4.2 Tìm kiếm và lọc]
+    M4 --> M4_3[4.3 Xem chi tiết phòng]
+    M4 --> M4_4[4.4 Đánh dấu yêu thích]
+
+    %% 5. Quản lý lịch xem phòng
+    M5 --> M5_1[5.1 Đặt lịch xem]
+    M5 --> M5_2[5.2 Duyệt lịch xem]
+    M5 --> M5_3[5.3 Cập nhật trạng thái]
+    M5 --> M5_4[5.4 Gửi thông báo]
+
+    %% 6. Quản lý hợp đồng
+    M6 --> M6_1[6.1 Tạo hợp đồng]
+    M6 --> M6_2[6.2 Kiểm tra điều kiện]
+    M6 --> M6_3[6.3 Cập nhật trạng thái phòng]
+    M6 --> M6_4[6.4 Theo dõi hợp đồng]
+    M6 --> M6_5[6.5 Cảnh báo hết hạn]
+    M6 --> M6_6[6.6 Gia hạn/Kết thúc]
+
+    %% 7. Quản lý thanh toán
+    M7 --> M7_1[7.1 Ghi nhận thanh toán]
+    M7 --> M7_2[7.2 Theo dõi công nợ]
+    M7 --> M7_3[7.3 Nhắc nhở thanh toán]
+    M7 --> M7_4[7.4 Tạo biên nhận]
+
+    %% 8. AI Matching
+    M8 --> M8_1[8.1 Khai báo nhu cầu]
+    M8 --> M8_2[8.2 Tìm kiếm thủ công]
+    M8 --> M8_3[8.3 Gợi ý tự động AI]
+    M8 --> M8_4[8.4 Tính điểm tương thích]
+    M8 --> M8_5[8.5 Hiển thị kết quả]
+
+    %% 9. Quản lý bản đồ
+    M9 --> M9_1[9.1 Gắn vị trí phòng]
+    M9 --> M9_2[9.2 Hiển thị bản đồ]
+    M9 --> M9_3[9.3 Tính khoảng cách]
+    M9 --> M9_4[9.4 Tìm địa điểm xung quanh]
+
+    %% 10. Quản lý tiện nghi
+    M10 --> M10_1[10.1 Thêm tiện nghi]
+    M10 --> M10_2[10.2 Sửa/Xóa tiện nghi]
+    M10 --> M10_3[10.3 Gán tiện nghi cho phòng]
+    M10 --> M10_4[10.4 Lọc phòng theo tiện nghi]
+
+    %% 11. Quản lý đánh giá
+    M11 --> M11_1[11.1 Người thuê đánh giá]
+    M11 --> M11_2[11.2 Xử lý và tổng hợp]
+    M11 --> M11_3[11.3 Hiển thị đánh giá]
+    M11 --> M11_4[11.4 Kiểm duyệt nội dung]
+
+    %% 12. Quản lý thông báo
+    M12 --> M12_1[12.1 Gửi thông báo]
+    M12 --> M12_2[12.2 Quản lý trạng thái]
+    M12 --> M12_3[12.3 Lọc theo loại]
+    M12 --> M12_4[12.4 Đánh dấu đã đọc]
+
+    %% 13. Báo cáo và thống kê
+    M13 --> M13_1[13.1 Thống kê phòng]
+    M13 --> M13_2[13.2 Thống kê doanh thu]
+    M13 --> M13_3[13.3 Thống kê hợp đồng]
+    M13 --> M13_4[13.4 Lịch sử thuê phòng]
+    M13 --> M13_5[13.5 Xuất báo cáo]
+
+    %% ===== STYLING =====
+    classDef module1 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef module2 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef module3 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    
+    class M1,M2,M3,M4,M5 module1
+    class M6,M7,M8,M9 module2
+    class M10,M11,M12,M13 module3

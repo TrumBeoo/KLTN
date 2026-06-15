@@ -1,0 +1,61 @@
+flowchart TB
+    A[Quản lý phòng cho thuê]
+
+    %% Cấp 1
+    A --> B[Thêm phòng]
+    A --> C[Cập nhật phòng]
+    A --> D[Xóa phòng]
+    A --> E[Quản lý trạng thái phòng]
+
+    %% 2.2 Thêm phòng
+    B --> B1[Nhập thông tin phòng]
+    B --> B2[Kiểm tra dữ liệu]
+    B --> B3[Lưu phòng]
+
+    B1 --> B11[Diện tích]
+    B1 --> B12[Giá thuê]
+    B1 --> B13[Loại phòng]
+    B1 --> B14[Số người tối đa]
+    B1 --> B15[Mô tả]
+
+    B2 --> B21[Kiểm tra dữ liệu hợp lệ]
+    B2 --> B22[Kiểm tra trùng lặp]
+
+    B3 --> B31[Gán tiện nghi]
+    B3 --> B32[Thêm hình ảnh]
+    B3 --> B33[Lưu vào CSDL]
+
+    %% 2.3 Cập nhật phòng
+    C --> C1[Chọn phòng cần sửa]
+    C --> C2[Chỉnh sửa thông tin]
+    C --> C3[Cập nhật vào CSDL]
+
+    C2 --> C21[Thông tin cơ bản]
+    C2 --> C22[Tiện nghi]
+    C2 --> C23[Hình ảnh]
+
+    %% 2.4 Xóa phòng
+    D --> D1[Kiểm tra điều kiện xóa]
+    D --> D2[Xác nhận xóa]
+    D --> D3[Xóa khỏi CSDL]
+
+    D1 --> D11[Kiểm tra hợp đồng hiệu lực]
+    D1 --> D12[Hiển thị cảnh báo nếu có]
+
+    D3 --> D31[Xóa tiện nghi liên kết]
+    D3 --> D32[Xóa hình ảnh]
+    D3 --> D33[Xóa tin đăng]
+
+    %% 2.5 Quản lý trạng thái
+    E --> E1[Cập nhật tự động]
+    E --> E2[Cập nhật thủ công]
+    E --> E3[Theo dõi lịch sử]
+
+    E1 --> E11[Dựa trên hợp đồng]
+    E1 --> E12[Dựa trên lịch xem]
+    E1 --> E13[Dựa trên yêu cầu bảo trì]
+
+    E2 --> E21[Trống]
+    E2 --> E22[Đang thuê]
+    E2 --> E23[Đang đặt lịch xem]
+    E2 --> E24[Bảo trì]

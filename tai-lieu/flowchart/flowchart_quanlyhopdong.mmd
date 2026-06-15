@@ -1,0 +1,44 @@
+flowchart TD
+    A([Bắt đầu]) --> B[Chủ nhà chọn phòng]
+    B --> C[Nhập thông tin hợp đồng]
+    
+    C --> C1[Ngày bắt đầu / kết thúc]
+    C --> C2[Tiền cọc / Tổng tiền]
+    C --> C3[Điều khoản hợp đồng]
+    
+    C1 --> D{Kiểm tra phòng có đang thuê?}
+    C2 --> D
+    C3 --> D
+    
+    D -- Đang thuê --> E[Hiển thị cảnh báo]
+    E --> F[Không cho phép tạo]
+    F --> Z([Kết thúc])
+    
+    D -- Trống --> G{Kiểm tra trùng lịch hợp đồng?}
+    
+    G -- Có trùng --> H[Hiển thị lỗi trùng lịch]
+    H --> Z
+    
+    G -- Không trùng --> I[Lưu hợp đồng vào CSDL]
+    I --> J[Cập nhật trạng thái phòng: "Đã cho thuê"]
+    J --> K[Lưu lịch sử hợp đồng]
+    
+    K --> L[Tạo lịch thanh toán định kỳ]
+    L --> M[Gửi thông báo cho người thuê]
+    
+    M --> N{Theo dõi hợp đồng}
+    N --> N1[Kiểm tra hợp đồng sắp hết hạn]
+    
+    N1 --> O{Còn 30 ngày?}
+    O -- Có --> P[Gửi thông báo nhắc nhở]
+    P --> Q{Gia hạn hay kết thúc?}
+    
+    Q -- Gia hạn --> R[Tạo hợp đồng mới / Cập nhật]
+    R --> J
+    
+    Q -- Kết thúc --> S[Đánh dấu hợp đồng "Hết hạn"]
+    S --> T[Cập nhật trạng thái phòng: "Trống"]
+    T --> U[Lưu lịch sử kết thúc]
+    U --> Z
+    
+    O -- Không --> N1

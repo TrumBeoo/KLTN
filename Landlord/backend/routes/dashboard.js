@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const authMiddleware = require('../middleware/auth');
+const cacheService = require('../services/cacheService');
 
 // Get dashboard statistics
 router.get('/stats', authMiddleware, async (req, res) => {
@@ -21,35 +22,30 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
-    // Get room statistics
+    // Check cache first (TTL: 2 minutes for dashboard)
+    const cacheKey = cacheService.dashboardKey(landlordId);
+    const cachedStats = cacheService.get(cacheKey);
+    
+    if (cachedStats) {
+      return res.json({
+        success: true,
+        data: cachedStats,
+        cached: true
+      });
+    }
+
+    // Single optimized query for room statistics
     const [roomStats] = await db.query(`
       SELECT 
-        COUNT(*) as totalRooms,
-        SUM(CASE WHEN Status = 'available' THEN 1 ELSE 0 END) as availableRooms,
-        SUM(CASE WHEN Status = 'rented' THEN 1 ELSE 0 END) as rentedRooms,
-        SUM(CASE WHEN Status = 'viewing' THEN 1 ELSE 0 END) as viewingRooms
-      FROM ROOM 
-      WHERE LandlordID = ?
-    `, [landlordId]);
-
-    // Get rooms with pending viewing schedules (chờ duyệt)
-    const [roomsWithPendingViewings] = await db.query(`
-      SELECT COUNT(DISTINCT r.RoomID) as pendingViewingRooms
+        COUNT(DISTINCT r.RoomID) as totalRooms,
+        SUM(CASE WHEN r.Status = 'available' THEN 1 ELSE 0 END) as availableRooms,
+        SUM(CASE WHEN r.Status = 'rented' THEN 1 ELSE 0 END) as rentedRooms,
+        SUM(CASE WHEN r.Status = 'viewing' THEN 1 ELSE 0 END) as viewingRooms,
+        COUNT(DISTINCT CASE WHEN vs.Status = 'Chờ duyệt' AND r.Status = 'available' THEN r.RoomID END) as pendingViewingRooms,
+        COUNT(DISTINCT CASE WHEN vs.Status = 'Đã duyệt' AND r.Status = 'available' THEN r.RoomID END) as approvedViewingRooms
       FROM ROOM r
-      JOIN VIEWING_SCHEDULE vs ON r.RoomID = vs.RoomID
-      WHERE r.LandlordID = ? 
-      AND vs.Status = 'Chờ duyệt'
-      AND r.Status = 'available'
-    `, [landlordId]);
-
-    // Get rooms with approved viewing schedules (đã đặt lịch)
-    const [roomsWithApprovedViewings] = await db.query(`
-      SELECT COUNT(DISTINCT r.RoomID) as approvedViewingRooms
-      FROM ROOM r
-      JOIN VIEWING_SCHEDULE vs ON r.RoomID = vs.RoomID
-      WHERE r.LandlordID = ? 
-      AND vs.Status = 'Đã duyệt'
-      AND r.Status = 'available'
+      LEFT JOIN VIEWING_SCHEDULE vs ON r.RoomID = vs.RoomID
+      WHERE r.LandlordID = ?
     `, [landlordId]);
 
     // Get pending viewing schedules count
@@ -75,50 +71,50 @@ router.get('/stats', authMiddleware, async (req, res) => {
     const occupancyRate = stats.totalRooms > 0 ? 
       Math.round((stats.rentedRooms / stats.totalRooms) * 100) : 0;
 
-    // Get monthly revenue (current month)
-    const [revenue] = await db.query(`
-      SELECT COALESCE(SUM(p.Amount), 0) as currentMonthRevenue
+    // Get revenue data (current and previous month in single query)
+    const [revenueData] = await db.query(`
+      SELECT 
+        COALESCE(SUM(CASE 
+          WHEN MONTH(p.PaymentDate) = MONTH(NOW()) AND YEAR(p.PaymentDate) = YEAR(NOW())
+          THEN p.Amount ELSE 0 
+        END), 0) as currentMonthRevenue,
+        COALESCE(SUM(CASE 
+          WHEN MONTH(p.PaymentDate) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) 
+          AND YEAR(p.PaymentDate) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))
+          THEN p.Amount ELSE 0 
+        END), 0) as prevMonthRevenue
       FROM PAYMENT p
       JOIN CONTRACT c ON p.ContractID = c.ContractID
       JOIN ROOM r ON c.RoomID = r.RoomID
-      WHERE r.LandlordID = ?
-      AND p.Status = 'Đã TT'
-      AND MONTH(p.PaymentDate) = MONTH(NOW())
-      AND YEAR(p.PaymentDate) = YEAR(NOW())
+      WHERE r.LandlordID = ? AND p.Status = 'Đã TT'
+      AND p.PaymentDate >= DATE_SUB(NOW(), INTERVAL 2 MONTH)
     `, [landlordId]);
 
-    // Get previous month revenue for comparison
-    const [prevRevenue] = await db.query(`
-      SELECT COALESCE(SUM(p.Amount), 0) as prevMonthRevenue
-      FROM PAYMENT p
-      JOIN CONTRACT c ON p.ContractID = c.ContractID
-      JOIN ROOM r ON c.RoomID = r.RoomID
-      WHERE r.LandlordID = ?
-      AND p.Status = 'Đã TT'
-      AND MONTH(p.PaymentDate) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH))
-      AND YEAR(p.PaymentDate) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))
-    `, [landlordId]);
-
-    const currentRevenue = revenue[0].currentMonthRevenue;
-    const previousRevenue = prevRevenue[0].prevMonthRevenue;
+    const currentRevenue = revenueData[0].currentMonthRevenue || 0;
+    const previousRevenue = revenueData[0].prevMonthRevenue || 0;
     const revenueChange = previousRevenue > 0 ? 
       ((currentRevenue - previousRevenue) / previousRevenue * 100).toFixed(1) : 0;
 
+    const result = {
+      totalRooms: stats.totalRooms,
+      availableRooms: stats.availableRooms - stats.pendingViewingRooms - stats.approvedViewingRooms,
+      rentedRooms: stats.rentedRooms,
+      pendingViewingRooms: stats.pendingViewingRooms,
+      viewingRooms: stats.approvedViewingRooms,
+      occupancyRate: occupancyRate,
+      pendingViewings: pendingViewings[0].pendingCount,
+      expiringContracts: expiringContracts[0].expiringCount,
+      currentMonthRevenue: currentRevenue,
+      revenueChange: revenueChange,
+      revenueChangePositive: parseFloat(revenueChange) >= 0
+    };
+
+    // Cache for 2 minutes
+    cacheService.set(cacheKey, result, 120);
+
     res.json({
       success: true,
-      data: {
-        totalRooms: stats.totalRooms,
-        availableRooms: stats.availableRooms - roomsWithPendingViewings[0].pendingViewingRooms - roomsWithApprovedViewings[0].approvedViewingRooms,
-        rentedRooms: stats.rentedRooms,
-        pendingViewingRooms: roomsWithPendingViewings[0].pendingViewingRooms,
-        viewingRooms: roomsWithApprovedViewings[0].approvedViewingRooms,
-        occupancyRate: occupancyRate,
-        pendingViewings: pendingViewings[0].pendingCount,
-        expiringContracts: expiringContracts[0].expiringCount,
-        currentMonthRevenue: currentRevenue,
-        revenueChange: revenueChange,
-        revenueChangePositive: parseFloat(revenueChange) >= 0
-      }
+      data: result
     });
   } catch (error) {
     console.error('Get dashboard stats error:', error.message);

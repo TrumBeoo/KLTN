@@ -1,0 +1,56 @@
+flowchart TB
+    A[Quản lý hình ảnh phòng]
+
+    %% Cấp 1
+    A --> B[Tải hình ảnh lên]
+    A --> C[Xem danh sách hình ảnh]
+    A --> D[Cập nhật hình ảnh]
+    A --> E[Xóa hình ảnh]
+
+    %% Tải hình ảnh lên
+    B --> B1[Chọn phòng]
+    B --> B2[Chọn file hình ảnh]
+    B --> B3[Kiểm tra file]
+    B --> B4[Upload và lưu]
+
+    B2 --> B21[Chọn từ thiết bị]
+    B2 --> B22[Hỗ trợ nhiều file]
+
+    B3 --> B31[Kiểm tra định dạng]
+    B3 --> B32[Kiểm tra kích thước]
+    B3 --> B33[Kiểm tra số lượng]
+
+    B4 --> B41[Upload lên server]
+    B4 --> B42[Lưu đường dẫn vào CSDL]
+    B4 --> B43[Gán vào phòng]
+
+    %% Xem danh sách hình ảnh
+    C --> C1[Hiển thị theo phòng]
+    C --> C2[Hiển thị theo chung cư]
+    C --> C3[Xem chi tiết]
+
+    C1 --> C11[Danh sách thumbnail]
+    C1 --> C12[Số lượng ảnh]
+
+    C3 --> C31[Xem ảnh gốc]
+    C3 --> C32[Thông tin ảnh]
+
+    %% Cập nhật hình ảnh
+    D --> D1[Chọn hình ảnh]
+    D --> D2[Thay đổi thông tin]
+    D --> D3[Lưu cập nhật]
+
+    D2 --> D21[Mô tả ảnh]
+    D2 --> D22[Thứ tự hiển thị]
+    D2 --> D23[Ảnh đại diện phòng]
+
+    %% Xóa hình ảnh
+    E --> E1[Chọn ảnh cần xóa]
+    E --> E2[Xác nhận xóa]
+    E --> E3[Xóa khỏi hệ thống]
+
+    E2 --> E21[Kiểm tra ảnh đại diện]
+    E2 --> E22[Cảnh báo nếu cần]
+
+    E3 --> E31[Xóa file trên server]
+    E3 --> E32[Xóa bản ghi CSDL]

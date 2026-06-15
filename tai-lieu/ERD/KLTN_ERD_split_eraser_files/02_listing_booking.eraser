@@ -1,0 +1,159 @@
+// ERD 02 - Listing / Booking / Favorite / Review
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Tenant {
+  TenantID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Gender string
+  Birthday datetime
+  AvatarURL string
+  AvatarPublicID string
+  Bio string
+  University string
+  Job string
+  Phone string
+  Email string
+  BudgetMin decimal
+  BudgetMax decimal
+  PreferredDistrict string
+  Latitude float
+  Longitude float
+  IsVerified boolean
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Landlord {
+  LandlordID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Phone string
+  Email string
+  Address string
+  City string
+  District string
+  Ward string
+  AvatarURL string
+  AvatarPublicID string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Listing {
+  ListingID string pk
+  RoomID string fk
+  LandlordID string fk
+  Title string
+  Description string
+  IsVisible boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+ListingImage {
+  ImageID int pk
+  ListingID string fk
+  ImageURL string
+  ImageOrder int
+  CreatedAt datetime
+}
+
+ViewingSchedule {
+  ScheduleID string pk
+  TenantID string fk
+  RoomID string fk
+  DateTime datetime
+  Status string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Favorite {
+  FavoriteID string pk
+  TenantID string fk
+  RoomID string fk
+  ListingID string fk
+  Rating decimal
+  Note string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Review {
+  ReviewID string pk
+  RoomID string fk
+  TenantID string fk
+  Rating int
+  Content string
+  ReviewDate datetime
+}
+
+Document {
+  DocumentID string pk
+  RoomID string fk
+  TenantID string fk
+  Type string
+  Title string
+  FileURL string
+  PublicID string
+  FileType string
+  ResourceType string
+  FileSize int
+  UploadedBy string fk
+  IsPrivate boolean
+  IsAllRooms boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Notification {
+  NotificationID string pk
+  TargetID string
+  Content string
+  Type string
+  Link string
+  CreatedAt datetime
+  Status string
+}
+
+// Relationships
+Room.RoomID < Listing.RoomID
+Landlord.LandlordID < Listing.LandlordID
+Listing.ListingID < ListingImage.ListingID
+Tenant.TenantID < ViewingSchedule.TenantID
+Room.RoomID < ViewingSchedule.RoomID
+Tenant.TenantID < Favorite.TenantID
+Room.RoomID < Favorite.RoomID
+Listing.ListingID < Favorite.ListingID
+Tenant.TenantID < Review.TenantID
+Room.RoomID < Review.RoomID
+Room.RoomID < Document.RoomID
+Tenant.TenantID < Document.TenantID

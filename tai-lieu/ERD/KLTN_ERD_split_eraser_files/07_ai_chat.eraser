@@ -1,0 +1,100 @@
+// ERD 07 - AI Chat Assistant / Room Interaction
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Tenant {
+  TenantID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Gender string
+  Birthday datetime
+  AvatarURL string
+  AvatarPublicID string
+  Bio string
+  University string
+  Job string
+  Phone string
+  Email string
+  BudgetMin decimal
+  BudgetMax decimal
+  PreferredDistrict string
+  Latitude float
+  Longitude float
+  IsVerified boolean
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+AiChatSession {
+  SessionID string pk
+  TenantID string fk
+  StartedAt datetime
+  LastMessageAt datetime
+  Status string
+  MessageCount int
+  SessionContext string
+}
+
+AiChatMessage {
+  MessageID string pk
+  SessionID string fk
+  Sender string
+  Message string
+  Intent string
+  Entities json
+  SuggestedRooms json
+  CreatedAt datetime
+}
+
+AiChatFeedback {
+  FeedbackID string pk
+  SessionID string fk
+  TenantID string fk
+  Rating int
+  Comment string
+  CreatedAt datetime
+}
+
+AiChatRoomInteraction {
+  InteractionID string pk
+  SessionID string fk
+  TenantID string fk
+  RoomID string fk
+  ActionType string
+  Context string
+  CreatedAt datetime
+}
+
+// Relationships
+Tenant.TenantID < AiChatSession.TenantID
+AiChatSession.SessionID < AiChatMessage.SessionID
+AiChatSession.SessionID < AiChatFeedback.SessionID
+Tenant.TenantID < AiChatFeedback.TenantID
+AiChatSession.SessionID < AiChatRoomInteraction.SessionID
+Tenant.TenantID < AiChatRoomInteraction.TenantID
+Room.RoomID < AiChatRoomInteraction.RoomID

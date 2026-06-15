@@ -1,0 +1,59 @@
+// ERD 04 - POI / Location-based Filtering / Section
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+PoiType {
+  TypeCode string pk
+  Name string
+  Description string
+  Icon string
+  CreatedAt datetime
+}
+
+Poi {
+  POIID string pk
+  Name string
+  TypeCode string fk
+  Latitude float
+  Longitude float
+  District string
+  Address string
+  IsActive boolean
+  CreatedAt datetime
+}
+
+RoomPoi {
+  RoomID string fk
+  POIID string fk
+  Distance float
+  CreatedAt datetime
+}
+
+
+// Relationships
+PoiType.TypeCode < Poi.TypeCode
+Room.RoomID < RoomPoi.RoomID
+Poi.POIID < RoomPoi.POIID

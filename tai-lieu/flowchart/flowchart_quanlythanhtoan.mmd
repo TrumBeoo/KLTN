@@ -1,0 +1,54 @@
+flowchart TD
+    A([Bắt đầu]) --> B[Chủ nhà/Người thuê truy cập]
+    B --> C{Vai trò?}
+    
+    %% Nhánh chủ nhà
+    C -- Chủ nhà --> D[Ghi nhận thanh toán]
+    D --> D1[Chọn hợp đồng]
+    D1 --> D2[Nhập thông tin thanh toán]
+    
+    D2 --> D21[Số tiền]
+    D2 --> D22[Ngày thanh toán]
+    D2 --> D23[Hình thức thanh toán]
+    D2 --> D24[Trạng thái]
+    
+    D21 --> E{Kiểm tra số tiền hợp lệ?}
+    D22 --> E
+    D23 --> E
+    D24 --> E
+    
+    E -- Không hợp lệ --> F[Hiển thị lỗi]
+    F --> D2
+    
+    E -- Hợp lệ --> G[Lưu thanh toán vào CSDL]
+    G --> H[Cập nhật trạng thái hợp đồng]
+    H --> I[Tạo biên nhận]
+    I --> J[Gửi thông báo cho người thuê]
+    J --> K[Xem báo cáo công nợ]
+    
+    %% Nhánh người thuê
+    C -- Người thuê --> L[Xem lịch sử thanh toán]
+    L --> M[Hiển thị các khoản thanh toán]
+    M --> M1[Đã thanh toán]
+    M --> M2[Chưa thanh toán]
+    M --> M3[Sắp đến hạn]
+    
+    M1 --> N{Nhận thông báo?}
+    M2 --> N
+    M3 --> N
+    
+    %% Hệ thống tự động
+    K --> O[Hệ thống kiểm tra công nợ]
+    O --> P{Có khoản sắp đến hạn?}
+    
+    P -- Có --> Q[Tạo thông báo nhắc nhở]
+    Q --> R[Gửi thông báo]
+    R --> S{Kiểm tra quá hạn?}
+    
+    S -- Quá hạn --> T[Đánh dấu "Quá hạn"]
+    T --> U[Gửi cảnh báo quá hạn]
+    U --> Z([Kết thúc])
+    
+    S -- Chưa quá hạn --> Z
+    P -- Không --> Z
+    N --> Z

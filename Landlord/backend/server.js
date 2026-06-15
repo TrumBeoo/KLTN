@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const passport = require('./config/passport');
+const compression = require('compression');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -19,12 +20,24 @@ const profileRoutes = require('./routes/profile');
 const roomAttributeRoutes = require('./routes/roomAttributes');
 const poiRoutes = require('./routes/poi');
 const contractRoutes = require('./routes/contracts');
+const tenantRoutes = require('./routes/tenants');
 
 // Import contract notification service
 const contractNotificationService = require('./services/contractNotificationService');
 const contractCleanupService = require('./services/contractCleanupService');
 
 const app = express();
+
+// Compression middleware - MUST be before other middleware
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6
+}));
 
 // Middleware
 app.use(cors({
@@ -48,11 +61,13 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Request logging
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-});
+// Request logging - Only in development
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+  });
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -70,6 +85,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/room-attributes', roomAttributeRoutes);
 app.use('/api/poi', poiRoutes);
 app.use('/api/contracts', contractRoutes);
+app.use('/api/tenants', tenantRoutes);
 
 // All files are now served from Cloudinary - no local file serving needed
 

@@ -1,0 +1,37 @@
+flowchart TD
+    %% External Entities
+    ET1([Chủ nhà])
+    ET2([Người thuê])
+    ET3([Hệ thống thông báo])
+
+    %% Processes
+    P1[Ghi nhận thanh toán]
+    P2[Kiểm tra hợp lệ thanh toán]
+    P3[Theo dõi công nợ]
+    P4[Tạo thông báo nhắc nhở]
+    P5[Tính toán kỳ thanh toán]
+
+    %% Data Stores
+    DS1[(DB Thanh toán)]
+    DS2[(DB Hợp đồng)]
+    DS3[(DB Thông báo)]
+
+    %% Flows
+    ET1 -->|Thông tin thanh toán| P1
+    P1 --> P2
+    P2 -->|Kiểm tra| DS2
+    
+    P2 -->|Thanh toán hợp lệ| DS1
+    DS1 -->|Cập nhật trạng thái| DS2
+    
+    DS1 --> P3
+    DS2 --> P3
+    P3 -->|Báo cáo công nợ| ET1
+    
+    DS2 --> P5
+    P5 --> P4
+    P4 -->|Lưu thông báo| DS3
+    DS3 --> ET3
+    ET3 -->|Gửi nhắc nhở| ET2
+    
+    P3 -->|Danh sách công nợ| P4

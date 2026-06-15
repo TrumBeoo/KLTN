@@ -1,0 +1,925 @@
+// Prisma schema generated from uploaded KLTN SQL files.
+// Purpose: ERD design / visualization.
+// Note: MySQL ENUM columns are represented as String for ERD portability.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+// CORE ACCOUNTS
+// =========================
+
+model Account {
+  AccountID       String   @id @db.Char(10)
+  Username        String   @unique @db.VarChar(30)
+  Password        String   @db.Char(64)
+  GoogleID        String?  @unique @db.VarChar(255)
+  Role            String   @db.VarChar(20)
+  Status          String?  @default("Active") @db.VarChar(20)
+  AvatarURL       String?  @db.VarChar(255)
+  AvatarPublicID  String?  @db.VarChar(255)
+  CreatedAt       DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt       DateTime? @updatedAt @db.DateTime(0)
+
+  landlord        Landlord?
+  tenant          Tenant?
+  movingProvider  MovingProvider?
+  uploadedDocs    Document[] @relation("DocumentUploader")
+
+  @@map("ACCOUNT")
+}
+
+model Landlord {
+  LandlordID      String   @id @db.Char(10)
+  AccountID       String?  @unique @db.Char(10)
+  Name            String?  @db.VarChar(50)
+  Username        String?  @db.VarChar(30)
+  Phone           String?  @db.VarChar(15)
+  Email           String?  @db.VarChar(50)
+  Address         String?  @db.VarChar(255)
+  City            String?  @db.VarChar(100)
+  District        String?  @db.VarChar(100)
+  Ward            String?  @db.VarChar(100)
+  AvatarURL       String?  @db.VarChar(255)
+  AvatarPublicID  String?  @db.VarChar(255)
+  CreatedAt       DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt       DateTime? @updatedAt @db.DateTime(0)
+
+  account         Account? @relation(fields: [AccountID], references: [AccountID], onDelete: Cascade)
+  buildings       Building[]
+  rooms           Room[]
+  listings        Listing[]
+  uploadJobs      UploadJob[]
+
+  @@map("LANDLORD")
+}
+
+model Tenant {
+  TenantID          String   @id @db.Char(10)
+  AccountID         String   @unique @db.Char(10)
+  Name              String   @db.VarChar(100)
+  Username          String?  @db.VarChar(30)
+  Gender            String?  @db.VarChar(20)
+  Birthday          DateTime? @db.Date
+  AvatarURL         String?  @db.VarChar(255)
+  AvatarPublicID    String?  @db.VarChar(255)
+  Bio               String?  @db.Text
+  University        String?  @db.VarChar(100)
+  Job               String?  @db.VarChar(100)
+  Phone             String?  @db.VarChar(15)
+  Email             String?  @db.VarChar(100)
+  BudgetMin         Decimal? @db.Decimal(10, 2)
+  BudgetMax         Decimal? @db.Decimal(10, 2)
+  PreferredDistrict String?  @db.VarChar(100)
+  Latitude          Float?
+  Longitude         Float?
+  IsVerified        Boolean? @default(false)
+  IsActive          Boolean? @default(true)
+  CreatedAt         DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt         DateTime? @updatedAt @db.DateTime(0)
+
+  account           Account @relation(fields: [AccountID], references: [AccountID], onDelete: Cascade)
+  preference        TenantPreference?
+  contracts         Contract[]
+  payments          Payment[] @ignore
+  viewingSchedules  ViewingSchedule[]
+  favorites         Favorite[]
+  reviews           Review[]
+  documents         Document[]
+  aiChatSessions    AiChatSession[]
+  aiChatFeedbacks   AiChatFeedback[]
+  roomInteractions  AiChatRoomInteraction[]
+  matchScoresAs1    MatchScore[] @relation("MatchTenant1")
+  matchScoresAs2    MatchScore[] @relation("MatchTenant2")
+  actionsSent       MatchAction[] @relation("ActionFromTenant")
+  actionsReceived   MatchAction[] @relation("ActionToTenant")
+  matchRooms        MatchRoom[]
+  chatRoomsAs1      MatchChatRoom[] @relation("ChatTenant1")
+  chatRoomsAs2      MatchChatRoom[] @relation("ChatTenant2")
+  aiMatchings       AiMatching[]
+  movingBookings    MovingBooking[]
+  movingReviews     MovingReview[]
+  lifestyles        TenantLifestyle[]
+  interests         TenantInterest[]
+
+  @@map("TENANT")
+}
+
+// =========================
+// LOCATION / BUILDING / ROOM
+// =========================
+
+model Location {
+  LocationID String   @id @db.Char(10)
+  City       String   @default("Hà Nội") @db.VarChar(30)
+  District   String   @db.VarChar(50)
+  Ward       String   @db.VarChar(50)
+  Street     String?  @db.VarChar(100)
+  Address    String?  @db.VarChar(200)
+  Latitude   Decimal? @db.Decimal(10, 8)
+  Longitude  Decimal? @db.Decimal(11, 8)
+  IsActive   Boolean? @default(true)
+  CreatedAt  DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt  DateTime? @updatedAt @db.DateTime(0)
+
+  buildings  Building[]
+  rooms      Room[]
+
+  @@map("LOCATION")
+}
+
+model Building {
+  BuildingID   String  @id @db.Char(10)
+  LandlordID   String? @db.Char(10)
+  LocationID   String? @db.Char(10)
+  BuildingName String? @db.VarChar(100)
+  Address      String? @db.VarChar(100)
+  District     String? @db.VarChar(30)
+  Ward         String? @db.VarChar(30)
+  Floors       Int?
+  NumberRooms  Int?    @default(0)
+  CreatedAt    DateTime? @db.DateTime(0)
+  UpdatedAt    DateTime? @db.DateTime(0)
+
+  landlord     Landlord? @relation(fields: [LandlordID], references: [LandlordID])
+  location     Location? @relation(fields: [LocationID], references: [LocationID])
+  rooms        Room[]
+  uploadJobs   UploadJob[]
+  uploadDetails UploadDetail[]
+
+  @@map("BUILDING")
+}
+
+model Room {
+  RoomID      String   @id @db.Char(10)
+  LandlordID  String?  @db.Char(10)
+  BuildingID  String?  @db.Char(10)
+  LocationID  String?  @db.Char(10)
+  RoomCode    String?  @db.VarChar(20)
+  RoomType    String?  @db.VarChar(50)
+  Area        Decimal? @db.Decimal(8, 2)
+  MaxPeople   Int?
+  Amenities   String?  @db.Text
+  Status      String?  @default("available") @db.VarChar(30)
+  DraftStatus String?  @default("draft") @db.VarChar(30)
+  Price       Int?
+  Title       String?  @db.VarChar(255)
+  Description String?  @db.VarChar(255)
+  Tags        String?  @db.Text
+  Furniture   String?  @db.Text
+  Service     String?  @db.Text
+  Rules       String?  @db.Text
+  FloorType   String?  @db.VarChar(50)
+  CreatedAt   DateTime? @db.DateTime(0)
+  UpdatedAt   DateTime? @db.DateTime(0)
+
+  landlord    Landlord? @relation(fields: [LandlordID], references: [LandlordID])
+  building    Building? @relation(fields: [BuildingID], references: [BuildingID])
+  location    Location? @relation(fields: [LocationID], references: [LocationID])
+
+  listings    Listing[]
+  contracts   Contract[]
+  viewingSchedules ViewingSchedule[]
+  favorites   Favorite[]
+  reviews     Review[]
+  documents   Document[]
+  roomPois    RoomPoi[]
+  roomAmenities RoomAmenity[]
+  roomServices  RoomService[]
+  roomFurnitures RoomFurniture[]
+  roomRules    RoomRule[]
+  images       RoomImage[]
+  matchRooms   MatchRoom[]
+  aiMatchings  AiMatching[]
+  uploadDetails UploadDetail[]
+  aiInteractions AiChatRoomInteraction[]
+
+  @@map("ROOM")
+}
+
+model RoomType {
+  RoomTypeID  String @id @db.Char(10)
+  Name        String? @db.VarChar(50)
+  Description String? @db.VarChar(255)
+
+  @@map("ROOM_TYPE")
+}
+
+// =========================
+// LISTING / CONTACT / FAVORITE
+// =========================
+
+model Listing {
+  ListingID   String  @id @db.Char(10)
+  RoomID      String? @db.Char(10)
+  LandlordID  String? @db.Char(10)
+  Title       String? @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  IsVisible   Boolean? @default(true)
+  CreatedAt   DateTime? @db.DateTime(0)
+  UpdatedAt   DateTime? @db.DateTime(0)
+
+  room        Room? @relation(fields: [RoomID], references: [RoomID])
+  landlord    Landlord? @relation(fields: [LandlordID], references: [LandlordID])
+  images      ListingImage[]
+  favorites   Favorite[]
+  uploadDetails UploadDetail[]
+
+  @@map("LISTING")
+}
+
+model ListingImage {
+  ImageID     Int     @id @default(autoincrement())
+  ListingID   String? @db.Char(10)
+  ImageURL    String? @db.VarChar(255)
+  ImageOrder  Int?    @default(1)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  listing     Listing? @relation(fields: [ListingID], references: [ListingID], onDelete: Cascade)
+
+  @@map("LISTING_IMAGE")
+}
+
+model ViewingSchedule {
+  ScheduleID String @id @db.Char(10)
+  TenantID   String? @db.Char(10)
+  RoomID     String? @db.Char(10)
+  DateTime   DateTime? @db.DateTime(0)
+  Status     String? @db.VarChar(30)
+  CreatedAt  DateTime? @db.DateTime(0)
+  UpdatedAt  DateTime? @db.DateTime(0)
+
+  tenant     Tenant? @relation(fields: [TenantID], references: [TenantID])
+  room       Room? @relation(fields: [RoomID], references: [RoomID])
+
+  @@map("VIEWING_SCHEDULE")
+}
+
+model Favorite {
+  FavoriteID String @id @db.Char(10)
+  TenantID   String @db.Char(10)
+  RoomID     String @db.Char(10)
+  ListingID  String? @db.Char(10)
+  Rating     Decimal? @db.Decimal(2, 1)
+  Note       String? @db.Text
+  CreatedAt  DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt  DateTime? @updatedAt @db.DateTime(0)
+
+  tenant     Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  room       Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+  listing    Listing? @relation(fields: [ListingID], references: [ListingID], onDelete: SetNull)
+
+  @@map("FAVORITE")
+}
+
+model Review {
+  ReviewID   String @id @db.Char(10)
+  RoomID     String? @db.Char(10)
+  TenantID   String? @db.Char(10)
+  Rating     Int?
+  Content    String? @db.VarChar(200)
+  ReviewDate DateTime? @db.Date
+
+  room       Room? @relation(fields: [RoomID], references: [RoomID])
+  tenant     Tenant? @relation(fields: [TenantID], references: [TenantID])
+
+  @@map("REVIEW")
+}
+
+model Document {
+  DocumentID   String @id @db.Char(10)
+  RoomID       String? @db.Char(10)
+  TenantID     String? @db.Char(10)
+  Type         String @db.VarChar(30)
+  Title        String? @db.VarChar(255)
+  FileURL      String @db.VarChar(255)
+  PublicID     String? @db.VarChar(255)
+  FileType     String? @db.VarChar(20)
+  ResourceType String? @default("raw") @db.VarChar(20)
+  FileSize     Int?
+  UploadedBy   String? @db.Char(10)
+  IsPrivate    Boolean? @default(true)
+  IsAllRooms   Boolean? @default(false)
+  CreatedAt    DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt    DateTime? @updatedAt @db.DateTime(0)
+
+  room         Room? @relation(fields: [RoomID], references: [RoomID], onDelete: SetNull)
+  tenant       Tenant? @relation(fields: [TenantID], references: [TenantID], onDelete: SetNull)
+  uploader     Account? @relation("DocumentUploader", fields: [UploadedBy], references: [AccountID], onDelete: SetNull)
+
+  @@map("DOCUMENT")
+}
+
+model Notification {
+  NotificationID String @id @db.Char(10)
+  TargetID       String? @db.Char(10)
+  Content        String? @db.Text
+  Type           String? @db.VarChar(30)
+  Link           String? @db.VarChar(255)
+  CreatedAt      DateTime? @db.DateTime(0)
+  Status         String? @db.VarChar(30)
+
+  @@map("NOTIFICATION")
+}
+
+// =========================
+// CONTRACT / PAYMENT
+// =========================
+
+model Contract {
+  ContractID String @id @db.Char(10)
+  TenantID   String? @db.Char(10)
+  RoomID     String? @db.Char(10)
+  StartDate  DateTime? @db.Date
+  EndDate    DateTime? @db.Date
+  Status     String? @db.VarChar(30)
+  TotalPrice Decimal? @db.Decimal(10, 2)
+  Deposit    Decimal? @db.Decimal(10, 2)
+  CreatedAt  DateTime? @db.DateTime(0)
+  UpdatedAt  DateTime? @db.DateTime(0)
+
+  tenant     Tenant? @relation(fields: [TenantID], references: [TenantID])
+  room       Room? @relation(fields: [RoomID], references: [RoomID])
+  payments   Payment[]
+
+  @@map("CONTRACT")
+}
+
+model Payment {
+  PaymentID   String @id @db.Char(10)
+  ContractID  String? @db.Char(10)
+  PaymentDate DateTime? @db.Date
+  Amount      Decimal? @db.Decimal(10, 2)
+  Method      String? @db.VarChar(30)
+  Status      String? @db.VarChar(30)
+
+  contract    Contract? @relation(fields: [ContractID], references: [ContractID])
+
+  @@map("PAYMENT")
+}
+
+// =========================
+// ROOM DETAIL FEATURE TABLES
+// =========================
+
+model Amenity {
+  AmenityID   String @id @db.Char(10)
+  Name        String @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  Icon        String? @db.VarChar(50)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  rooms       RoomAmenity[]
+
+  @@map("AMENITY")
+}
+
+model RoomAmenity {
+  RoomID    String @db.Char(10)
+  AmenityID String @db.Char(10)
+
+  room      Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+  amenity   Amenity @relation(fields: [AmenityID], references: [AmenityID], onDelete: Cascade)
+
+  @@id([RoomID, AmenityID])
+  @@map("ROOM_AMENITY")
+}
+
+model Service {
+  ServiceID   String @id @db.Char(10)
+  Name        String @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  Icon        String? @db.VarChar(50)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  rooms       RoomService[]
+
+  @@map("SERVICE")
+}
+
+model RoomService {
+  RoomID    String @db.Char(10)
+  ServiceID String @db.Char(10)
+
+  room      Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+  service   Service @relation(fields: [ServiceID], references: [ServiceID], onDelete: Cascade)
+
+  @@id([RoomID, ServiceID])
+  @@map("ROOM_SERVICE")
+}
+
+model Furniture {
+  FurnitureID String @id @db.Char(10)
+  Name        String @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  Icon        String? @db.VarChar(50)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  rooms       RoomFurniture[]
+
+  @@map("FURNITURE")
+}
+
+model RoomFurniture {
+  RoomID      String @db.Char(10)
+  FurnitureID String @db.Char(10)
+
+  room        Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+  furniture   Furniture @relation(fields: [FurnitureID], references: [FurnitureID], onDelete: Cascade)
+
+  @@id([RoomID, FurnitureID])
+  @@map("ROOM_FURNITURE")
+}
+
+model Rule {
+  RuleID      String @id @db.Char(10)
+  Name        String @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  Icon        String? @db.VarChar(50)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  rooms       RoomRule[]
+
+  @@map("RULE")
+}
+
+model RoomRule {
+  RoomID String @db.Char(10)
+  RuleID String @db.Char(10)
+
+  room   Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+  rule   Rule @relation(fields: [RuleID], references: [RuleID], onDelete: Cascade)
+
+  @@id([RoomID, RuleID])
+  @@map("ROOM_RULE")
+}
+
+model RoomImage {
+  ImageID      Int @id @default(autoincrement())
+  RoomID       String @db.Char(10)
+  ImageURL     String @db.VarChar(255)
+  PublicID     String? @db.VarChar(255)
+  DisplayOrder Int? @default(1)
+  IsPrimary    Boolean? @default(false)
+  CreatedAt    DateTime? @default(now()) @db.DateTime(0)
+
+  room         Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+
+  @@map("ROOM_IMAGE")
+}
+
+// =========================
+// POI / SECTION
+// =========================
+
+model PoiType {
+  TypeCode    String @id @db.VarChar(50)
+  Name        String @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  Icon        String? @db.VarChar(50)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  pois        Poi[]
+
+  @@map("POI_TYPE")
+}
+
+model Poi {
+  POIID     String @id @db.Char(10)
+  Name      String @db.VarChar(150)
+  TypeCode  String @db.VarChar(50)
+  Latitude  Float
+  Longitude Float
+  District  String? @db.VarChar(50)
+  Address   String? @db.VarChar(255)
+  IsActive  Boolean? @default(true)
+  CreatedAt DateTime? @default(now()) @db.DateTime(0)
+
+  type      PoiType @relation(fields: [TypeCode], references: [TypeCode])
+  rooms     RoomPoi[]
+
+  @@map("POI")
+}
+
+model RoomPoi {
+  RoomID    String @db.Char(10)
+  POIID     String @db.Char(10)
+  Distance  Float
+  CreatedAt DateTime? @default(now()) @db.DateTime(0)
+
+  room      Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+  poi       Poi @relation(fields: [POIID], references: [POIID], onDelete: Cascade)
+
+  @@id([RoomID, POIID])
+  @@map("ROOM_POI")
+}
+
+model Section {
+  SectionID   String @id @db.Char(10)
+  Name        String? @db.VarChar(100)
+  Slug        String? @db.VarChar(100)
+  Type        String? @db.VarChar(50)
+  MaxDistance Float? @default(2)
+
+  @@map("SECTION")
+}
+
+// =========================
+// TENANT PROFILE / MATCHING
+// =========================
+
+model TenantPreference {
+  TenantID           String @id @db.Char(10)
+  BudgetMin          Int?
+  BudgetMax          Int?
+  PreferredDistrict  String? @db.VarChar(100)
+  PreferredAmenities String? @db.Text
+  PreferredRoomType  String? @db.VarChar(50)
+  MoveInDate         DateTime? @db.Date
+  PreferredGender    String? @default("any") @db.VarChar(20)
+
+  tenant             Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+
+  @@map("TENANT_PREFERENCE")
+}
+
+model LifestyleMaster {
+  LifestyleID String @id @db.Char(10)
+  Name        String @db.VarChar(100)
+  Category    String? @db.VarChar(50)
+  Icon        String? @db.VarChar(50)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  tenants     TenantLifestyle[]
+
+  @@map("LIFESTYLE_MASTER")
+}
+
+model TenantLifestyle {
+  TenantID    String @db.Char(10)
+  LifestyleID String @db.Char(10)
+  ValueLevel  Int? @default(1)
+
+  tenant      Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  lifestyle   LifestyleMaster @relation(fields: [LifestyleID], references: [LifestyleID], onDelete: Cascade)
+
+  @@id([TenantID, LifestyleID])
+  @@map("TENANT_LIFESTYLE")
+}
+
+model InterestMaster {
+  InterestID String @id @db.Char(10)
+  Name       String @db.VarChar(100)
+  Icon       String? @db.VarChar(50)
+  CreatedAt  DateTime? @default(now()) @db.DateTime(0)
+
+  tenants    TenantInterest[]
+
+  @@map("INTEREST_MASTER")
+}
+
+model TenantInterest {
+  TenantID   String @db.Char(10)
+  InterestID String @db.Char(10)
+
+  tenant     Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  interest   InterestMaster @relation(fields: [InterestID], references: [InterestID], onDelete: Cascade)
+
+  @@id([TenantID, InterestID])
+  @@map("TENANT_INTEREST")
+}
+
+model MatchScore {
+  TenantID1          String @db.Char(10)
+  TenantID2          String @db.Char(10)
+  Score              Float? @default(0)
+  CompatibilityLevel String? @default("medium") @db.VarChar(20)
+  Reason             String? @db.Text
+  UpdatedAt          DateTime? @updatedAt @db.DateTime(0)
+
+  tenant1            Tenant @relation("MatchTenant1", fields: [TenantID1], references: [TenantID], onDelete: Cascade)
+  tenant2            Tenant @relation("MatchTenant2", fields: [TenantID2], references: [TenantID], onDelete: Cascade)
+
+  @@id([TenantID1, TenantID2])
+  @@map("MATCH_SCORE")
+}
+
+model MatchAction {
+  ActionID     String @id @db.Char(10)
+  FromTenantID String? @db.Char(10)
+  ToTenantID   String? @db.Char(10)
+  ActionType   String? @db.VarChar(20)
+  CreatedAt    DateTime? @default(now()) @db.DateTime(0)
+
+  fromTenant   Tenant? @relation("ActionFromTenant", fields: [FromTenantID], references: [TenantID], onDelete: Cascade)
+  toTenant     Tenant? @relation("ActionToTenant", fields: [ToTenantID], references: [TenantID], onDelete: Cascade)
+
+  @@map("MATCH_ACTION")
+}
+
+model MatchRoom {
+  MatchRoomID String @id @db.Char(10)
+  TenantID    String? @db.Char(10)
+  RoomID      String? @db.Char(10)
+  MatchScore  Float? @default(0)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+
+  tenant      Tenant? @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  room        Room? @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+
+  @@map("MATCH_ROOM")
+}
+
+model MatchChatRoom {
+  ChatRoomID String @id @db.Char(10)
+  TenantID1  String? @db.Char(10)
+  TenantID2  String? @db.Char(10)
+  CreatedAt  DateTime? @default(now()) @db.DateTime(0)
+
+  tenant1    Tenant? @relation("ChatTenant1", fields: [TenantID1], references: [TenantID], onDelete: Cascade)
+  tenant2    Tenant? @relation("ChatTenant2", fields: [TenantID2], references: [TenantID], onDelete: Cascade)
+
+  @@map("MATCH_CHAT_ROOM")
+}
+
+model AiMatching {
+  MatchingID String @id @db.Char(10)
+  TenantID   String? @db.Char(10)
+  RoomID     String? @db.Char(10)
+  Score      Decimal? @db.Decimal(5, 2)
+  Reason     String? @db.VarChar(255)
+  CreatedAt  DateTime? @db.DateTime(0)
+
+  tenant     Tenant? @relation(fields: [TenantID], references: [TenantID])
+  room       Room? @relation(fields: [RoomID], references: [RoomID])
+
+  @@map("AI_MATCHING")
+}
+
+// =========================
+// MOVING SERVICE
+// =========================
+
+model MovingProvider {
+  ProviderID     String @id @db.Char(10)
+  AccountID      String @unique @db.Char(10)
+  Name           String @db.VarChar(100)
+  Phone          String @db.VarChar(15)
+  Email          String? @db.VarChar(100)
+  Address        String? @db.VarChar(255)
+  Rating         Decimal? @default(0) @db.Decimal(3, 2)
+  TotalReviews   Int? @default(0)
+  VerifiedStatus String? @default("pending") @db.VarChar(20)
+  VerifiedAt     DateTime? @db.DateTime(0)
+  VerifiedBy     String? @db.Char(10)
+  IsActive       Boolean? @default(true)
+  CreatedAt      DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt      DateTime? @updatedAt @db.DateTime(0)
+
+  account        Account @relation(fields: [AccountID], references: [AccountID], onDelete: Cascade)
+  services       MovingService[]
+
+  @@map("MOVING_PROVIDER")
+}
+
+model ServiceCategory {
+  CategoryID  String @id @db.Char(10)
+  Name        String @db.VarChar(100)
+  Description String? @db.VarChar(255)
+  Icon        String? @db.VarChar(100)
+  Thumbnail   String? @db.VarChar(255)
+  SortOrder   Int? @default(0)
+  IsActive    Boolean? @default(true)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt   DateTime? @updatedAt @db.DateTime(0)
+
+  services    MovingService[]
+
+  @@map("SERVICE_CATEGORY")
+}
+
+model MovingService {
+  ServiceID         String @id @db.Char(10)
+  ProviderID        String @db.Char(10)
+  CategoryID        String? @db.Char(10)
+  Name              String @db.VarChar(150)
+  Description       String? @db.Text
+  Thumbnail         String? @db.VarChar(255)
+  BasePrice         Decimal? @default(0) @db.Decimal(10, 2)
+  PricePerKm        Decimal? @default(0) @db.Decimal(10, 2)
+  FreeDistanceKm    Float? @default(0)
+  MaxDistanceKm     Float?
+  ExtraFloorPrice   Decimal? @default(0) @db.Decimal(10, 2)
+  OvertimePrice     Decimal? @default(0) @db.Decimal(10, 2)
+  VehicleType       String? @default("van") @db.VarChar(20)
+  EstimatedDuration Int?
+  MaxItems          Int?
+  Features          String? @db.Text
+  IsPopular         Boolean? @default(false)
+  IsActive          Boolean? @default(true)
+  SortOrder         Int? @default(0)
+  CreatedAt         DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt         DateTime? @updatedAt @db.DateTime(0)
+
+  provider          MovingProvider @relation(fields: [ProviderID], references: [ProviderID], onDelete: Cascade)
+  category          ServiceCategory? @relation(fields: [CategoryID], references: [CategoryID], onDelete: SetNull)
+  bookings          MovingBooking[]
+
+  @@map("MOVING_SERVICE")
+}
+
+model MovingBooking {
+  BookingID             String @id @db.Char(10)
+  TenantID              String @db.Char(10)
+  ServiceID             String @db.Char(10)
+  PickupAddress         String @db.VarChar(255)
+  DestinationAddress    String @db.VarChar(255)
+  PickupLatitude        Float?
+  PickupLongitude       Float?
+  DestinationLatitude   Float?
+  DestinationLongitude  Float?
+  DistanceKm            Float? @default(0)
+  MovingDate            DateTime @db.Date
+  MovingTime            DateTime @db.Time(0)
+  FloorFrom             Int? @default(0)
+  FloorTo               Int? @default(0)
+  HasElevator           Boolean? @default(false)
+  Note                  String? @db.Text
+  BasePriceSnapshot     Decimal? @default(0) @db.Decimal(10, 2)
+  DistancePriceSnapshot Decimal? @default(0) @db.Decimal(10, 2)
+  ExtraFeeSnapshot      Decimal? @default(0) @db.Decimal(10, 2)
+  FinalPrice            Decimal? @default(0) @db.Decimal(10, 2)
+  Status                String? @default("pending") @db.VarChar(20)
+  ActualStartTime       DateTime? @db.DateTime(0)
+  ActualEndTime         DateTime? @db.DateTime(0)
+  StaffNote             String? @db.Text
+  CreatedAt             DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt             DateTime? @updatedAt @db.DateTime(0)
+
+  tenant                Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  service               MovingService @relation(fields: [ServiceID], references: [ServiceID], onDelete: Cascade)
+  review                MovingReview?
+
+  @@map("MOVING_BOOKING")
+}
+
+model MovingReview {
+  ReviewID  String @id @db.Char(10)
+  BookingID String @unique @db.Char(10)
+  TenantID  String @db.Char(10)
+  Rating    Int
+  Comment   String? @db.Text
+  CreatedAt DateTime? @default(now()) @db.DateTime(0)
+
+  booking   MovingBooking @relation(fields: [BookingID], references: [BookingID], onDelete: Cascade)
+  tenant    Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+
+  @@map("MOVING_REVIEW")
+}
+
+// =========================
+// AI CHAT
+// =========================
+
+model AiChatSession {
+  SessionID      String @id @db.Char(10)
+  TenantID       String? @db.Char(10)
+  StartedAt      DateTime? @default(now()) @db.DateTime(0)
+  LastMessageAt  DateTime? @updatedAt @db.DateTime(0)
+  Status         String? @default("active") @db.VarChar(20)
+  MessageCount   Int? @default(0)
+  SessionContext String? @db.Text
+
+  tenant         Tenant? @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  messages       AiChatMessage[]
+  feedbacks      AiChatFeedback[]
+  roomInteractions AiChatRoomInteraction[]
+
+  @@map("AI_CHAT_SESSION")
+}
+
+model AiChatMessage {
+  MessageID      String @id @db.Char(10)
+  SessionID      String @db.Char(10)
+  Sender         String @db.VarChar(20)
+  Message        String @db.Text
+  Intent         String? @db.VarChar(50)
+  Entities       Json?
+  SuggestedRooms Json?
+  CreatedAt      DateTime? @default(now()) @db.DateTime(0)
+
+  session        AiChatSession @relation(fields: [SessionID], references: [SessionID], onDelete: Cascade)
+
+  @@map("AI_CHAT_MESSAGE")
+}
+
+model AiChatFeedback {
+  FeedbackID String @id @db.Char(10)
+  SessionID  String @db.Char(10)
+  TenantID   String @db.Char(10)
+  Rating     Int?
+  Comment    String? @db.Text
+  CreatedAt  DateTime? @default(now()) @db.DateTime(0)
+
+  session    AiChatSession @relation(fields: [SessionID], references: [SessionID], onDelete: Cascade)
+  tenant     Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+
+  @@map("AI_CHAT_FEEDBACK")
+}
+
+model AiChatRoomInteraction {
+  InteractionID String @id @db.Char(10)
+  SessionID     String @db.Char(10)
+  TenantID      String @db.Char(10)
+  RoomID        String @db.Char(10)
+  ActionType    String @db.VarChar(30)
+  Context       String? @db.Text
+  CreatedAt     DateTime? @default(now()) @db.DateTime(0)
+
+  session       AiChatSession @relation(fields: [SessionID], references: [SessionID], onDelete: Cascade)
+  tenant        Tenant @relation(fields: [TenantID], references: [TenantID], onDelete: Cascade)
+  room          Room @relation(fields: [RoomID], references: [RoomID], onDelete: Cascade)
+
+  @@map("AI_CHAT_ROOM_INTERACTION")
+}
+
+model AiChatAnalytics {
+  AnalyticsID        String @id @db.Char(10)
+  AnalysisDate       DateTime @db.Date
+  TotalSessions      Int? @default(0)
+  TotalMessages      Int? @default(0)
+  TotalUsers         Int? @default(0)
+  IntentDistribution Json?
+  PositiveFeedback   Int? @default(0)
+  NegativeFeedback   Int? @default(0)
+  TopRooms           Json?
+  TopDistricts       Json?
+  AvgPriceRange      Json?
+  CreatedAt          DateTime? @default(now()) @db.DateTime(0)
+
+  @@map("AI_CHAT_ANALYTICS")
+}
+
+// =========================
+// UPLOAD
+// =========================
+
+model UploadJob {
+  UploadJobID String @id @db.Char(10)
+  LandlordID  String @db.Char(10)
+  Mode        String @db.VarChar(30)
+  BuildingID  String? @db.Char(10)
+  FileName    String @db.VarChar(255)
+  TotalRows   Int @default(0)
+  SuccessRows Int? @default(0)
+  FailedRows  Int? @default(0)
+  Status      String? @default("pending") @db.VarChar(20)
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+  CompletedAt DateTime? @db.DateTime(0)
+
+  landlord    Landlord @relation(fields: [LandlordID], references: [LandlordID], onDelete: Cascade)
+  building    Building? @relation(fields: [BuildingID], references: [BuildingID], onDelete: SetNull)
+  details     UploadDetail[]
+
+  @@map("UPLOAD_JOB")
+}
+
+model UploadDetail {
+  UploadDetailID String @id @db.Char(10)
+  UploadJobID    String @db.Char(10)
+  RowNumber      Int
+  BuildingName   String? @db.VarChar(255)
+  BuildingID     String? @db.Char(10)
+  RoomCode       String? @db.VarChar(50)
+  Title          String? @db.VarChar(255)
+  Price          Decimal? @default(0) @db.Decimal(12, 0)
+  Area           Float? @default(20)
+  MaxPeople      Int? @default(1)
+  Address        String? @db.Text
+  RoomType       String? @db.VarChar(50)
+  Description    String? @db.Text
+  Furniture      String? @db.Text
+  Amenities      String? @db.Text
+  Service        String? @db.Text
+  Rules          String? @db.Text
+  FloorType      String? @db.VarChar(50)
+  Status         String? @default("pending") @db.VarChar(20)
+  ErrorMessage   String? @db.Text
+  RoomID         String? @db.Char(10)
+  ListingID      String? @db.Char(10)
+  CreatedAt      DateTime? @default(now()) @db.DateTime(0)
+  UpdatedAt      DateTime? @updatedAt @db.DateTime(0)
+
+  uploadJob      UploadJob @relation(fields: [UploadJobID], references: [UploadJobID], onDelete: Cascade)
+  building       Building? @relation(fields: [BuildingID], references: [BuildingID], onDelete: SetNull)
+  room           Room? @relation(fields: [RoomID], references: [RoomID], onDelete: SetNull)
+  listing        Listing? @relation(fields: [ListingID], references: [ListingID], onDelete: SetNull)
+
+  @@map("UPLOAD_DETAIL")
+}

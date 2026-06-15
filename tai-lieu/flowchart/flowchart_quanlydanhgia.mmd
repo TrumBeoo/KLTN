@@ -1,0 +1,51 @@
+flowchart TD
+    A([Bắt đầu]) --> B[Người thuê truy cập]
+    B --> C[Xem danh sách phòng đã thuê]
+    C --> D{Chọn phòng để đánh giá?}
+    
+    D -- Không --> Z([Kết thúc])
+    
+    D -- Có --> E[Kiểm tra điều kiện đánh giá]
+    E --> F{Đã thuê phòng này?}
+    
+    F -- Chưa --> G[Hiển thị thông báo lỗi]
+    G --> Z
+    
+    F -- Rồi --> H{Trong thời gian cho phép?}
+    
+    H -- Không --> I[Hết hạn đánh giá]
+    I --> Z
+    
+    H -- Có --> J[Hiển thị form đánh giá]
+    J --> K[Người thuê cho điểm]
+    K --> K1[Chọn từ 1 đến 5 sao]
+    
+    K1 --> L[Nhập nội dung đánh giá]
+    L --> M{Kiểm tra nội dung?}
+    
+    M -- Trống --> N[Yêu cầu nhập nội dung]
+    N --> L
+    
+    M -- Hợp lệ --> O[Gửi đánh giá]
+    O --> P[Hệ thống kiểm duyệt nội dung]
+    
+    P --> Q{Có vi phạm?}
+    
+    Q -- Có --> R[Đánh dấu cần duyệt]
+    R --> S[Gửi cho Admin kiểm tra]
+    S --> T{Admin phê duyệt?}
+    
+    T -- Từ chối --> U[Ẩn đánh giá]
+    U --> V[Thông báo cho người dùng]
+    V --> Z
+    
+    T -- Chấp nhận --> W[Lưu đánh giá vào CSDL]
+    
+    Q -- Không --> W
+    
+    W --> X[Tổng hợp điểm đánh giá]
+    X --> Y[Tính điểm trung bình]
+    Y --> AA[Cập nhật điểm phòng]
+    AA --> AB[Hiển thị trên tin đăng]
+    AB --> AC[Gửi thông báo cho chủ nhà]
+    AC --> Z

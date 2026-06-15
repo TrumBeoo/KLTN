@@ -1,0 +1,65 @@
+flowchart TD
+    A([Bắt đầu]) --> B[Người thuê truy cập trang tìm kiếm]
+    B --> C[Hiển thị danh sách tin đăng]
+    
+    C --> D{Sử dụng bộ lọc?}
+    
+    D -- Không --> E[Xem toàn bộ tin đăng]
+    
+    D -- Có --> F[Chọn tiêu chí lọc]
+    F --> F1[Khu vực / Địa điểm]
+    F --> F2[Khoảng giá]
+    F --> F3[Diện tích]
+    F --> F4[Loại phòng]
+    F --> F5[Tiện nghi]
+    F --> F6[Trạng thái phòng]
+    
+    F1 --> G[Áp dụng bộ lọc]
+    F2 --> G
+    F3 --> G
+    F4 --> G
+    F5 --> G
+    F6 --> G
+    
+    G --> H[Hệ thống truy vấn CSDL]
+    H --> I[Hiển thị kết quả phù hợp]
+    
+    E --> I
+    
+    I --> J{Có kết quả?}
+    
+    J -- Không --> K[Hiển thị: "Không tìm thấy phòng"]
+    K --> L[Gợi ý điều chỉnh bộ lọc]
+    L --> D
+    
+    J -- Có --> M[Hiển thị danh sách phòng]
+    M --> N{Người dùng chọn phòng?}
+    
+    N -- Không --> O{Thay đổi bộ lọc?}
+    O -- Có --> D
+    O -- Không --> Z([Kết thúc])
+    
+    N -- Có --> P[Xem chi tiết phòng]
+    P --> Q[Hiển thị thông tin đầy đủ]
+    
+    Q --> Q1[Hình ảnh]
+    Q --> Q2[Giá thuê / Diện tích]
+    Q --> Q3[Tiện nghi]
+    Q --> Q4[Vị trí bản đồ]
+    Q --> Q5[Đánh giá]
+    
+    Q1 --> R{Hành động tiếp theo?}
+    Q2 --> R
+    Q3 --> R
+    Q4 --> R
+    Q5 --> R
+    
+    R -- Đặt lịch xem --> S[Chuyển đến đặt lịch]
+    S --> Z
+    
+    R -- Lưu yêu thích --> T[Thêm vào danh sách yêu thích]
+    T --> U[Thông báo đã lưu]
+    U --> Z
+    
+    R -- Quay lại --> M
+    R -- Thoát --> Z

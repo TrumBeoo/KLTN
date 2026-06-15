@@ -1,0 +1,64 @@
+flowchart LR
+    %% ======================
+    %% TÁC NHÂN NGOÀI
+    %% ======================
+    Tenant([Người thuê])
+    Landlord([Chủ nhà])
+    Admin([Quản trị viên])
+    System([Hệ thống Email/SMS])
+
+    %% ======================
+    %% PROCESS CẤP 0
+    %% ======================
+    P0[Hệ thống quản lý cho thuê phòng trọ]
+
+    %% ======================
+    %% DATA FLOW
+    %% ======================
+    
+    %% Từ Người thuê
+    Tenant -->|Thông tin đăng ký| P0
+    Tenant -->|Yêu cầu tìm phòng| P0
+    Tenant -->|Đặt lịch xem phòng| P0
+    Tenant -->|Thông tin ở ghép| P0
+    Tenant -->|Đánh giá phòng| P0
+    
+    %% Đến Người thuê
+    P0 -->|Danh sách phòng| Tenant
+    P0 -->|Kết quả gợi ý| Tenant
+    P0 -->|Thông báo lịch xem| Tenant
+    P0 -->|Thông báo thanh toán| Tenant
+    
+    %% Từ Chủ nhà
+    Landlord -->|Thông tin đăng ký| P0
+    Landlord -->|Thông tin phòng| P0
+    Landlord -->|Dữ liệu tải lên| P0
+    Landlord -->|Duyệt lịch xem| P0
+    Landlord -->|Tạo hợp đồng| P0
+    Landlord -->|Ghi nhận thanh toán| P0
+    
+    %% Đến Chủ nhà
+    P0 -->|Yêu cầu xem phòng| Landlord
+    P0 -->|Báo cáo thống kê| Landlord
+    P0 -->|Thông báo đánh giá| Landlord
+    P0 -->|Cảnh báo hợp đồng| Landlord
+    
+    %% Từ Admin
+    Admin -->|Quản lý người dùng| P0
+    Admin -->|Kiểm duyệt nội dung| P0
+    
+    %% Đến Admin
+    P0 -->|Báo cáo hệ thống| Admin
+    P0 -->|Nội dung cần duyệt| Admin
+    
+    %% Hệ thống thông báo
+    P0 -->|Gửi thông báo| System
+    System -->|Email/SMS| Tenant
+    System -->|Email/SMS| Landlord
+
+    %% Style
+    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef process fill:#fff3e0,stroke:#e65100,stroke-width:3px
+    
+    class Tenant,Landlord,Admin,System external
+    class P0 process

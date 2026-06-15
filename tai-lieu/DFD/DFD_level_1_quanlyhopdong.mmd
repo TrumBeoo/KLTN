@@ -1,0 +1,44 @@
+flowchart TD
+    %% External Entities
+    ET1([Chủ nhà])
+    ET2([Người thuê])
+    ET3([Hệ thống thông báo])
+
+    %% Processes
+    P1[Tạo hợp đồng]
+    P2[Kiểm tra điều kiện hợp đồng]
+    P3[Cập nhật trạng thái phòng]
+    P4[Theo dõi hợp đồng]
+    P5[Cảnh báo hết hạn]
+    P6[Gia hạn / Kết thúc hợp đồng]
+
+    %% Data Stores
+    DS1[(DB Hợp đồng)]
+    DS2[(DB Phòng)]
+    DS3[(DB Thông báo)]
+    DS4[(DB Thanh toán)]
+
+    %% Flows
+    ET1 -->|Thông tin hợp đồng| P1
+    P1 --> P2
+    P2 -->|Kiểm tra phòng| DS2
+    
+    P2 -->|Hợp đồng hợp lệ| DS1
+    DS1 --> P3
+    P3 -->|Cập nhật trạng thái| DS2
+    
+    DS1 --> P4
+    P4 -->|Chi tiết hợp đồng| ET1
+    P4 -->|Chi tiết hợp đồng| ET2
+    
+    DS1 --> P5
+    P5 -->|Lưu cảnh báo| DS3
+    DS3 --> ET3
+    ET3 -->|Thông báo sắp hết hạn| ET1
+    ET3 -->|Thông báo sắp hết hạn| ET2
+    
+    ET1 -->|Yêu cầu gia hạn / kết thúc| P6
+    P6 -->|Cập nhật| DS1
+    P6 --> P3
+    
+    DS1 --> DS4

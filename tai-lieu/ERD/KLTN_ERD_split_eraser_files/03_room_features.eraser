@@ -1,0 +1,99 @@
+// ERD 03 - Room Detail / Features / Images
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Amenity {
+  AmenityID string pk
+  Name string
+  Description string
+  Icon string
+  CreatedAt datetime
+}
+
+RoomAmenity {
+  RoomID string fk
+  AmenityID string fk
+}
+
+Service {
+  ServiceID string pk
+  Name string
+  Description string
+  Icon string
+  CreatedAt datetime
+}
+
+RoomService {
+  RoomID string fk
+  ServiceID string fk
+}
+
+Furniture {
+  FurnitureID string pk
+  Name string
+  Description string
+  Icon string
+  CreatedAt datetime
+}
+
+RoomFurniture {
+  RoomID string fk
+  FurnitureID string fk
+}
+
+Rule {
+  RuleID string pk
+  Name string
+  Description string
+  Icon string
+  CreatedAt datetime
+}
+
+RoomRule {
+  RoomID string fk
+  RuleID string fk
+}
+
+RoomImage {
+  ImageID int pk
+  RoomID string fk
+  ImageURL string
+  PublicID string
+  DisplayOrder int
+  IsPrimary boolean
+  CreatedAt datetime
+}
+
+// Relationships
+Room.RoomID < RoomAmenity.RoomID
+Amenity.AmenityID < RoomAmenity.AmenityID
+Room.RoomID < RoomService.RoomID
+Service.ServiceID < RoomService.ServiceID
+Room.RoomID < RoomFurniture.RoomID
+Furniture.FurnitureID < RoomFurniture.FurnitureID
+Room.RoomID < RoomRule.RoomID
+Rule.RuleID < RoomRule.RuleID
+Room.RoomID < RoomImage.RoomID

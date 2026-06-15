@@ -1,0 +1,146 @@
+// ERD 05 - Tenant Profile / Lifestyle / Matching
+// Paste this into Eraser.io as a Database Diagram / Diagram-as-code file.
+
+Tenant {
+  TenantID string pk
+  AccountID string fk
+  Name string
+  Username string
+  Gender string
+  Birthday datetime
+  AvatarURL string
+  AvatarPublicID string
+  Bio string
+  University string
+  Job string
+  Phone string
+  Email string
+  BudgetMin decimal
+  BudgetMax decimal
+  PreferredDistrict string
+  Latitude float
+  Longitude float
+  IsVerified boolean
+  IsActive boolean
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+Room {
+  RoomID string pk
+  LandlordID string fk
+  BuildingID string fk
+  LocationID string fk
+  RoomCode string
+  RoomType string
+  Area decimal
+  MaxPeople int
+  Amenities string
+  Status string
+  DraftStatus string
+  Price int
+  Title string
+  Description string
+  Tags string
+  Furniture string
+  Service string
+  Rules string
+  FloorType string
+  CreatedAt datetime
+  UpdatedAt datetime
+}
+
+TenantPreference {
+  TenantID string pk fk
+  BudgetMin int
+  BudgetMax int
+  PreferredDistrict string
+  PreferredAmenities string
+  PreferredRoomType string
+  MoveInDate datetime
+  PreferredGender string
+}
+
+LifestyleMaster {
+  LifestyleID string pk
+  Name string
+  Category string
+  Icon string
+  CreatedAt datetime
+}
+
+TenantLifestyle {
+  TenantID string fk
+  LifestyleID string fk
+  ValueLevel int
+}
+
+InterestMaster {
+  InterestID string pk
+  Name string
+  Icon string
+  CreatedAt datetime
+}
+
+TenantInterest {
+  TenantID string fk
+  InterestID string fk
+}
+
+MatchScore {
+  TenantID1 string fk
+  TenantID2 string fk
+  Score float
+  CompatibilityLevel string
+  Reason string
+  UpdatedAt datetime
+}
+
+MatchAction {
+  ActionID string pk
+  FromTenantID string fk
+  ToTenantID string fk
+  ActionType string
+  CreatedAt datetime
+}
+
+MatchRoom {
+  MatchRoomID string pk
+  TenantID string fk
+  RoomID string fk
+  MatchScore float
+  CreatedAt datetime
+}
+
+MatchChatRoom {
+  ChatRoomID string pk
+  TenantID1 string fk
+  TenantID2 string fk
+  CreatedAt datetime
+}
+
+AiMatching {
+  MatchingID string pk
+  TenantID string fk
+  RoomID string fk
+  Score decimal
+  Reason string
+  CreatedAt datetime
+}
+
+// Relationships
+Tenant.TenantID < TenantPreference.TenantID
+Tenant.TenantID < TenantLifestyle.TenantID
+LifestyleMaster.LifestyleID < TenantLifestyle.LifestyleID
+Tenant.TenantID < TenantInterest.TenantID
+InterestMaster.InterestID < TenantInterest.InterestID
+Tenant.TenantID < MatchScore.TenantID1
+Tenant.TenantID < MatchScore.TenantID2
+Tenant.TenantID < MatchAction.FromTenantID
+Tenant.TenantID < MatchAction.ToTenantID
+Tenant.TenantID < MatchRoom.TenantID
+Room.RoomID < MatchRoom.RoomID
+Tenant.TenantID < MatchChatRoom.TenantID1
+Tenant.TenantID < MatchChatRoom.TenantID2
+Tenant.TenantID < AiMatching.TenantID
+Room.RoomID < AiMatching.RoomID
