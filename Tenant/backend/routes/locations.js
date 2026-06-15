@@ -20,24 +20,31 @@ router.get('/districts-with-stats', async (req, res) => {
   try {
     const [districts] = await db.query(`
       SELECT 
-        loc.District,
-        COUNT(DISTINCT r.RoomID) as RoomCount,
+        District,
+        RoomCount,
         (SELECT ri.ImageURL 
-         FROM ROOM r2 
-         INNER JOIN ROOM_IMAGE ri ON r2.RoomID = ri.RoomID 
-         INNER JOIN LOCATION loc2 ON r2.LocationID = loc2.LocationID
-         WHERE loc2.District = loc.District 
-           AND r2.Status = 'available' 
-           AND r2.DraftStatus = 'published'
+         FROM ROOM r3
+         LEFT JOIN BUILDING b3 ON r3.BuildingID = b3.BuildingID
+         LEFT JOIN LOCATION loc3 ON r3.LocationID = loc3.LocationID
+         INNER JOIN ROOM_IMAGE ri ON r3.RoomID = ri.RoomID 
+         WHERE COALESCE(b3.District, loc3.District) = district_data.District
+           AND r3.Status IN ('available', 'viewing')
          ORDER BY ri.DisplayOrder 
          LIMIT 1) as ImageURL
-      FROM LOCATION loc
-      LEFT JOIN ROOM r ON loc.LocationID = r.LocationID 
-        AND r.Status = 'available' 
-        AND r.DraftStatus = 'published'
-      WHERE loc.IsActive = TRUE
-      GROUP BY loc.District
-      HAVING RoomCount > 0
+      FROM (
+        SELECT 
+          COALESCE(b.District, loc.District) as District,
+          COUNT(DISTINCT r.RoomID) as RoomCount
+        FROM ROOM r
+        LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+        LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID 
+        LEFT JOIN LISTING lst ON r.RoomID = lst.RoomID
+        WHERE r.Status IN ('available', 'viewing')
+          AND (lst.IsVisible IS NULL OR lst.IsVisible = 1)
+          AND (b.District IS NOT NULL OR loc.District IS NOT NULL)
+        GROUP BY COALESCE(b.District, loc.District)
+      ) as district_data
+      WHERE RoomCount > 0
       ORDER BY RoomCount DESC
       LIMIT 8
     `);

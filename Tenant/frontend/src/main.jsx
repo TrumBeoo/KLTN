@@ -31,11 +31,9 @@ const globalStyles = (
 )
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {globalStyles}
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>,
+  <ThemeProvider theme={theme}>
+    <CssBaseline />
+    {globalStyles}
+    <App />
+  </ThemeProvider>,
 )

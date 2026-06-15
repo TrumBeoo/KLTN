@@ -319,4 +319,222 @@ router.get('/lifestyles', async (req, res) => {
   }
 });
 
+// Get roommate profile
+router.get('/roommate-profile', authMiddleware, async (req, res) => {
+  try {
+    const [tenants] = await db.query('SELECT TenantID FROM TENANT WHERE AccountID = ?', [req.user.accountId]);
+    if (tenants.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin người thuê' });
+    }
+
+    const tenantId = tenants[0].TenantID;
+
+    // Get basic info from TENANT
+    const [profile] = await db.query(`
+      SELECT 
+        t.Name, t.Gender, t.Birthday,
+        YEAR(CURDATE()) - YEAR(t.Birthday) as Age,
+        t.University, t.Job, t.Bio,
+        t.BudgetMin, t.BudgetMax, t.PreferredDistrict
+      FROM TENANT t
+      WHERE t.TenantID = ?
+    `, [tenantId]);
+
+    if (profile.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ' });
+    }
+
+    // Get preferences
+    const [preferences] = await db.query(`
+      SELECT 
+        BudgetMin, BudgetMax, PreferredDistrict,
+        PreferredAmenities, PreferredRoomType,
+        MoveInDate, PreferredGender
+      FROM TENANT_PREFERENCE
+      WHERE TenantID = ?
+    `, [tenantId]);
+
+    // Get lifestyles
+    const [lifestyles] = await db.query(`
+      SELECT lm.LifestyleID, lm.Name, lm.Category, lm.Icon, tl.ValueLevel
+      FROM TENANT_LIFESTYLE tl
+      JOIN LIFESTYLE_MASTER lm ON tl.LifestyleID = lm.LifestyleID
+      WHERE tl.TenantID = ?
+    `, [tenantId]);
+
+    // Get interests
+    const [interests] = await db.query(`
+      SELECT im.InterestID, im.Name, im.Icon
+      FROM TENANT_INTEREST ti
+      JOIN INTEREST_MASTER im ON ti.InterestID = im.InterestID
+      WHERE ti.TenantID = ?
+    `, [tenantId]);
+
+    const roommateProfile = {
+      ...profile[0],
+      preferences: preferences[0] || {},
+      lifestyles: lifestyles.map(l => l.Name),
+      interests: interests.map(i => i.Name)
+    };
+
+    res.json({ success: true, profile: roommateProfile });
+  } catch (error) {
+    console.error('Get roommate profile error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+});
+
+// Save/Update roommate profile
+router.post('/roommate-profile', authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [tenants] = await connection.query('SELECT TenantID FROM TENANT WHERE AccountID = ?', [req.user.accountId]);
+    if (tenants.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin người thuê' });
+    }
+
+    const tenantId = tenants[0].TenantID;
+    const {
+      name, age, gender, occupation, university, bio,
+      lifestyle, interests, sleepTime, wakeTime, cleanLevel, noiseLevel,
+      budget, locations, genderPreference, duration
+    } = req.body;
+
+    // Calculate birthday from age
+    const currentYear = new Date().getFullYear();
+    const birthYear = currentYear - (age || 25);
+    const birthday = `${birthYear}-01-01`;
+
+    // Map gender values: 'Nam' -> 'male', 'Nữ' -> 'female', 'any' -> 'other'
+    const genderMap = {
+      'Nam': 'male',
+      'Nữ': 'female',
+      'any': 'other',
+      'male': 'male',
+      'female': 'female',
+      'other': 'other'
+    };
+    const mappedGender = genderMap[gender] || 'other';
+
+    // Map gender preference: 'Nam' -> 'male', 'Nữ' -> 'female', 'any' -> 'any'
+    const genderPrefMap = {
+      'Nam': 'male',
+      'Nữ': 'female',
+      'any': 'any',
+      'male': 'male',
+      'female': 'female'
+    };
+    const mappedGenderPref = genderPrefMap[genderPreference] || 'any';
+
+    // Update TENANT basic info
+    await connection.query(`
+      UPDATE TENANT 
+      SET Name = ?, Gender = ?, Birthday = ?, University = ?, Job = ?, Bio = ?,
+          BudgetMin = ?, BudgetMax = ?, PreferredDistrict = ?
+      WHERE TenantID = ?
+    `, [name, mappedGender, birthday, university || '', occupation || '', bio || '', budget[0], budget[1], locations.join(', '), tenantId]);
+
+    // Insert or update TENANT_PREFERENCE
+    const [existingPref] = await connection.query(
+      'SELECT 1 FROM TENANT_PREFERENCE WHERE TenantID = ?',
+      [tenantId]
+    );
+
+    if (existingPref.length > 0) {
+      await connection.query(`
+        UPDATE TENANT_PREFERENCE
+        SET BudgetMin = ?, BudgetMax = ?, PreferredDistrict = ?,
+            PreferredGender = ?, PreferredAmenities = ?
+        WHERE TenantID = ?
+      `, [budget[0], budget[1], locations.join(', '), mappedGenderPref, duration || '', tenantId]);
+    } else {
+      await connection.query(`
+        INSERT INTO TENANT_PREFERENCE (TenantID, BudgetMin, BudgetMax, PreferredDistrict, PreferredGender, PreferredAmenities)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [tenantId, budget[0], budget[1], locations.join(', '), mappedGenderPref, duration || '']);
+    }
+
+    // Delete old lifestyles and insert new ones
+    await connection.query('DELETE FROM TENANT_LIFESTYLE WHERE TenantID = ?', [tenantId]);
+    
+    if (lifestyle && lifestyle.length > 0) {
+      // Get or create lifestyle master records
+      for (const ls of lifestyle) {
+        // Check if lifestyle exists in master
+        const [existingLifestyle] = await connection.query(
+          'SELECT LifestyleID FROM LIFESTYLE_MASTER WHERE Name = ?',
+          [ls]
+        );
+
+        let lifestyleId;
+        if (existingLifestyle.length > 0) {
+          lifestyleId = existingLifestyle[0].LifestyleID;
+        } else {
+          // Create new lifestyle
+          const [maxId] = await connection.query('SELECT MAX(CAST(SUBSTRING(LifestyleID, 4) AS UNSIGNED)) as maxNum FROM LIFESTYLE_MASTER');
+          const nextNum = (maxId[0].maxNum || 0) + 1;
+          lifestyleId = `LFS${String(nextNum).padStart(7, '0')}`;
+          
+          await connection.query(
+            'INSERT INTO LIFESTYLE_MASTER (LifestyleID, Name, Category) VALUES (?, ?, ?)',
+            [lifestyleId, ls, 'general']
+          );
+        }
+
+        // Insert into TENANT_LIFESTYLE
+        await connection.query(
+          'INSERT INTO TENANT_LIFESTYLE (TenantID, LifestyleID, ValueLevel) VALUES (?, ?, ?)',
+          [tenantId, lifestyleId, 1]
+        );
+      }
+    }
+
+    // Delete old interests and insert new ones
+    await connection.query('DELETE FROM TENANT_INTEREST WHERE TenantID = ?', [tenantId]);
+    
+    if (interests && interests.length > 0) {
+      for (const interest of interests) {
+        // Check if interest exists in master
+        const [existingInterest] = await connection.query(
+          'SELECT InterestID FROM INTEREST_MASTER WHERE Name = ?',
+          [interest]
+        );
+
+        let interestId;
+        if (existingInterest.length > 0) {
+          interestId = existingInterest[0].InterestID;
+        } else {
+          // Create new interest
+          const [maxId] = await connection.query('SELECT MAX(CAST(SUBSTRING(InterestID, 4) AS UNSIGNED)) as maxNum FROM INTEREST_MASTER');
+          const nextNum = (maxId[0].maxNum || 0) + 1;
+          interestId = `INT${String(nextNum).padStart(7, '0')}`;
+          
+          await connection.query(
+            'INSERT INTO INTEREST_MASTER (InterestID, Name) VALUES (?, ?)',
+            [interestId, interest]
+          );
+        }
+
+        // Insert into TENANT_INTEREST
+        await connection.query(
+          'INSERT INTO TENANT_INTEREST (TenantID, InterestID) VALUES (?, ?)',
+          [tenantId, interestId]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ success: true, message: 'Lưu hồ sơ tìm roommate thành công' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Save roommate profile error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi server' });
+  } finally {
+    connection.release();
+  }
+});
+
 module.exports = router;

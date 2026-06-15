@@ -94,12 +94,7 @@ const CANDIDATES = [
   },
 ]
 
-const DISCOVER_ROOMS = [
-  { id: 1, title: 'Studio hiện đại Cầu Giấy', district: 'Cầu Giấy', price: '4.5tr', match: 94, area: '28m²', image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=280&fit=crop', badge: 'Gần ĐH', tags: ['Điều hòa', 'Wifi', 'Thang máy'] },
-  { id: 2, title: 'Phòng khép kín Đống Đa', district: 'Đống Đa', price: '3.2tr', match: 88, area: '22m²', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=280&fit=crop', badge: 'Giá tốt', tags: ['Gác lửng', 'Ban công', 'Giữ xe'] },
-  { id: 3, title: 'Ở ghép Thanh Xuân 2 người', district: 'Thanh Xuân', price: '2.8tr', match: 82, area: '35m²', image: 'https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=400&h=280&fit=crop', badge: 'Ghép 2', tags: ['Full nội thất', 'Giờ tự do'] },
-  { id: 4, title: 'Mini studio Nam Từ Liêm', district: 'Nam Từ Liêm', price: '3.8tr', match: 79, area: '24m²', image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&h=280&fit=crop', badge: 'Mới đăng', tags: ['Điều hòa', 'Bếp riêng'] },
-]
+
 
 // ─── Matching engine ─────────────────────────────────────────────────────────
 function getScore(prefs, candidate) {
@@ -411,65 +406,7 @@ function CompatibilityPanel({ match, score }) {
   )
 }
 
-// ─── Discover Card ────────────────────────────────────────────────────────────
-function DiscoverCard({ room }) {
-  const [liked, setLiked] = useState(false)
-  return (
-    <div style={{
-      minWidth: 220, borderRadius: 16,
-      background: C.surface, border: `1px solid ${C.border}`,
-      overflow: 'hidden', flexShrink: 0,
-      transition: 'transform 0.2s, box-shadow 0.2s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 12px 40px rgba(0,0,0,0.4)` }}
-      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
-    >
-      <div style={{ position: 'relative', height: 140 }}>
-        <img src={room.image} alt={room.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 60%)' }} />
-        <div style={{
-          position: 'absolute', top: 10, left: 10,
-          background: C.accentSoft, backdropFilter: 'blur(8px)',
-          border: `1px solid ${C.accentGlow}`,
-          color: C.accent, fontSize: 10, fontWeight: 600,
-          padding: '3px 8px', borderRadius: 20,
-        }}>{room.badge}</div>
-        <div style={{
-          position: 'absolute', top: 8, right: 8,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
-          color: room.match >= 90 ? C.green : room.match >= 80 ? C.accent : C.gold,
-          fontSize: 11, fontWeight: 700,
-          padding: '3px 8px', borderRadius: 20,
-          border: `1px solid currentColor`,
-        }}>{room.match}%</div>
-        <button
-          onClick={() => setLiked(!liked)}
-          style={{
-            position: 'absolute', bottom: 10, right: 10,
-            background: liked ? 'rgba(248,113,113,0.2)' : 'rgba(0,0,0,0.4)',
-            border: `1px solid ${liked ? C.red : 'rgba(255,255,255,0.2)'}`,
-            color: liked ? C.red : '#fff',
-            width: 30, height: 30, borderRadius: '50%',
-            cursor: 'pointer', fontSize: 14, display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-          }}
-        >{liked ? '♥' : '♡'}</button>
-      </div>
-      <div style={{ padding: '12px 14px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3, lineHeight: 1.3 }}>{room.title}</div>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>📍 {room.district} · {room.area}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>{room.price}/tháng</span>
-        </div>
-        <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
-          {room.tags.slice(0, 2).map(t => (
-            <span key={t} style={{ fontSize: 10, color: C.muted, background: 'rgba(255,255,255,0.05)', padding: '2px 7px', borderRadius: 10 }}>{t}</span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+
 
 // ─── Filter Sheet ─────────────────────────────────────────────────────────────
 function FilterSheet({ prefs, onChange, onClose }) {
@@ -586,7 +523,7 @@ export default function RoommateMatchingPage() {
   useScrollToTop()
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
-  const [tab, setTab] = useState('match') // match | discover
+  const [tab, setTab] = useState('match')
   const [prefs, setPrefs] = useState({ budget: [2, 6], gender: 'any', locations: [], lifestyle: [] })
   const [showFilter, setShowFilter] = useState(false)
   const [queue, setQueue] = useState([])
@@ -603,26 +540,40 @@ export default function RoommateMatchingPage() {
 
   // Check if user has profile on mount
   useEffect(() => {
-    checkUserProfile()
-  }, [])
+    if (user) {
+      checkUserProfile()
+    }
+  }, [user])
 
   const checkUserProfile = async () => {
     try {
-      // TODO: Replace with actual API call to check user profile
-      // const response = await fetch('/api/tenant/profile')
-      // const data = await response.json()
-      // if (data.success && data.profile) {
-      //   setHasProfile(true)
-      //   setUserProfile(data.profile)
-      // } else {
-      //   setHasProfile(false)
-      // }
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setHasProfile(false)
+        return
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tenant/roommate-profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       
-      // For now, check localStorage
-      const savedProfile = localStorage.getItem('roommateProfile')
-      if (savedProfile) {
+      const data = await response.json()
+      
+      if (data.success && data.profile) {
         setHasProfile(true)
-        setUserProfile(JSON.parse(savedProfile))
+        setUserProfile(data.profile)
+        
+        // Update prefs from profile
+        if (data.profile.preferences) {
+          setPrefs({
+            budget: [data.profile.preferences.BudgetMin || 2, data.profile.preferences.BudgetMax || 6],
+            gender: data.profile.preferences.PreferredGender || 'any',
+            locations: data.profile.preferences.PreferredDistrict ? data.profile.preferences.PreferredDistrict.split(', ') : [],
+            lifestyle: data.profile.lifestyles || [],
+          })
+        }
       } else {
         setHasProfile(false)
       }
@@ -634,32 +585,40 @@ export default function RoommateMatchingPage() {
 
   const handleProfileSubmit = async (profileData) => {
     try {
-      // TODO: Replace with actual API call to save profile
-      // const response = await fetch('/api/tenant/profile', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(profileData)
-      // })
-      // const data = await response.json()
-      // if (data.success) {
-      //   setHasProfile(true)
-      //   setUserProfile(data.profile)
-      //   setShowProfileForm(false)
-      // }
-      
-      // For now, save to localStorage
-      localStorage.setItem('roommateProfile', JSON.stringify(profileData))
-      setHasProfile(true)
-      setUserProfile(profileData)
-      setShowProfileForm(false)
-      
-      // Update prefs from profile
-      setPrefs({
-        budget: profileData.budget,
-        gender: profileData.genderPreference,
-        locations: profileData.locations,
-        lifestyle: profileData.lifestyle,
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Vui lòng đăng nhập để lưu hồ sơ')
+        return
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tenant/roommate-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileData)
       })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setHasProfile(true)
+        setUserProfile(profileData)
+        setShowProfileForm(false)
+        
+        // Update prefs from profile
+        setPrefs({
+          budget: profileData.budget,
+          gender: profileData.genderPreference,
+          locations: profileData.locations,
+          lifestyle: profileData.lifestyle,
+        })
+        
+        alert('Lưu hồ sơ thành công!')
+      } else {
+        alert(data.message || 'Có lỗi xảy ra khi lưu hồ sơ')
+      }
     } catch (error) {
       console.error('Error saving profile:', error)
       alert('Có lỗi xảy ra khi lưu hồ sơ. Vui lòng thử lại.')
@@ -818,21 +777,11 @@ export default function RoommateMatchingPage() {
       <div style={{ borderBottom: `1px solid ${C.border}`, backdropFilter: 'blur(20px)', background: 'rgba(15,15,17,0.8)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>🏠</span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>RoomMatch</span>
+            <span style={{ fontSize: 20 }}></span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}></span>
           </div>
 
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 12, padding: 3, gap: 2 }}>
-            {[['match', '🔍 Ghép đôi'], ['discover', '🗺️ Khám phá']].map(([t, l]) => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                padding: '6px 16px', borderRadius: 9, border: 'none',
-                background: tab === t ? C.surfaceUp : 'transparent',
-                color: tab === t ? C.text : C.muted,
-                cursor: 'pointer', fontSize: 13, fontWeight: tab === t ? 600 : 400,
-                transition: 'all 0.2s',
-              }}>{l}</button>
-            ))}
-          </div>
+
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <div style={{ position: 'relative' }}>
@@ -881,8 +830,7 @@ export default function RoommateMatchingPage() {
       )}
 
       {/* Content */}
-      {tab === 'match' ? (
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
           <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
             {/* LEFT: Stats sidebar (desktop) */}
@@ -1029,59 +977,6 @@ export default function RoommateMatchingPage() {
             </div>
           </div>
         </div>
-      ) : (
-        /* ── Discover tab ─────────────────────────────────────────────────── */
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
-          {/* Hero banner */}
-          <div style={{
-            borderRadius: 24, background: `linear-gradient(135deg, ${C.accentSoft}, rgba(52,211,153,0.08))`,
-            border: `1px solid ${C.accentGlow}`,
-            padding: '28px 32px', marginBottom: 32,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
-          }}>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 6 }}>Khám phá phòng gần bạn</div>
-              <div style={{ fontSize: 14, color: C.muted }}>Lọc theo địa điểm, ngân sách và tiện nghi yêu thích</div>
-            </div>
-            <div style={{ display: 'flex', gap: 16 }}>
-              {[{ val: '10k+', label: 'Phòng' }, { val: '5k+', label: 'Người tìm' }, { val: '94%', label: 'Hài lòng' }].map(s => (
-                <div key={s.label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: C.accent }}>{s.val}</div>
-                  <div style={{ fontSize: 11, color: C.muted }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sections */}
-          {[
-            { title: '✨ Phù hợp nhất với bạn', rooms: DISCOVER_ROOMS },
-            { title: '🎓 Gần trường đại học', rooms: DISCOVER_ROOMS.slice(0, 3) },
-            { title: '🚇 Gần metro', rooms: DISCOVER_ROOMS.slice(1, 4) },
-            { title: '💰 Giá tốt', rooms: DISCOVER_ROOMS.slice(0, 3) },
-          ].map(section => (
-            <div key={section.title} style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h2 style={{ fontSize: 17, fontWeight: 700, color: C.text, margin: 0 }}>{section.title}</h2>
-                <button style={{ background: 'none', border: 'none', color: C.accent, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Xem tất cả →</button>
-              </div>
-              <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-                {section.rooms.map(r => <DiscoverCard key={r.id} room={r} />)}
-              </div>
-            </div>
-          ))}
-
-          {/* Smart filter pills */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: '20px 24px' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 14 }}>Lọc nhanh</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {['Dưới 3tr/tháng', 'Điều hòa', 'Wifi', 'Thang máy', 'Giờ tự do', 'Gác lửng', 'Ban công', 'Giữ xe', 'Khép kín', 'Có bếp'].map(tag => (
-                <Tag key={tag}>{tag}</Tag>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filter sheet */}
       {showFilter && <FilterSheet prefs={prefs} onChange={setPrefs} onClose={() => setShowFilter(false)} />}
@@ -1093,14 +988,14 @@ export default function RoommateMatchingPage() {
         borderTop: `1px solid ${C.border}`,
         display: 'flex', padding: '8px 0 env(safe-area-inset-bottom)',
       }}>
-        {[['match', '🔍', 'Ghép đôi'], ['discover', '🗺️', 'Khám phá'], ['filter', '⚡', 'Bộ lọc']].map(([t, icon, label]) => (
-          <button key={t} onClick={() => t === 'filter' ? setShowFilter(true) : setTab(t)} style={{
+        {[['match', '🔍', 'Ghép đôi'], ['filter', '⚡', 'Bộ lọc']].map(([t, icon, label]) => (
+          <button key={t} onClick={() => setShowFilter(true)} style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
             gap: 3, background: 'none', border: 'none', cursor: 'pointer',
             padding: '8px 0',
           }}>
             <span style={{ fontSize: 20 }}>{icon}</span>
-            <span style={{ fontSize: 10, color: tab === t ? C.accent : C.muted, fontWeight: tab === t ? 600 : 400 }}>{label}</span>
+            <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>{label}</span>
           </button>
         ))}
       </div>

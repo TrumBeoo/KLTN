@@ -184,15 +184,39 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
-    // Get LocationID from Building if not provided
+    // Get LocationID and District from Building to ensure consistency
     let finalLocationId = locationId;
-    if (!finalLocationId) {
-      const [buildings] = await connection.query(
-        'SELECT LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
-        [buildingId, landlordId]
+    let buildingDistrict = null;
+    
+    const [buildings] = await connection.query(
+      'SELECT LocationID, District FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [buildingId, landlordId]
+    );
+    
+    if (buildings.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Không tìm thấy tòa nhà'
+      });
+    }
+    
+    finalLocationId = buildings[0].LocationID;
+    buildingDistrict = buildings[0].District;
+    
+    // Validate district consistency if locationId is provided separately
+    if (locationId && locationId !== finalLocationId) {
+      const [providedLocation] = await connection.query(
+        'SELECT District FROM LOCATION WHERE LocationID = ?',
+        [locationId]
       );
-      if (buildings.length > 0) {
-        finalLocationId = buildings[0].LocationID;
+      
+      if (providedLocation.length > 0 && providedLocation[0].District !== buildingDistrict) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Quận của địa điểm (${providedLocation[0].District}) không khớp với quận của tòa nhà (${buildingDistrict})`
+        });
       }
     }
 
@@ -308,15 +332,39 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
-    // Get LocationID from Building if not provided
+    // Get LocationID and District from Building to ensure consistency
     let finalLocationId = locationId;
-    if (!finalLocationId && buildingId) {
-      const [buildings] = await connection.query(
-        'SELECT LocationID FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
-        [buildingId, landlordId]
+    let buildingDistrict = null;
+    
+    const [buildings] = await connection.query(
+      'SELECT LocationID, District FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',
+      [buildingId, landlordId]
+    );
+    
+    if (buildings.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Không tìm thấy tòa nhà'
+      });
+    }
+    
+    finalLocationId = buildings[0].LocationID;
+    buildingDistrict = buildings[0].District;
+    
+    // Validate district consistency if locationId is provided separately
+    if (locationId && locationId !== finalLocationId) {
+      const [providedLocation] = await connection.query(
+        'SELECT District FROM LOCATION WHERE LocationID = ?',
+        [locationId]
       );
-      if (buildings.length > 0) {
-        finalLocationId = buildings[0].LocationID;
+      
+      if (providedLocation.length > 0 && providedLocation[0].District !== buildingDistrict) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Quận của địa điểm (${providedLocation[0].District}) không khớp với quận của tòa nhà (${buildingDistrict})`
+        });
       }
     }
 

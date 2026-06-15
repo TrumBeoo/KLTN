@@ -12,7 +12,7 @@
  *  - WCAG 2.2 AA throughout
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import {
@@ -46,9 +46,11 @@ import {
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
 import AIChatWidget from '../components/AIChatWidget'
-import NearUniversities from '../components/NearUniversities'
-import NearMetroStations from '../components/NearMetroStations'
-import NearbyAmenities from '../components/NearbyAmenities'
+
+// Lazy load heavy components
+const NearUniversities = lazy(() => import('../components/NearUniversities'))
+const NearMetroStations = lazy(() => import('../components/NearMetroStations'))
+const NearbyAmenities = lazy(() => import('../components/NearbyAmenities'))
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const T = {
@@ -106,6 +108,7 @@ const HeroSearchBar = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'stretch',
   flexDirection: 'row',
+  flexWrap: 'wrap',
   borderRadius: '12px',
   overflow: 'hidden',
   backgroundColor: T.white,
@@ -113,10 +116,12 @@ const HeroSearchBar = styled(Box)(({ theme }) => ({
   border: '1px solid rgba(255,255,255,0.3)',
   maxWidth: '100%',
   [theme.breakpoints.down('md')]: {
-    flexDirection: 'column',
+    borderRadius: '12px',
+    boxShadow: 'rgba(0,0,0,0.2) 0px 6px 20px',
+  },
+  [theme.breakpoints.down('sm')]: {
     borderRadius: '8px',
-    boxShadow: 'rgba(0,0,0,0.15) 0px 4px 16px',
-    gap: 0,
+    boxShadow: 'rgba(0,0,0,0.15) 0px 4px 12px',
   },
 }))
 
@@ -141,24 +146,24 @@ const SearchSegment = styled(Box)(({ theme }) => ({
     height: '32px',
     backgroundColor: '#e0e0e0',
     [theme.breakpoints.down('md')]: {
-      width: 'calc(100% - 32px)',
-      height: '1px',
-      top: 'auto',
-      bottom: 0,
-      left: '16px',
-      transform: 'none',
+      display: 'none',
     },
   },
   '&:hover': {
     backgroundColor: '#f8f9fa',
   },
   [theme.breakpoints.down('md')]: {
-    height: '60px',
-    padding: '12px 16px',
+    height: '48px',
+    padding: '8px 10px',
+    flex: '1 1 calc(33.333% - 1px)',
+    borderRight: '1px solid #e0e0e0',
+    '&:nth-of-type(3)': {
+      borderRight: 'none',
+    },
   },
   [theme.breakpoints.down('sm')]: {
-    height: '56px',
-    padding: '10px 16px',
+    height: '44px',
+    padding: '6px 8px',
   },
 }))
 
@@ -323,6 +328,7 @@ export default function HomePage() {
   const [guestCount, setGuestCount]       = useState(1)
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  const LANDLORD_URL = import.meta.env.VITE_LANDLORD_URL || 'https://landlord-kltn.vercel.app'
 
   const statistics = [
     { value: '10.000+', label: 'Phòng trọ đăng ký',  icon: <HomeIcon sx={{ fontSize: 32, color: T.blue }} /> },
@@ -338,7 +344,16 @@ export default function HomePage() {
     { step: 4, icon: '✅', title: 'Thuê phòng', desc: 'Ký hợp đồng và dọn vào ở ngay' },
   ]
 
-  useEffect(() => { fetchRooms(); fetchDistricts(); fetchDistrictOptions(); checkFavorites() }, [])
+  useEffect(() => { 
+    fetchRooms(); 
+    checkFavorites();
+    // Delay non-critical fetches
+    const timer = setTimeout(() => {
+      fetchDistricts(); 
+      fetchDistrictOptions();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [])
 
   const fetchDistrictOptions = async () => {
     try {
@@ -512,26 +527,26 @@ export default function HomePage() {
             Xem bản đồ · Đặt lịch xem · Tìm bạn ở ghép thông minh
           </Typography>
 
-          {/* Search bar - Multi-layout responsive */}
+          {/* Search bar - 3 tabs horizontal on mobile */}
           <HeroSearchBar role="search" aria-label="Tìm kiếm phòng">
             <SearchSegment 
               sx={{ 
-                flex: { xs: 1, md: 2 },
-                '&::after': { display: { xs: 'block', md: 'block' } }
+                flex: { xs: '1 1 calc(33.333% - 1px)', md: 2 },
               }}
             >
               <LocationIcon sx={{ 
-                fontSize: { xs: 20, sm: 22, md: 24 }, 
+                fontSize: { xs: 16, sm: 18, md: 24 }, 
                 color: T.blue, 
-                mr: { xs: 1.5, md: 1.5 }, 
-                flexShrink: 0 
+                mr: { xs: 0.5, sm: 0.75, md: 1.5 }, 
+                flexShrink: 0,
+                display: { xs: 'none', sm: 'block' }
               }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.75rem', sm: '0.786rem', md: '0.75rem' }, 
+                  fontSize: { xs: '0.625rem', sm: '0.688rem', md: '0.75rem' }, 
                   color: T.muted, 
-                  lineHeight: 1.3, 
-                  mb: { xs: 0.5, md: 0.25 }, 
+                  lineHeight: 1.1, 
+                  mb: { xs: 0.25, md: 0.25 }, 
                   fontWeight: 500,
                   letterSpacing: '0.01em'
                 }}>Địa điểm</Typography>
@@ -543,20 +558,21 @@ export default function HomePage() {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Chọn quận/huyện"
+                      placeholder="Quận"
                       variant="standard"
                       InputProps={{
                         ...params.InputProps,
                         disableUnderline: true,
                         sx: { 
-                          fontSize: { xs: '0.929rem', sm: '0.929rem', md: '1rem' }, 
+                          fontSize: { xs: '0.813rem', sm: '0.875rem', md: '1rem' }, 
                           fontWeight: 600, 
                           color: T.text,
                           '& input': {
                             padding: 0,
                             '&::placeholder': {
                               color: T.muted,
-                              opacity: 0.6,
+                              opacity: 0.7,
+                              fontSize: { xs: '0.813rem', sm: '0.875rem' },
                             }
                           }
                         }
@@ -573,25 +589,25 @@ export default function HomePage() {
 
             <SearchSegment 
               sx={{ 
-                flex: { xs: 1, md: 1.2 },
-                '&::after': { display: { xs: 'block', md: 'block' } }
+                flex: { xs: '1 1 calc(33.333% - 1px)', md: 1.2 },
               }}
             >
               <CalendarIcon sx={{ 
-                fontSize: { xs: 20, sm: 22, md: 24 }, 
+                fontSize: { xs: 16, sm: 18, md: 24 }, 
                 color: T.blue, 
-                mr: { xs: 1.5, md: 1.5 }, 
-                flexShrink: 0 
+                mr: { xs: 0.5, sm: 0.75, md: 1.5 }, 
+                flexShrink: 0,
+                display: { xs: 'none', sm: 'block' }
               }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.75rem', sm: '0.786rem', md: '0.75rem' }, 
+                  fontSize: { xs: '0.625rem', sm: '0.688rem', md: '0.75rem' }, 
                   color: T.muted, 
-                  lineHeight: 1.3, 
-                  mb: { xs: 0.5, md: 0.25 }, 
+                  lineHeight: 1.1, 
+                  mb: { xs: 0.25, md: 0.25 }, 
                   fontWeight: 500,
                   letterSpacing: '0.01em'
-                }}>Xem phòng</Typography>
+                }}>Ngày xem</Typography>
                 <TextField
                   type="date"
                   value={searchDate}
@@ -601,7 +617,7 @@ export default function HomePage() {
                   InputProps={{ 
                     disableUnderline: true, 
                     sx: { 
-                      fontSize: { xs: '0.929rem', sm: '0.929rem', md: '1rem' }, 
+                      fontSize: { xs: '0.813rem', sm: '0.875rem', md: '1rem' }, 
                       fontWeight: 600, 
                       color: T.text,
                       '& input': {
@@ -617,28 +633,28 @@ export default function HomePage() {
 
             <SearchSegment 
               sx={{ 
-                flex: { xs: 1, md: 1 },
-                '&::after': { display: 'none' }
+                flex: { xs: '1 1 calc(33.333% - 1px)', md: 1 },
               }} 
               onClick={e => setGuestAnchor(e.currentTarget)}
             >
               <PeopleIcon sx={{ 
-                fontSize: { xs: 20, sm: 22, md: 24 }, 
+                fontSize: { xs: 16, sm: 18, md: 24 }, 
                 color: T.blue, 
-                mr: { xs: 1.5, md: 1.5 }, 
-                flexShrink: 0 
+                mr: { xs: 0.5, sm: 0.75, md: 1.5 }, 
+                flexShrink: 0,
+                display: { xs: 'none', sm: 'block' }
               }} />
               <Box sx={{ flex: 1 }}>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.75rem', sm: '0.786rem', md: '0.75rem' }, 
+                  fontSize: { xs: '0.625rem', sm: '0.688rem', md: '0.75rem' }, 
                   color: T.muted, 
-                  lineHeight: 1.3, 
-                  mb: { xs: 0.5, md: 0.25 }, 
+                  lineHeight: 1.1, 
+                  mb: { xs: 0.25, md: 0.25 }, 
                   fontWeight: 500,
                   letterSpacing: '0.01em'
                 }}>Số người</Typography>
                 <Typography sx={{ 
-                  fontSize: { xs: '0.929rem', sm: '0.929rem', md: '1rem' }, 
+                  fontSize: { xs: '0.813rem', sm: '0.875rem', md: '1rem' }, 
                   color: T.text, 
                   fontWeight: 600 
                 }}>{guestCount} người</Typography>
@@ -659,17 +675,18 @@ export default function HomePage() {
                 backgroundColor: T.blue,
                 color: T.white,
                 borderRadius: { xs: 0, md: 0 },
-                px: { xs: 3, sm: 3.5, md: 4 },
-                height: { xs: '56px', sm: '56px', md: '64px' },
-                fontSize: { xs: '1rem', sm: '1rem', md: '1rem' },
+                px: { xs: 2, sm: 2.5, md: 4 },
+                height: { xs: '44px', sm: '48px', md: '64px' },
+                fontSize: { xs: '0.875rem', sm: '0.938rem', md: '1rem' },
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
+                flex: { xs: '1 1 100%', md: '0 0 auto' },
                 minWidth: { xs: '100%', md: '140px' },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: { xs: 0.5, md: 1 },
+                gap: { xs: 0.5, sm: 0.75, md: 1 },
                 transition: 'background-color 120ms ease, transform 120ms ease',
                 '&:hover': {
                   backgroundColor: T.blueDk,
@@ -683,8 +700,8 @@ export default function HomePage() {
                 },
               }}
             >
-              <SearchIcon sx={{ fontSize: { xs: 20, sm: 22, md: 24 } }} />
-              <Box component="span">Tìm</Box>
+              <SearchIcon sx={{ fontSize: { xs: 16, sm: 18, md: 24 } }} />
+              <Box component="span">Tìm phòng</Box>
             </Button>
           </HeroSearchBar>
 
@@ -929,13 +946,13 @@ export default function HomePage() {
           </SectionHeader>
           <Grid container spacing={2}>
             {loadingDistricts
-              ? [1,2,3,4].map(i => (
-                  <Grid item xs={6} sm={3} key={i}>
+              ? [1,2,3,4,5,6,7,8].map(i => (
+                  <Grid item xs={6} sm={3} md={3} lg={3} key={i}>
                     <Skeleton variant="rectangular" sx={{ borderRadius: '8px', height: 140 }} animation="wave" />
                   </Grid>
                 ))
-              : districts.slice(0, 4).map(d => (
-                  <Grid item xs={6} sm={3} key={d.name}>
+              : districts.slice(0, 8).map(d => (
+                  <Grid item xs={6} sm={3} md={3} lg={3} key={d.name}>
                     <Box
                       onClick={() => navigate(`/listings?district=${encodeURIComponent(d.name)}`)}
                       tabIndex={0} role="article"
@@ -998,13 +1015,37 @@ export default function HomePage() {
       </Box>
 
       {/* ─── Near Universities ─────────────────────────────────────────────── */}
-      <NearUniversities />
+      <Suspense fallback={
+        <Box sx={{ py: 4 }}>
+          <Container maxWidth="lg">
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '8px' }} />
+          </Container>
+        </Box>
+      }>
+        <NearUniversities />
+      </Suspense>
 
       {/* ─── Near Metro Stations ───────────────────────────────────────────── */}
-      <NearMetroStations />
+      <Suspense fallback={
+        <Box sx={{ py: 4 }}>
+          <Container maxWidth="lg">
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '8px' }} />
+          </Container>
+        </Box>
+      }>
+        <NearMetroStations />
+      </Suspense>
 
       {/* ─── Nearby Amenities ──────────────────────────────────────────────── */}
-      <NearbyAmenities />
+      <Suspense fallback={
+        <Box sx={{ py: 4 }}>
+          <Container maxWidth="lg">
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '8px' }} />
+          </Container>
+        </Box>
+      }>
+        <NearbyAmenities />
+      </Suspense>
 
       {/* ─── Statistics ────────────────────────────────────────────────────── */}
       <Box sx={{ py: 4 }}>
@@ -1046,7 +1087,7 @@ export default function HomePage() {
               { icon: '🏠', title: 'Bạn là chủ nhà?',
                 desc: 'Đăng tin miễn phí, tiếp cận hàng nghìn người thuê đang tìm kiếm',
                 btn: 'Đăng phòng miễn phí', btnColor: '#f5a623', btnTextColor: T.white,
-                onClick: () => window.location.href = 'http://localhost:3333/login' },
+                onClick: () => window.location.href = 'https://landlord-kltn.vercel.app/login' },
             ].map((item, i) => (
               <Grid item xs={12} sm={6} md={3} key={i}>
                 <Box sx={{

@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const session = require('express-session');
-const passport = require('./config/passport');
+const compression = require('compression');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -19,31 +18,38 @@ const movingServiceRoutes = require('./routes/movingService');
 
 const app = express();
 
+// Enable compression for all responses
+app.use(compression());
+
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3333',
+  'https://kltn-1o6k.onrender.com',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow for development
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-// Session configuration for Passport
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your_session_secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
-}));
-
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Request logging
+// Cache control headers
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes cache
+  }
   next();
 });
 
@@ -60,11 +66,9 @@ app.use('/api/filters', filterRoutes);
 app.use('/api/tenant/favorites', favoriteRoutes);
 app.use('/api/moving', movingServiceRoutes);
 
-// All files are now served from Cloudinary - no local file serving needed
-
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK' });
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // 404 handler

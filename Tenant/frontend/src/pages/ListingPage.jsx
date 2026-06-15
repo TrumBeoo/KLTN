@@ -6,7 +6,7 @@
  * Tokens: same as theme.js
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import SecondaryMenu from '../components/SecondaryMenu'
@@ -180,7 +180,13 @@ export default function ListingPage() {
   const roomTypeParam = searchParams.get('roomType')
   const nearUniversity = searchParams.get('nearUniversity')
 
-  useEffect(() => { fetchRooms() }, [poiId, poiType, district, selectedRoomType, selectedDistrict, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity])
+  useEffect(() => { 
+    // Debounce fetch to avoid excessive API calls
+    const timer = setTimeout(() => {
+      fetchRooms();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [poiId, district, selectedRoomType, selectedDistrict, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity])
   
   useEffect(() => { fetchLatestRooms(); checkFavorites() }, [])
   
@@ -435,32 +441,41 @@ export default function ListingPage() {
   }
   const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
 
-  // Sắp xếp listings
-  const sortedListings = [...listings].sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        return new Date(b.createdAt) - new Date(a.createdAt)
-      case 'oldest':
-        return new Date(a.createdAt) - new Date(b.createdAt)
-      case 'price-asc':
-        return parseFloat(a.price) - parseFloat(b.price)
-      case 'price-desc':
-        return parseFloat(b.price) - parseFloat(a.price)
-      case 'area-asc':
-        return a.area - b.area
-      case 'area-desc':
-        return b.area - a.area
-      case 'rating':
-        return b.rating - a.rating
-      case 'views':
-        return b.views - a.views
-      default:
-        return 0
-    }
-  })
+  // Sắp xếp listings với useMemo để tránh tính toán lại mỗi render
+  const sortedListings = useMemo(() => {
+    return [...listings].sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt) - new Date(a.createdAt)
+        case 'oldest':
+          return new Date(a.createdAt) - new Date(b.createdAt)
+        case 'price-asc':
+          return parseFloat(a.price) - parseFloat(b.price)
+        case 'price-desc':
+          return parseFloat(b.price) - parseFloat(a.price)
+        case 'area-asc':
+          return a.area - b.area
+        case 'area-desc':
+          return b.area - a.area
+        case 'rating':
+          return b.rating - a.rating
+        case 'views':
+          return b.views - a.views
+        default:
+          return 0
+      }
+    });
+  }, [listings, sortBy]);
 
-  const paginated = sortedListings.slice((page - 1) * PER_PAGE, page * PER_PAGE)
-  const totalPages = Math.ceil(sortedListings.length / PER_PAGE)
+  const paginated = useMemo(() => 
+    sortedListings.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    [sortedListings, page]
+  );
+  
+  const totalPages = useMemo(() => 
+    Math.ceil(sortedListings.length / PER_PAGE),
+    [sortedListings.length]
+  );
 
   // Count active filters on mount and when params change
   useEffect(() => {
