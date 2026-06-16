@@ -16,11 +16,8 @@ import {
   Email as EmailIcon,
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
-  Google as GoogleIcon,
 } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
-
-const API_URL = import.meta.env.VITE_API_URL
 
 const ForgotCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.spacing(2),
@@ -50,30 +47,10 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError('')
     setSuccess('')
+
     setLoading(true)
 
     try {
-      // Kiểm tra email trước
-      const checkResponse = await fetch(`${API_URL}/auth/check-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-
-      const checkData = await checkResponse.json()
-
-      if (!checkResponse.ok) {
-        throw new Error(checkData.message || 'Không tìm thấy tài khoản')
-      }
-
-      // Nếu là tài khoản Google, hiển thị thông báo
-      if (checkData.isGoogleAccount) {
-        setError('Tài khoản và mật khẩu của bạn được quản lý bởi Google. Vui lòng sử dụng tính năng "Tiếp tục với Google" để đăng nhập.')
-        setLoading(false)
-        return
-      }
-
-      // Nếu không phải tài khoản Google, tiếp tục gửi email reset
       const response = await fetch('../../backend/forgot-password.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,7 +120,7 @@ export default function ForgotPasswordPage() {
                   disabled={loading}
                   sx={{ mt: 2 }}
                 >
-                  {loading ? 'Đang kiểm tra...' : 'Gửi hướng dẫn'}
+                  {loading ? 'Đang gửi...' : 'Gửi hướng dẫn'}
                 </Button>
               </Box>
             ) : (
@@ -178,7 +155,7 @@ export default function ForgotPasswordPage() {
 
             <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
               <Typography variant="body2" sx={{ color: 'info.dark' }}>
-                💡 <strong>Mẹo:</strong> Nếu bạn đăng nhập bằng Google, vui lòng sử dụng nút "Tiếp tục với Google" trên trang đăng nhập. Tính năng quên mật khẩu chỉ dành cho tài khoản đăng ký bằng email và mật khẩu.
+                💡 <strong>Mẹo:</strong> Nếu bạn không nhớ email hoặc tên đăng nhập, vui lòng liên hệ với bộ phận hỗ trợ.
               </Typography>
             </Box>
           </Stack>

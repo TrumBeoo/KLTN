@@ -274,25 +274,6 @@ class UserService {
     return rows[0] || null;
   }
 
-  async checkEmailLoginMethod(email) {
-    const [rows] = await pool.query(
-      `SELECT a.AccountID, a.GoogleID
-       FROM ACCOUNT a
-       LEFT JOIN TENANT t ON a.AccountID = t.AccountID
-       LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
-       LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
-       WHERE t.Email = ? OR l.Email = ? OR mp.Email = ?`,
-      [email, email, email]
-    );
-
-    if (rows.length === 0) {
-      return { exists: false, isGoogleAccount: false };
-    }
-
-    const hasGoogleID = rows[0].GoogleID !== null && rows[0].GoogleID !== '';
-    return { exists: true, isGoogleAccount: hasGoogleID };
-  }
-
   async findOrCreateGoogleUser({ googleId, email, name, avatarURL }) {
     const connection = await pool.getConnection();
     
