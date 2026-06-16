@@ -27,6 +27,7 @@ router.post('/login', async (req, res) => {
     }
 
     const user = await userService.loginUser(username, password);
+    console.log('Login user data:', user);
 
     if (user.error) {
       return res.status(401).json({
@@ -45,18 +46,22 @@ router.post('/login', async (req, res) => {
 
     const token = userService.generateToken(user);
 
+    const userData = {
+      account_id: user.AccountID,
+      username: user.Username,
+      name: user.Name,
+      email: user.Email,
+      phone: user.Phone,
+      role: user.Role
+    };
+    
+    console.log('Sending user data to frontend:', userData);
+
     res.json({
       success: true,
       message: 'Đăng nhập thành công',
       token,
-      user: {
-        account_id: user.AccountID,
-        username: user.Username,
-        name: user.Name,
-        email: user.Email,
-        phone: user.Phone,
-        role: user.Role
-      }
+      user: userData
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -161,9 +166,25 @@ router.post('/logout', authMiddleware, (req, res) => {
 // Get current user
 router.get('/me', authMiddleware, async (req, res) => {
   try {
+    const user = await userService.getUserById(req.user.accountId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người dùng'
+      });
+    }
+
     res.json({
       success: true,
-      user: req.user
+      user: {
+        account_id: user.AccountID,
+        username: user.Username,
+        name: user.Name,
+        email: user.Email,
+        phone: user.Phone,
+        role: user.Role
+      }
     });
   } catch (error) {
     console.error('Get user error:', error);

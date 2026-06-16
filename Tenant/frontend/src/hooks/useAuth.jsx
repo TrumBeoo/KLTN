@@ -11,16 +11,28 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedToken = localStorage.getItem('token')
     const storedUser = localStorage.getItem('user')
+    
+    console.log('Loading from localStorage:', { storedToken: !!storedToken, storedUser })
 
     if (storedToken && storedUser) {
-      setToken(storedToken)
-      setUser(JSON.parse(storedUser))
+      try {
+        const parsedUser = JSON.parse(storedUser)
+        console.log('Parsed user:', parsedUser)
+        setToken(storedToken)
+        setUser(parsedUser)
+      } catch (error) {
+        console.error('Failed to parse stored user:', error)
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
     }
     setLoading(false)
   }, [])
 
   const login = async (username, password) => {
     const data = await authAPI.login(username, password)
+    console.log('Login response data:', data)
+    console.log('User data to save:', data.user)
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setToken(data.token)

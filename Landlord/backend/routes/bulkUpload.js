@@ -365,6 +365,22 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
 
     const landlordId = landlords[0].LandlordID;
 
+    // Kiểm tra xem đã có batch pending/processing chưa
+    const [existingJobs] = await connection.query(
+      'SELECT UploadJobID, FileName, CreatedAt FROM UPLOAD_JOB WHERE LandlordID = ? AND Status IN (?, ?) ORDER BY CreatedAt DESC LIMIT 1',
+      [landlordId, 'pending', 'processing']
+    );
+
+    if (existingJobs.length > 0) {
+      await connection.rollback();
+      const existingJob = existingJobs[0];
+      return res.status(400).json({ 
+        success: false, 
+        message: `Bạn đang có batch "${existingJob.FileName}" chưa hoàn thành. Vui lòng hoàn thành hoặc xóa batch hiện tại trước khi upload file mới.`,
+        existingJobId: existingJob.UploadJobID
+      });
+    }
+
     // Verify building ownership and get building's district
     const [buildings] = await connection.query(
       'SELECT BuildingID, LocationID, District, BuildingName FROM BUILDING WHERE BuildingID = ? AND LandlordID = ?',

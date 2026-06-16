@@ -47,7 +47,7 @@ import NotificationModal from './NotificationModal'
 import POISelector from './POISelector'
 
 export default function ExcelUploadWithImages() {
-  const { notification, showSuccess, showError, hideNotification } = useNotification()
+  const { notification, showSuccess, showError, showConfirm, hideNotification } = useNotification()
   const [activeStep, setActiveStep] = useState(0)
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState([])
@@ -207,10 +207,21 @@ export default function ExcelUploadWithImages() {
         setFilterStats(data.data.stats) // Lưu thống kê lọc
         setActiveStep(1)
       } else {
-        showError('Lỗi!', data.message)
+        // Nếu có batch tồn tại, hiển thị thông báo và chuyển đến danh sách batch
+        if (data.existingJobId) {
+          showError('Có batch chưa hoàn thành', data.message)
+          // Tự động tải lại danh sách batch để hiển thị
+          await loadDraftBatches()
+          setShowBatches(true)
+        } else {
+          showError('Lỗi!', data.message)
+        }
+        // Reset file input
+        e.target.value = ''
       }
     } catch (error) {
       showError('Lỗi!', 'Không thể xem trước dữ liệu')
+      e.target.value = ''
     }
   }
 
@@ -526,19 +537,19 @@ export default function ExcelUploadWithImages() {
   }
 
   const handleDeleteBatch = async (jobId) => {
-    if (!confirm('Bạn có chắc muốn xóa batch này?')) return
-
-    try {
-      await fetch(`${API_URL}/bulk/job/${jobId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      showSuccess('Thành công!', 'Đã xóa batch')
-      loadDraftBatches()
-    } catch (error) {
-      console.error('Delete batch error:', error)
-      showError('Lỗi!', 'Không thể xóa batch')
-    }
+    showConfirm('Xác nhận xóa', 'Bạn có chắc muốn xóa batch này?', async () => {
+      try {
+        await fetch(`${API_URL}/bulk/job/${jobId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        showSuccess('Thành công!', 'Đã xóa batch')
+        loadDraftBatches()
+      } catch (error) {
+        console.error('Delete batch error:', error)
+        showError('Lỗi!', 'Không thể xóa batch')
+      }
+    })
   }
 
   const resetState = () => {
@@ -658,6 +669,24 @@ export default function ExcelUploadWithImages() {
 
         {activeStep === 0 && (
           <Stack spacing={2}>
+            {draftBatches.length > 0 && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  ⚠️ Bạn đang có {draftBatches.length} batch chưa hoàn thành
+                </Typography>
+                <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                  Vui lòng hoàn thành hoặc xóa các batch hiện tại trước khi upload file mới.
+                </Typography>
+                <Button 
+                  size="small" 
+                  variant="outlined" 
+                  sx={{ mt: 1 }}
+                  onClick={() => setShowBatches(true)}
+                >
+                  Xem các batch đang xử lý
+                </Button>
+              </Alert>
+            )}
             <Alert severity="info">
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
                 File Excel chỉ cần cột bắt buộc:
@@ -693,16 +722,16 @@ export default function ExcelUploadWithImages() {
               component="label"
               startIcon={<UploadIcon />}
               fullWidth
-              disabled={!selectedBuilding}
+              disabled={!selectedBuilding || draftBatches.length > 0}
               sx={{ py: 3, borderStyle: 'dashed' }}
             >
-              {file ? file.name : selectedBuilding ? 'Chọn file Excel hoặc kéo thả vào đây' : 'Vui lòng chọn tòa nhà trước'}
+              {file ? file.name : selectedBuilding ? (draftBatches.length > 0 ? 'Hoàn thành batch hiện tại trước' : 'Chọn file Excel hoặc kéo thả vào đây') : 'Vui lòng chọn tòa nhà trước'}
               <input
                 type="file"
                 hidden
                 accept=".xlsx,.xls"
                 onChange={handleFileSelect}
-                disabled={!selectedBuilding}
+                disabled={!selectedBuilding || draftBatches.length > 0}
               />
             </Button>
 
@@ -993,6 +1022,7 @@ export default function ExcelUploadWithImages() {
         type={notification.type}
         title={notification.title}
         message={notification.message}
+        onConfirm={notification.onConfirm}
       />
 
       {/* POI Dialog */}

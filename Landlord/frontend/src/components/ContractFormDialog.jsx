@@ -19,8 +19,11 @@ import {
   Box
 } from '@mui/material'
 import { Close as CloseIcon, Upload as UploadIcon } from '@mui/icons-material'
+import { useNotification } from '../hooks/useNotification'
+import NotificationModal from './NotificationModal'
 
 export default function ContractFormDialog({ open, onClose, roomId, roomCode, onSubmit }) {
+  const { notification, showError, hideNotification } = useNotification()
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
@@ -97,7 +100,7 @@ export default function ContractFormDialog({ open, onClose, roomId, roomCode, on
 
   const handleSubmit = async () => {
     if (!formData.startDate || !formData.endDate || !formData.depositAmount || !formData.monthlyRent) {
-      alert('Vui lòng nhập đầy đủ thông tin bắt buộc')
+      showError('Lỗi!', 'Vui lòng nhập đầy đủ thông tin bắt buộc')
       return
     }
 
@@ -123,7 +126,7 @@ export default function ContractFormDialog({ open, onClose, roomId, roomCode, on
       onClose()
     } catch (error) {
       console.error('Submit contract error:', error)
-      alert('Lỗi: ' + error.message)
+      showError('Lỗi!', error.message)
     } finally {
       setLoading(false)
     }
@@ -304,6 +307,14 @@ export default function ContractFormDialog({ open, onClose, roomId, roomCode, on
           {loading ? 'Đang tạo...' : 'Tạo hợp đồng'}
         </Button>
       </DialogActions>
+      
+      <NotificationModal
+        open={notification.open}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </Dialog>
   )
 }

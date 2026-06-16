@@ -51,20 +51,41 @@ class UserService {
   async loginUser(username, password) {
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username);
     
-    let query = `
-      SELECT a.AccountID, a.Username, a.Password, a.Role, a.Status,
-             COALESCE(t.Name, l.Name, mp.Name) as Name,
-             COALESCE(t.Email, l.Email, mp.Email) as Email,
-             COALESCE(t.Phone, l.Phone, mp.Phone) as Phone
-      FROM ACCOUNT a
-      LEFT JOIN TENANT t ON a.AccountID = t.AccountID
-      LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
-      LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
-      WHERE ${isEmail ? '(t.Email = ? OR l.Email = ? OR mp.Email = ?)' : 'a.Username = ?'}
-    `;
+    let query, params;
+    
+    if (isEmail) {
+      query = `
+        SELECT a.AccountID, a.Username, a.Password, a.Role, a.Status,
+               COALESCE(t.Name, l.Name, mp.Name) as Name,
+               COALESCE(t.Email, l.Email, mp.Email) as Email,
+               COALESCE(t.Phone, l.Phone, mp.Phone) as Phone
+        FROM ACCOUNT a
+        LEFT JOIN TENANT t ON a.AccountID = t.AccountID
+        LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
+        LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
+        WHERE (t.Email = ? OR l.Email = ? OR mp.Email = ?)
+          AND a.Status = 'Active'
+      `;
+      params = [username, username, username];
+    } else {
+      query = `
+        SELECT a.AccountID, a.Username, a.Password, a.Role, a.Status,
+               COALESCE(t.Name, l.Name, mp.Name) as Name,
+               COALESCE(t.Email, l.Email, mp.Email) as Email,
+               COALESCE(t.Phone, l.Phone, mp.Phone) as Phone
+        FROM ACCOUNT a
+        LEFT JOIN TENANT t ON a.AccountID = t.AccountID
+        LEFT JOIN LANDLORD l ON a.AccountID = l.AccountID
+        LEFT JOIN MOVING_PROVIDER mp ON a.AccountID = mp.AccountID
+        WHERE a.Username = ?
+      `;
+      params = [username];
+    }
 
-    const params = isEmail ? [username, username, username] : [username];
+    console.log('Login query:', query);
+    console.log('Login params:', params);
     const [rows] = await pool.query(query, params);
+    console.log('Query result:', rows);
 
     if (rows.length === 0) {
       return { error: 'Tên đăng nhập hoặc mật khẩu không chính xác' };

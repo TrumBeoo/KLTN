@@ -112,6 +112,10 @@ export default function Navbar() {
   const [notifications, setNotifications]  = useState([])
   const [loadingNotif, setLoadingNotif]    = useState(false)
 
+  useEffect(() => {
+    console.log('Current user in Navbar:', user)
+  }, [user])
+
   useEffect(() => { if (user) fetchUnreadCount() }, [user])
 
   const fetchUnreadCount = async () => {
@@ -470,8 +474,12 @@ export default function Navbar() {
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${BORDER}` }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.857rem', color: '#1a1a1a' }}>{user?.name}</Typography>
-          <Typography variant="caption" sx={{ color: '#595959' }}>{user?.email}</Typography>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.857rem', color: '#1a1a1a' }}>
+            {user?.name || user?.username || 'User'}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#595959' }}>
+            {user?.email || 'No email'}
+          </Typography>
         </Box>
         {[
           { label: 'Hồ sơ của tôi',     action: () => { navigate('/profile'); setUserMenuAnchor(null) } },

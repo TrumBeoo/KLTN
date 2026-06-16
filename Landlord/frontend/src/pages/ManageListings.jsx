@@ -147,7 +147,7 @@ const ListingForm = ({ open, onClose, listing = null, onSubmit }) => {
             control={
               <Switch
                 name="isVisible"
-                checked={formData.isVisible}
+                checked={Boolean(formData.isVisible)}
                 onChange={handleChange}
               />
             }
@@ -625,7 +625,7 @@ export default function ManageListings() {
                     </TableCell>
                     <TableCell>
                       <Switch
-                        checked={listing.IsVisible}
+                        checked={Boolean(listing.IsVisible)}
                         onChange={() => handleToggleVisibility(listing.ListingID, listing.IsVisible)}
                         size="small"
                       />

@@ -43,6 +43,8 @@ import {
 } from '@mui/icons-material'
 
 import notificationService from '../services/notificationService'
+import { useNotification } from '../hooks/useNotification'
+import NotificationModal from './NotificationModal'
 
 const SIDEBAR_WIDTH = 240
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333/api'
@@ -114,6 +116,7 @@ const NavItem = ({ item, isActive, onClick }) => (
 )
 
 export default function LandlordLayout() {
+  const { notification, showConfirm, hideNotification } = useNotification()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -186,14 +189,15 @@ export default function LandlordLayout() {
   }
 
   const handleDeleteAllNotifications = async () => {
-    if (!window.confirm('Bạn có chắc muốn xóa tất cả thông báo?')) return
-    try {
-      await notificationService.deleteAllNotifications()
-      fetchNotifications()
-      fetchUnreadCount()
-    } catch (error) {
-      console.error('Failed to delete all notifications:', error)
-    }
+    showConfirm('Xác nhận xóa', 'Bạn có chắc muốn xóa tất cả thông báo?', async () => {
+      try {
+        await notificationService.deleteAllNotifications()
+        fetchNotifications()
+        fetchUnreadCount()
+      } catch (error) {
+        console.error('Failed to delete all notifications:', error)
+      }
+    })
   }
 
   const handleMarkAllAsRead = async () => {
@@ -712,6 +716,15 @@ export default function LandlordLayout() {
           <Outlet />
         </Box>
       </Box>
+      
+      <NotificationModal
+        open={notification.open}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onConfirm={notification.onConfirm}
+      />
     </Box>
   )
 }
