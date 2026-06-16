@@ -229,6 +229,40 @@ router.post('/change-password', authMiddleware, async (req, res) => {
   }
 });
 
+// Check if email is registered with Google
+router.post('/check-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng nhập email'
+      });
+    }
+
+    const result = await userService.checkEmailLoginMethod(email);
+
+    if (!result.exists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Email không tồn tại trong hệ thống'
+      });
+    }
+
+    res.json({
+      success: true,
+      isGoogleAccount: result.isGoogleAccount
+    });
+  } catch (error) {
+    console.error('Check email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server'
+    });
+  }
+});
+
 // Upload avatar
 router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
   try {
