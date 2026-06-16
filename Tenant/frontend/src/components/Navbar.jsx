@@ -324,10 +324,10 @@ export default function Navbar() {
                 onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setUserMenuAnchor(e.currentTarget)}
               >
                 <Avatar sx={{ width: 26, height: 26, fontSize: '0.714rem', bgcolor: '#febb02', color: '#1a1a1a' }}>
-                  {user.name?.charAt(0).toUpperCase()}
+                  {(user.name || user.Name || user.username || user.Username || 'U')?.charAt(0).toUpperCase()}
                 </Avatar>
                 <Typography sx={{ color: WHITE, fontSize: '0.857rem', fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>
-                  {user.name?.split(' ').pop()}
+                  {(user.name || user.Name || user.username || user.Username)?.split(' ').pop()}
                 </Typography>
                 <ArrowDownIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.8)' }} />
               </UserPill>
@@ -475,10 +475,10 @@ export default function Navbar() {
       >
         <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${BORDER}` }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.857rem', color: '#1a1a1a' }}>
-            {user?.name || user?.username || 'User'}
+            {user?.name || user?.Name || user?.username || user?.Username || 'User'}
           </Typography>
           <Typography variant="caption" sx={{ color: '#595959' }}>
-            {user?.email || 'No email'}
+            {user?.email || user?.Email || 'No email'}
           </Typography>
         </Box>
         {[
