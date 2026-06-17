@@ -103,7 +103,7 @@ export default function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
-  const LANDLORD_URL = (import.meta.env.VITE_LANDLORD_URL || 'https://landlord-kltn.vercel.app').replace(/\/$/, '')
+  const LANDLORD_URL = (import.meta.env.VITE_LANDLORD_URL || 'https://landlordrentify.vercel.app').replace(/\/$/, '')
 
   const [mobileOpen, setMobileOpen]       = useState(false)
   const [userMenuAnchor, setUserMenuAnchor] = useState(null)
