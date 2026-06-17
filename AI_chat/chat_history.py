@@ -5,7 +5,7 @@ chat_history.py - Chat history management for Rentify AI
 import json
 from typing import Any, Dict, List, Optional
 from datetime import datetime
-from config import DB_CONFIG
+from db_pool import pool_manager
 
 try:
     import mysql.connector
@@ -24,7 +24,7 @@ class ChatHistoryManager:
     
     def _check_connection(self):
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             conn.close()
             print("[OK] ChatHistory DB connected")
         except Exception as e:
@@ -38,7 +38,7 @@ class ChatHistoryManager:
             return None
         
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             cur = conn.cursor(dictionary=True)
             cur.execute(query, params)
             

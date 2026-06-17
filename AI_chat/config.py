@@ -15,6 +15,13 @@ DB_CONFIG = {
     "port": int(os.getenv("DB_PORT", 3306)),
 }
 
+DB_POOL_CONFIG = {
+    **DB_CONFIG,
+    "pool_name": os.getenv("DB_POOL_NAME", "rentify_ai_pool"),
+    "pool_size": int(os.getenv("DB_POOL_SIZE", 8)),
+    "pool_reset_session": True,
+}
+
 # ── AI / Groq ─────────────────────────────────────────────
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")

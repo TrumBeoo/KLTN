@@ -12,6 +12,7 @@ pydantic==2.9.2
 pydantic-settings==2.6.1
 
 requests==2.32.3
+redis==5.2.1
 
 # Performance optimization
 aiocache==0.12.2

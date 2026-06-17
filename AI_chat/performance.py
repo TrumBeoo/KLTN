@@ -3,6 +3,7 @@ performance.py - Performance optimizations for AI chat
 """
 
 import asyncio
+import time
 from typing import Dict, Any, List
 from groq import Groq
 from config import GROQ_API_KEY, GROQ_MODEL
@@ -103,3 +104,45 @@ def lazy_load_features():
     """Lazy load heavy dependencies only when needed"""
     # Move heavy imports here if needed in future
     pass
+
+
+class MetricsCollector:
+    """Lightweight in-process metrics collector"""
+
+    def __init__(self, max_samples: int = 500):
+        self.max_samples = max_samples
+        self.request_count = 0
+        self.error_count = 0
+        self.intent_counts: Dict[str, int] = {}
+        self.latencies_ms: List[float] = []
+        self.last_request_at = None
+
+    def record_request(self, latency_ms: float, intent: str = "unknown", is_error: bool = False):
+        self.request_count += 1
+        self.last_request_at = time.time()
+        self.intent_counts[intent] = self.intent_counts.get(intent, 0) + 1
+        self.latencies_ms.append(latency_ms)
+        if len(self.latencies_ms) > self.max_samples:
+            self.latencies_ms = self.latencies_ms[-self.max_samples:]
+        if is_error:
+            self.error_count += 1
+
+    def summary(self) -> Dict[str, Any]:
+        samples = sorted(self.latencies_ms)
+        avg = round(sum(samples) / len(samples), 2) if samples else 0.0
+        p95_index = int(len(samples) * 0.95) - 1 if samples else -1
+        p95 = round(samples[max(p95_index, 0)], 2) if samples else 0.0
+        error_rate = round(self.error_count / self.request_count, 4) if self.request_count else 0.0
+        return {
+            "requests": self.request_count,
+            "errors": self.error_count,
+            "error_rate": error_rate,
+            "avg_latency_ms": avg,
+            "p95_latency_ms": p95,
+            "recent_samples": len(samples),
+            "intent_counts": self.intent_counts,
+            "last_request_at": self.last_request_at,
+        }
+
+
+metrics = MetricsCollector()

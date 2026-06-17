@@ -5,7 +5,7 @@ booking_service.py - Integration with Tenant backend for room viewing bookings
 import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from config import DB_CONFIG
+from db_pool import pool_manager
 
 try:
     import mysql.connector
@@ -20,6 +20,24 @@ class BookingService:
     def __init__(self, backend_url: str = "http://localhost:5000"):
         self.backend_url = backend_url
         self.connected = _MYSQL_OK
+        self.session = requests.Session()
+        self._room_code_cache: Dict[str, Optional[str]] = {}
+
+    def health(self) -> Dict[str, Any]:
+        status = {
+            "db_connected": self.connected,
+            "backend_url": self.backend_url,
+            "room_code_cache_size": len(self._room_code_cache),
+            "backend_reachable": False,
+        }
+
+        try:
+            response = self.session.get(f"{self.backend_url}/api/health", timeout=2)
+            status["backend_reachable"] = response.status_code == 200
+        except Exception:
+            status["backend_reachable"] = False
+
+        return status
     
     def get_available_slots(self, room_id: str, date: str) -> List[str]:
         """Get available time slots for a room on a specific date
@@ -32,7 +50,7 @@ class BookingService:
             List of available time slots in HH:mm format
         """
         try:
-            response = requests.get(
+            response = self.session.get(
                 f"{self.backend_url}/api/viewing-schedule/available-slots/{room_id}",
                 params={"date": date},
                 timeout=5
@@ -52,16 +70,21 @@ class BookingService:
         """Get RoomID from RoomCode"""
         if not self.connected:
             return None
+
+        if room_code in self._room_code_cache:
+            return self._room_code_cache[room_code]
         
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             cur = conn.cursor(dictionary=True)
             cur.execute("SELECT RoomID FROM ROOM WHERE RoomCode = %s", (room_code,))
             result = cur.fetchone()
             cur.close()
             conn.close()
-            
-            return result["RoomID"] if result else None
+
+            room_id = result["RoomID"] if result else None
+            self._room_code_cache[room_code] = room_id
+            return room_id
         except Exception as e:
             print(f"[BookingService] Error getting RoomID: {e}")
             return None
@@ -91,7 +114,7 @@ class BookingService:
             if auth_token:
                 headers["Authorization"] = f"Bearer {auth_token}"
             
-            response = requests.post(
+            response = self.session.post(
                 f"{self.backend_url}/api/viewing-schedule/schedule",
                 json={
                     "roomId": room_id,
@@ -135,7 +158,7 @@ class BookingService:
             return []
         
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             cur = conn.cursor(dictionary=True)
             
             if room_id:
@@ -183,7 +206,7 @@ class BookingService:
             return False
         
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             cur = conn.cursor()
             
             # Verify ownership and cancel

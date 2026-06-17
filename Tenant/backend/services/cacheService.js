@@ -1,7 +1,7 @@
 const NodeCache = require('node-cache');
 
 const DEFAULT_TTL = parseInt(process.env.CACHE_TTL || '300', 10);
-const CACHE_PROVIDER = (process.env.CACHE_PROVIDER || '').toLowerCase();
+const CACHE_PROVIDER = (process.env.CACHE_PROVIDER || 'memory').toLowerCase();
 const REDIS_URL = process.env.REDIS_URL;
 
 class CacheService {
@@ -27,7 +27,7 @@ class CacheService {
   }
 
   async initializeRedis() {
-    const shouldUseRedis = CACHE_PROVIDER === 'redis' || Boolean(REDIS_URL);
+    const shouldUseRedis = CACHE_PROVIDER === 'redis';
     if (!shouldUseRedis) {
       return;
     }

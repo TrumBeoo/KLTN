@@ -7,10 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
+import time
 
 from AI_chat import ChatOrchestrator
 from booking_service import BookingService
 import cache
+from db_pool import pool_manager
+from performance import metrics
 
 app = FastAPI(title="Rentify AI Chat", version="2.0.0")
 app.add_middleware(
@@ -34,14 +37,29 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 async def health():
+    db_connected = orchestrator._db.is_connected()
+    booking_health = booking_service.health()
+    cache_health = cache.get_cache_health()
+    metrics_health = metrics.summary()
+
     return {
-        "status": "ok",
-        "database": "connected" if orchestrator._db.is_connected() else "disconnected",
+        "status": "ok" if db_connected else "degraded",
+        "ai_provider": {
+            "groq_available": bool(getattr(orchestrator._ai, "_client", None)),
+        },
+        "database": {
+            "connected": db_connected,
+            "pool": pool_manager.health(),
+        },
+        "cache": cache_health,
+        "booking_service": booking_health,
+        "metrics": metrics_health,
     }
 
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    started_at = time.perf_counter()
     try:
         print(f"[Chat Request] message={req.message[:50]}..., user_id={req.user_id}")
         
@@ -52,12 +70,16 @@ async def chat(req: ChatRequest):
             session_id=req.session_id,
         )
         
+        latency_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        metrics.record_request(latency_ms, result.get("intent", "unknown"), is_error=False)
         print(f"[Chat Response] intent={result.get('intent')}, reply_length={len(result.get('reply', ''))}")
         return JSONResponse(content=result)
         
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
+        latency_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        metrics.record_request(latency_ms, "error", is_error=True)
         print(f"[Chat Error] {error_detail}")
         
         # Return user-friendly error
@@ -73,6 +95,19 @@ async def chat(req: ChatRequest):
                 "session_id": req.session_id or "unknown"
             }
         )
+
+
+@app.get("/metrics")
+async def get_metrics():
+    return {
+        "success": True,
+        "data": {
+            "metrics": metrics.summary(),
+            "cache": cache.get_cache_health(),
+            "db_pool": pool_manager.health(),
+            "booking_service": booking_service.health(),
+        }
+    }
 
 
 @app.get("/rooms/stats")

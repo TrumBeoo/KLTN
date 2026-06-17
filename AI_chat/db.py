@@ -7,7 +7,8 @@ import decimal
 import datetime
 from typing import Any, Dict, List, Optional
 
-from config import DB_CONFIG, ALLOWED_ROOM_FIELDS, PRIVACY_FIELDS, PRIVACY_PLACEHOLDER
+from config import ALLOWED_ROOM_FIELDS, PRIVACY_FIELDS, PRIVACY_PLACEHOLDER
+from db_pool import pool_manager
 
 try:
     import mysql.connector
@@ -71,7 +72,7 @@ class DatabaseClient:
 
     def _check_connection(self):
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             conn.close()
             self.connected = True
             print("[OK] DB connected")
@@ -87,7 +88,7 @@ class DatabaseClient:
         if not self.connected:
             return []
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = pool_manager.get_connection()
             cur = conn.cursor(dictionary=True)
             cur.execute(query, params)
             rows = cur.fetchall()
@@ -159,7 +160,7 @@ class DatabaseClient:
             params.append(ward)
 
         where = " AND ".join(conditions) if conditions else "1=1"
-        order = _SORT_MAP.get(filters.get("sort_by", ""), "RAND()")
+        order = _SORT_MAP.get(filters.get("sort_by", ""), "Price ASC, RoomCode ASC")
         limit = min(int(filters.get("limit", 5)), 20)
 
         # Optimized: Only SELECT fields we need, avoid LEFT JOIN if district not needed

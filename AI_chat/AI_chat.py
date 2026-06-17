@@ -22,6 +22,7 @@ from config import (
 )
 from db import DatabaseClient, filter_privacy
 from chat_history import ChatHistoryManager
+from booking_service import BookingService
 import cache
 
 try:
@@ -429,6 +430,7 @@ class ChatOrchestrator:
         self._ai = _GroqClient()
         self._db = DatabaseClient()
         self._history = ChatHistoryManager()
+        self._booking = BookingService()
         self._session_context = {}
 
     async def process(
@@ -668,9 +670,7 @@ class ChatOrchestrator:
             # Try parsing from message if not extracted
             if not date or not time:
                 try:
-                    from booking_service import BookingService
-                    bs = BookingService()
-                    parsed = bs.parse_natural_time(message)
+                    parsed = self._booking.parse_natural_time(message)
                     if not date and parsed.get("date"):
                         date = parsed["date"]
                     if not time and parsed.get("time"):
@@ -697,11 +697,9 @@ class ChatOrchestrator:
             room_id = None
             if date:
                 try:
-                    from booking_service import BookingService
-                    bs = BookingService()
-                    room_id = bs.get_room_id_from_code(room_code)
+                    room_id = self._booking.get_room_id_from_code(room_code)
                     if room_id:
-                        available_slots = bs.get_available_slots(room_id, date)
+                        available_slots = self._booking.get_available_slots(room_id, date)
                     else:
                         # Fallback: suggest common times
                         available_slots = ["09:00", "10:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"]
