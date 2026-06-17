@@ -135,6 +135,15 @@ export default function TenantProfilePage() {
     fetchFavorites()
   }, [])
 
+  useEffect(() => {
+    const handleViewingScheduleChanged = () => {
+      fetchViewingSchedules()
+    }
+
+    window.addEventListener('viewing-schedule:changed', handleViewingScheduleChanged)
+    return () => window.removeEventListener('viewing-schedule:changed', handleViewingScheduleChanged)
+  }, [])
+
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('token')

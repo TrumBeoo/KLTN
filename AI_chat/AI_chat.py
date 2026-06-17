@@ -394,6 +394,7 @@ def _build_booking_payload(room_code: str, room_info: Dict, date: str, time: str
     return {
         "action": "booking_confirmation_required",
         "room_code": room_code,
+        "room_id": room_info.get("RoomID"),
         "room_info": {
             "title": room_info.get("Title") or f"{room_info.get('RoomType', 'Phòng')} - {room_code}",
             "room_type": room_info.get("RoomType", "Phòng trọ"),

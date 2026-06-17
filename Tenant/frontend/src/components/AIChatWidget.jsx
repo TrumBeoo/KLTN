@@ -149,13 +149,14 @@ const SuggestionChip = styled(Chip)({
  *   error       → error message + [Thử lại]
  *   cancelled   → soft cancelled state
  */
-function BookingCard({ card, userId, authToken, tenantBackendUrl, onResult }) {
+function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, onResult }) {
   const [status, setStatus]       = useState('idle')   // idle | confirming | success | error | cancelled
   const [errorMsg, setErrorMsg]   = useState('')
   const [scheduleId, setScheduleId] = useState(null)
 
   const {
     room_code,
+    room_id,
     room_info = {},
     viewing_date,
     viewing_date_display,
@@ -165,6 +166,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, onResult }) {
 
   const fmt = p => p ? Math.floor(parseFloat(p)).toLocaleString('vi-VN') : null
   const price = fmt(room_info.price)
+  const resolvedRoomId = room_id || roomCodeMap?.[room_code] || null
   // Remove /api suffix if present to avoid duplication
   const BACKEND_URL = (tenantBackendUrl || 'http://localhost:5000/api').replace(/\/api$/, '')
 
@@ -200,6 +202,12 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, onResult }) {
 
       // Step 2: Call Tenant backend to create the schedule
       // The backend validates: slot availability, no duplicate, room status, etc.
+      if (!resolvedRoomId && !room_code) {
+        setErrorMsg('Không xác định được phòng để đặt lịch. Vui lòng thử lại.')
+        setStatus('error')
+        return
+      }
+
       const endpoint = `${BACKEND_URL}/api${api_endpoint || '/viewing-schedule/schedule'}`
       
       console.log('[BookingCard] Calling endpoint:', endpoint)
@@ -211,7 +219,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, onResult }) {
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          roomId: room_code,   // backend resolves RoomID from this
+          roomId: resolvedRoomId || room_code,
           date:   viewing_date,
           time:   viewing_time,
         }),
@@ -220,9 +228,21 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, onResult }) {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        setScheduleId(data.scheduleId || data.ScheduleID || 'SCH-OK')
+        const nextScheduleId = data.scheduleId || data.ScheduleID || 'SCH-OK'
+        setScheduleId(nextScheduleId)
         setStatus('success')
-        onResult?.({ type: 'success', scheduleId: data.scheduleId, card })
+        window.dispatchEvent(new CustomEvent('viewing-schedule:changed', {
+          detail: {
+            scheduleId: nextScheduleId,
+            roomId: resolvedRoomId,
+            roomCode: room_code,
+            status: 'Chờ duyệt',
+            viewingDate: viewing_date,
+            viewingTime: viewing_time,
+          },
+        }))
+        localStorage.setItem('viewing_schedule_updated_at', String(Date.now()))
+        onResult?.({ type: 'success', scheduleId: nextScheduleId, roomId: resolvedRoomId, roomCode: room_code, card })
       } else {
         setErrorMsg(data.message || 'Đặt lịch thất bại. Vui lòng thử lại.')
         setStatus('error')
@@ -1061,6 +1081,7 @@ export default function AIChatWidget({
                     userId={userId}
                     authToken={authToken}
                     tenantBackendUrl={tenantBackendUrl}
+                    roomCodeMap={roomCodeMap}
                     onResult={handleBookingResult}
                   />
                 </Box>

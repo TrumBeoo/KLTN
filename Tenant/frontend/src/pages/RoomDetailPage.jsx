@@ -122,6 +122,20 @@ export default function RoomDetailPage() {
 
   useEffect(() => { if (roomId) { fetchRoom(); fetchUserSchedule(); checkFavorite() } }, [roomId])
   useEffect(() => { if (roomId) { fetchUserSchedule(); checkFavorite() } }, [auth.user])
+  useEffect(() => {
+    const handleViewingScheduleChanged = (event) => {
+      const { roomId: scheduledRoomId, roomCode } = event.detail || {}
+      const matchesCurrentRoom = scheduledRoomId === roomId || (roomCode && room?.RoomCode === roomCode)
+
+      if (!matchesCurrentRoom) return
+
+      fetchUserSchedule()
+      fetchRoom()
+    }
+
+    window.addEventListener('viewing-schedule:changed', handleViewingScheduleChanged)
+    return () => window.removeEventListener('viewing-schedule:changed', handleViewingScheduleChanged)
+  }, [roomId, room?.RoomCode, auth.user])
 
   const fetchDocuments = async () => {
     setLoadingDocs(true)
@@ -256,6 +270,17 @@ export default function RoomDetailPage() {
       if (data.success) {
         setOpenSchedule(false)
         setScheduleData({ date: '', time: '', name: '', phone: '' })
+        window.dispatchEvent(new CustomEvent('viewing-schedule:changed', {
+          detail: {
+            scheduleId: data.scheduleId,
+            roomId: room.RoomID,
+            roomCode: room.RoomCode,
+            status: 'Chờ duyệt',
+            viewingDate: scheduleData.date,
+            viewingTime: scheduleData.time,
+          },
+        }))
+        localStorage.setItem('viewing_schedule_updated_at', String(Date.now()))
         showSuccess('Thành công!', 'Đặt lịch xem phòng thành công! Chủ nhà sẽ xác nhận trong 24 giờ.')
         fetchUserSchedule(); fetchRoom()
       } else showError('Lỗi!', data.message || 'Đặt lịch thất bại')

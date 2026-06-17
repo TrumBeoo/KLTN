@@ -355,6 +355,22 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [])
 
+  useEffect(() => {
+    const handleViewingScheduleChanged = (event) => {
+      const { roomId } = event.detail || {}
+      if (!roomId) return
+
+      setListings(prev => prev.map(listing =>
+        listing.id === roomId
+          ? { ...listing, status: 'pending' }
+          : listing
+      ))
+    }
+
+    window.addEventListener('viewing-schedule:changed', handleViewingScheduleChanged)
+    return () => window.removeEventListener('viewing-schedule:changed', handleViewingScheduleChanged)
+  }, [])
+
   const fetchDistrictOptions = async () => {
     try {
       const res = await fetch(`${API_URL}/locations/districts`)

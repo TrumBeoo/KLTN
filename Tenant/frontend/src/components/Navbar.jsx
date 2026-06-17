@@ -103,6 +103,7 @@ export default function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const LANDLORD_URL = (import.meta.env.VITE_LANDLORD_URL || 'https://landlord-kltn.vercel.app').replace(/\/$/, '')
 
   const [mobileOpen, setMobileOpen]       = useState(false)
   const [userMenuAnchor, setUserMenuAnchor] = useState(null)
@@ -184,6 +185,9 @@ export default function Navbar() {
   }
 
   const isActive = (path) => location.pathname === path
+  const goToLandlordLogin = () => {
+    window.location.href = `${LANDLORD_URL}/login`
+  }
 
   const handleLogout = async () => {
     await logout(); setUserMenuAnchor(null); navigate('/login')
@@ -271,7 +275,7 @@ export default function Navbar() {
             {/* Post button */}
             <PostBtn
               startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-              onClick={() => window.location.href = 'http://localhost:3333/login'}
+              onClick={goToLandlordLogin}
               aria-label="Đăng tin cho thuê"
               sx={{ display: { xs: 'none', md: 'flex' } }}
             >
@@ -541,7 +545,7 @@ export default function Navbar() {
 
           <Divider />
           <Box sx={{ p: 2 }}>
-            <PostBtn fullWidth onClick={() => { window.location.href = 'http://localhost:3333/login'; setMobileOpen(false) }}>
+            <PostBtn fullWidth onClick={() => { goToLandlordLogin(); setMobileOpen(false) }}>
               Đăng tin miễn phí
             </PostBtn>
             <Box sx={{ mt: 1.5 }}>
