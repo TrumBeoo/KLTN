@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import { GlobalStyles } from '@mui/material'
 import App from './App'
 import theme from './theme'
+import 'leaflet/dist/leaflet.css'
 
 const globalStyles = (
   <GlobalStyles

@@ -7,6 +7,43 @@ const cloudinaryService = require('../services/cloudinaryService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Get all roommate profiles (public)
+router.get('/roommate-profiles', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const [profiles] = await db.query(`
+      SELECT 
+        t.TenantID,
+        t.Name,
+        t.Gender,
+        YEAR(CURDATE()) - YEAR(t.Birthday) as Age,
+        t.University,
+        t.Job,
+        t.Bio,
+        t.BudgetMin,
+        t.BudgetMax,
+        t.PreferredDistrict as PreferredLocation,
+        COALESCE(t.BudgetMin, 0) as Budget,
+        a.AvatarURL,
+        t.CreatedAt
+      FROM TENANT t
+      JOIN ACCOUNT a ON t.AccountID = a.AccountID
+      WHERE t.BudgetMin IS NOT NULL 
+        AND t.BudgetMax IS NOT NULL
+        AND a.Status = 'active'
+      ORDER BY t.CreatedAt DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    res.json({ success: true, data: profiles });
+  } catch (error) {
+    console.error('Get roommate profiles error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+});
+
 // Get tenant profile
 router.get('/profile', authMiddleware, async (req, res) => {
   try {

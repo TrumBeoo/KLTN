@@ -45,7 +45,8 @@ const T = {
   yellow:  '#febb02',
   green:   '#008234',
   greenLt: '#e8f5ee',
-  shadow1: 'rgba(26,26,26,0.16) 0px 2px 8px 0px',
+  shadow1: '0px 4px 12px rgba(0,0,0,0.08), 0px 1px 3px rgba(0,0,0,0.06)',
+  shadow2: '0px 8px 20px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,0,0,0.08)',
   motion:  '120ms',
 }
 
@@ -54,15 +55,15 @@ const T = {
 /** Horizontal listing card — Booking.com hotel-card style */
 const ListingCard = styled(Box)(({ theme }) => ({
   backgroundColor: T.white,
-  borderRadius: '8px',
+  borderRadius: '16px',
   border: `1px solid ${T.border}`,
   boxShadow: T.shadow1,
   overflow: 'hidden',
   cursor: 'pointer',
   display: 'flex',
   flexDirection: 'row',
-  transition: `box-shadow ${T.motion} ease`,
-  '&:hover': { boxShadow: 'rgba(26,26,26,0.24) 0px 4px 16px' },
+  transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
+  '&:hover': { boxShadow: T.shadow2, transform: 'translateY(-2px)' },
   '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
   [theme.breakpoints.down('md')]: {
     flexDirection: 'column',
@@ -117,8 +118,9 @@ function SkeletonCard() {
   return (
     <Box sx={{ 
       backgroundColor: T.white, 
-      borderRadius: '8px', 
-      border: `1px solid ${T.border}`, 
+      borderRadius: '16px', 
+      border: `1px solid ${T.border}`,
+      boxShadow: T.shadow1,
       display: 'flex',
       flexDirection: { xs: 'column', md: 'row' },
       overflow: 'hidden' 
@@ -153,6 +155,8 @@ export default function ListingPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
   const [listings, setListings]   = useState([])
   const [latestListings, setLatestListings] = useState([])
+  const [roommateProfiles, setRoommateProfiles] = useState([])
+  const [transportServices, setTransportServices] = useState([])
   const [mapRooms, setMapRooms]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -194,7 +198,7 @@ export default function ListingPage() {
     return () => clearTimeout(timer);
   }, [poiId, district, selectedRoomType, selectedDistrict, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity, page, sortBy])
   
-  useEffect(() => { fetchLatestRooms(); checkFavorites() }, [])
+  useEffect(() => { fetchLatestRooms(); fetchRoommateProfiles(); fetchTransportServices(); checkFavorites() }, [])
   
   useEffect(() => {
     if (poiId) {
@@ -277,6 +281,64 @@ export default function ListingPage() {
       }
     } catch (error) {
       console.error('Fetch latest rooms error:', error)
+    }
+  }
+
+  const fetchRoommateProfiles = async () => {
+    try {
+      const res = await fetch(`${API_URL}/tenant/roommate-profiles?limit=5`)
+      const data = await res.json()
+      if (data.success && data.data && data.data.length > 0) {
+        setRoommateProfiles(data.data)
+      } else {
+        // Mock data if no real data
+        setRoommateProfiles([
+          { TenantID: 'mock1', Name: 'Nguyễn Văn An', Age: 24, Gender: 'male', BudgetMin: 2000000, BudgetMax: 3000000, PreferredLocation: 'Cầu Giấy', AvatarURL: 'https://i.pravatar.cc/150?img=12' },
+          { TenantID: 'mock2', Name: 'Trần Thị Bình', Age: 22, Gender: 'female', BudgetMin: 2500000, BudgetMax: 3500000, PreferredLocation: 'Đống Đa', AvatarURL: 'https://i.pravatar.cc/150?img=47' },
+          { TenantID: 'mock3', Name: 'Lê Hoàng Cường', Age: 25, Gender: 'male', BudgetMin: 3000000, BudgetMax: 4000000, PreferredLocation: 'Hai Bà Trưng', AvatarURL: 'https://i.pravatar.cc/150?img=33' },
+          { TenantID: 'mock4', Name: 'Phạm Thu Hà', Age: 23, Gender: 'female', BudgetMin: 2200000, BudgetMax: 3200000, PreferredLocation: 'Ba Đình', AvatarURL: 'https://i.pravatar.cc/150?img=45' },
+          { TenantID: 'mock5', Name: 'Đỗ Minh Tuấn', Age: 26, Gender: 'male', BudgetMin: 2800000, BudgetMax: 3800000, PreferredLocation: 'Thanh Xuân', AvatarURL: 'https://i.pravatar.cc/150?img=15' },
+        ])
+      }
+    } catch (error) {
+      console.error('Fetch roommate profiles error:', error)
+      // Mock data on error
+      setRoommateProfiles([
+        { TenantID: 'mock1', Name: 'Nguyễn Văn An', Age: 24, Gender: 'male', BudgetMin: 2000000, BudgetMax: 3000000, PreferredLocation: 'Cầu Giấy', AvatarURL: 'https://i.pravatar.cc/150?img=12' },
+        { TenantID: 'mock2', Name: 'Trần Thị Bình', Age: 22, Gender: 'female', BudgetMin: 2500000, BudgetMax: 3500000, PreferredLocation: 'Đống Đa', AvatarURL: 'https://i.pravatar.cc/150?img=47' },
+        { TenantID: 'mock3', Name: 'Lê Hoàng Cường', Age: 25, Gender: 'male', BudgetMin: 3000000, BudgetMax: 4000000, PreferredLocation: 'Hai Bà Trưng', AvatarURL: 'https://i.pravatar.cc/150?img=33' },
+        { TenantID: 'mock4', Name: 'Phạm Thu Hà', Age: 23, Gender: 'female', BudgetMin: 2200000, BudgetMax: 3200000, PreferredLocation: 'Ba Đình', AvatarURL: 'https://i.pravatar.cc/150?img=45' },
+        { TenantID: 'mock5', Name: 'Đỗ Minh Tuấn', Age: 26, Gender: 'male', BudgetMin: 2800000, BudgetMax: 3800000, PreferredLocation: 'Thanh Xuân', AvatarURL: 'https://i.pravatar.cc/150?img=15' },
+      ])
+    }
+  }
+
+  const fetchTransportServices = async () => {
+    try {
+      const res = await fetch(`${API_URL}/moving/services?limit=5`)
+      const data = await res.json()
+      if (data.success && data.data && data.data.length > 0) {
+        setTransportServices(data.data)
+      } else {
+        // Mock data with vehicle icons
+        setTransportServices([
+          { ServiceID: 'mock1', Name: 'Chuyển phòng trọ mini', BasePrice: 150000, VehicleType: 'tricycle', Category: 'moving' },
+          { ServiceID: 'mock2', Name: 'Chuyển nhà tiêu chuẩn', BasePrice: 350000, VehicleType: 'van', Category: 'moving' },
+          { ServiceID: 'mock3', Name: 'Chuyển nhà VIP', BasePrice: 650000, VehicleType: 'truck', Category: 'moving' },
+          { ServiceID: 'mock4', Name: 'Chuyển nhà gia đình', BasePrice: 500000, VehicleType: 'truck', Category: 'moving' },
+          { ServiceID: 'mock5', Name: 'Chuyển đồ xe máy', BasePrice: 80000, VehicleType: 'motorbike', Category: 'moving' },
+        ])
+      }
+    } catch (error) {
+      console.error('Fetch transport services error:', error)
+      // Mock data on error
+      setTransportServices([
+        { ServiceID: 'mock1', Name: 'Chuyển phòng trọ mini', BasePrice: 150000, VehicleType: 'tricycle', Category: 'moving' },
+        { ServiceID: 'mock2', Name: 'Chuyển nhà tiêu chuẩn', BasePrice: 350000, VehicleType: 'van', Category: 'moving' },
+        { ServiceID: 'mock3', Name: 'Chuyển nhà VIP', BasePrice: 650000, VehicleType: 'truck', Category: 'moving' },
+        { ServiceID: 'mock4', Name: 'Chuyển nhà gia đình', BasePrice: 500000, VehicleType: 'truck', Category: 'moving' },
+        { ServiceID: 'mock5', Name: 'Chuyển đồ xe máy', BasePrice: 80000, VehicleType: 'motorbike', Category: 'moving' },
+      ])
     }
   }
 
@@ -558,11 +620,11 @@ export default function ListingPage() {
                 top: { lg: 92 }, 
                 display: 'flex', 
                 flexDirection: 'column', 
-                gap: 2 
+                gap: 1
               }}>
                 {/* Map */}
                 <Box sx={{
-                  borderRadius: '8px', 
+                  borderRadius: '16px', 
                   overflow: 'hidden', 
                   height: { xs: 280, sm: 320, lg: 320 },
                   border: `1px solid ${T.border}`, 
@@ -580,7 +642,7 @@ export default function ListingPage() {
                 {/* Latest listings sidebar - hidden on mobile */}
                 <Box sx={{ 
                   backgroundColor: T.white, 
-                  borderRadius: '8px', 
+                  borderRadius: '16px', 
                   border: `1px solid ${T.border}`, 
                   boxShadow: T.shadow1, 
                   p: 2,
@@ -631,6 +693,170 @@ export default function ListingPage() {
                         </Box>
                       </Box>
                     ))}
+                  </Stack>
+                </Box>
+
+                {/* Roommate profiles panel */}
+                {roommateProfiles.length > 0 && (
+                  <Box sx={{ 
+                    backgroundColor: T.white, 
+                    borderRadius: '16px', 
+                    border: `1px solid ${T.border}`, 
+                    boxShadow: T.shadow1, 
+                    p: 2,
+                    display: { xs: 'none', lg: 'block' }
+                  }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 1.5, pb: 1, borderBottom: `1px solid ${T.border}` }}>
+                      Tìm người ở ghép
+                    </Typography>
+                    <Stack spacing={0}>
+                      {roommateProfiles.slice(0, 5).map(profile => (
+                        <Box
+                          key={profile.TenantID}
+                          onClick={() => navigate('/roommate')}
+                          tabIndex={0}
+                          sx={{
+                            display: 'flex', gap: 1.5, py: 1.25,
+                            borderBottom: `1px solid ${T.border}`,
+                            cursor: 'pointer',
+                            '&:last-child': { borderBottom: 'none', pb: 0 },
+                            '&:hover': { backgroundColor: T.blueLt },
+                            '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px', borderRadius: '4px' },
+                          }}
+                        >
+                          <Box sx={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, backgroundColor: T.blue }}>
+                            {profile.AvatarURL ? (
+                              <Box component="img" src={profile.AvatarURL} alt={profile.Name}
+                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.white, fontWeight: 700, fontSize: '1.1rem' }}>
+                                {profile.Name?.charAt(0) || 'T'}
+                              </Box>
+                            )}
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.857rem', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {profile.Name || 'Người dùng'} {profile.Age ? `• ${profile.Age} tuổi` : ''}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.786rem', color: T.muted }}>
+                              {profile.PreferredLocation || 'Hà Nội'} • {profile.BudgetMin && profile.BudgetMax ? `${fmt(profile.BudgetMin)}-${fmt(profile.BudgetMax)}đ` : 'Chưa cập nhật'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Stack>
+                    <Button 
+                      fullWidth 
+                      size="small" 
+                      onClick={() => navigate('/roommate')}
+                      sx={{ mt: 1.5, color: T.blue, fontWeight: 600, fontSize: '0.857rem' }}
+                    >
+                      Xem tất cả
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Transport services panel */}
+                {transportServices.length > 0 && (
+                  <Box sx={{ 
+                    backgroundColor: T.white, 
+                    borderRadius: '16px', 
+                    border: `1px solid ${T.border}`, 
+                    boxShadow: T.shadow1, 
+                    p: 2,
+                    display: { xs: 'none', lg: 'block' }
+                  }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 1.5, pb: 1, borderBottom: `1px solid ${T.border}` }}>
+                      Dịch vụ vận chuyển
+                    </Typography>
+                    <Stack spacing={0}>
+                      {transportServices.slice(0, 5).map(service => {
+                        const vehicleIcons = {
+                          motorbike: '🛻',
+                          tricycle: '🛻',
+                          van: '🚐',
+                          truck: '🚚',
+                          pickup: '🛻',
+                        };
+                        const icon = vehicleIcons[service.VehicleType] || '🚐';
+                        
+                        return (
+                          <Box
+                            key={service.ServiceID}
+                            onClick={() => navigate('/moving-service')}
+                            tabIndex={0}
+                            sx={{
+                              display: 'flex', gap: 1.5, py: 1.25,
+                              borderBottom: `1px solid ${T.border}`,
+                              cursor: 'pointer',
+                              '&:last-child': { borderBottom: 'none', pb: 0 },
+                              '&:hover': { backgroundColor: T.blueLt },
+                              '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px', borderRadius: '4px' },
+                            }}
+                          >
+                            <Box sx={{ width: 48, height: 48, borderRadius: '8px', backgroundColor: T.blueLt, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '26px' }}>
+                              {icon}
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography sx={{ fontWeight: 600, fontSize: '0.857rem', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {service.Name || 'Dịch vụ vận chuyển'}
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.786rem', color: T.green, fontWeight: 700 }}>
+                                Từ {fmt(service.BasePrice || 0)}đ
+                              </Typography>
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                    </Stack>
+                    <Button 
+                      fullWidth 
+                      size="small" 
+                      onClick={() => navigate('/services')}
+                      sx={{ mt: 1.5, color: T.blue, fontWeight: 600, fontSize: '0.857rem' }}
+                    >
+                      Xem tất cả dịch vụ
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Blog/Tips panel */}
+                <Box sx={{ 
+                  backgroundColor: T.white, 
+                  borderRadius: '16px', 
+                  border: `1px solid ${T.border}`, 
+                  boxShadow: T.shadow1, 
+                  p: 2,
+                  display: { xs: 'none', lg: 'block' }
+                }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 1.5, pb: 1, borderBottom: `1px solid ${T.border}` }}>
+                    Mẹo tìm phòng giá tốt
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    <Box sx={{ p: 1.5, borderRadius: '12px', backgroundColor: T.blueLt, border: `1px solid ${T.blue}20` }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '0.857rem', color: T.blueDk, mb: 0.5 }}>
+                        💡 Tìm phòng cuối tháng
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.786rem', color: T.muted, lineHeight: 1.5 }}>
+                        Chủ nhà thường dễ thương lượng giá hơn vào cuối tháng khi muốn cho thuê nhanh.
+                      </Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: '12px', backgroundColor: T.greenLt, border: `1px solid ${T.green}20` }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '0.857rem', color: '#005a23', mb: 0.5 }}>
+                        🔍 Khảo sát kỹ vị trí
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.786rem', color: T.muted, lineHeight: 1.5 }}>
+                        Kiểm tra khoảng cách đến trường/công ty, chợ, siêu thị và phương tiện công cộng.
+                      </Typography>
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: '12px', backgroundColor: '#fef6e8', border: '1px solid #febb0220' }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '0.857rem', color: '#a16100', mb: 0.5 }}>
+                        📋 Đọc kỹ hợp đồng
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.786rem', color: T.muted, lineHeight: 1.5 }}>
+                        Chú ý các điều khoản về tiền cọc, điện nước, và thời gian thuê tối thiểu.
+                      </Typography>
+                    </Box>
                   </Stack>
                 </Box>
               </Box>

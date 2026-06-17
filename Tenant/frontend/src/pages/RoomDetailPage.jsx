@@ -53,6 +53,7 @@ const T = {
   green:   '#008234',
   greenLt: '#e8f5ee',
   shadow1: 'rgba(26,26,26,0.16) 0px 2px 8px 0px',
+  panelShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
   motion:  '120ms',
 }
 
@@ -65,9 +66,14 @@ const ScoreBadge = styled(Box)({
 })
 
 const BookingCard = styled(Box)({
-  backgroundColor: T.white, borderRadius: '8px',
-  border: `1px solid ${T.border}`, boxShadow: T.shadow1,
+  backgroundColor: T.white, borderRadius: '12px',
+  border: `1px solid ${T.border}`, boxShadow: T.panelShadow,
   padding: '20px',
+  transition: `all ${T.motion} ease`,
+  '&:hover': {
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+    transform: 'translateY(-2px)',
+  },
 })
 
 const AmenityRow = ({ label }) => (
@@ -456,7 +462,7 @@ export default function RoomDetailPage() {
           {/* Left */}
           <Grid item xs={12} md={7}>
             {/* Room facts */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5, mb: 2 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, mb: 1.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 1.5 }}>
                 Thông tin phòng
               </Typography>
@@ -481,7 +487,7 @@ export default function RoomDetailPage() {
             </Box>
 
             {/* Mô tả */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5, mb: 2 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, mb: 1.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 1.5 }}>
                 Mô tả
               </Typography>
@@ -495,7 +501,7 @@ export default function RoomDetailPage() {
             </Box>
 
             {/* Dịch vụ */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5, mb: 2 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, mb: 1.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 1.5 }}>
                 Dịch vụ
               </Typography>
@@ -509,7 +515,7 @@ export default function RoomDetailPage() {
             </Box>
 
             {/* Nội thất */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5, mb: 2 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, mb: 1.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 1.5 }}>
                 Nội thất
               </Typography>
@@ -523,7 +529,7 @@ export default function RoomDetailPage() {
             </Box>
 
             {/* Quy định */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5, mb: 2 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, mb: 1.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 1.5 }}>
                 Quy định
               </Typography>
@@ -537,7 +543,7 @@ export default function RoomDetailPage() {
             </Box>
 
             {/* Amenities */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5, mb: 2 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, mb: 1.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 1.5 }}>
                 Tiện nghi phòng
               </Typography>
@@ -551,7 +557,7 @@ export default function RoomDetailPage() {
             </Box>
 
             {/* Landlord */}
-            <Box sx={{ backgroundColor: T.white, borderRadius: '8px', border: `1px solid ${T.border}`, p: 2.5 }}>
+            <Box sx={{ backgroundColor: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, p: 2.5, boxShadow: T.panelShadow, transition: `all ${T.motion} ease`, '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' } }}>
               <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text, mb: 2 }}>Chủ nhà</Typography>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Box

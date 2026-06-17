@@ -65,6 +65,7 @@ const T = {
   yellow:  '#febb02',
   green:   '#008234',
   shadow1: 'rgba(26,26,26,0.16) 0px 2px 8px 0px',
+  panelShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
   motion:  '120ms',
 }
 
@@ -170,14 +171,14 @@ const SearchSegment = styled(Box)(({ theme }) => ({
 /** Room card — list style (horizontal on md+) */
 const RoomCard = styled(Box)({
   backgroundColor: T.white,
-  borderRadius: '8px',
+  borderRadius: '12px',
   border: `1px solid ${T.border}`,
-  boxShadow: T.shadow1,
+  boxShadow: T.panelShadow,
   overflow: 'hidden',
   cursor: 'pointer',
   transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
   '&:hover': {
-    boxShadow: 'rgba(26,26,26,0.24) 0px 8px 24px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
     transform: 'translateY(-2px)',
   },
   '&:focus-visible': {
@@ -189,13 +190,14 @@ const RoomCard = styled(Box)({
 /** Small card for grids */
 const GridCard = styled(Box)({
   backgroundColor: T.white,
-  borderRadius: '8px',
+  borderRadius: '12px',
   border: `1px solid ${T.border}`,
   overflow: 'hidden',
   cursor: 'pointer',
+  boxShadow: T.panelShadow,
   transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
   '&:hover': {
-    boxShadow: 'rgba(26,26,26,0.24) 0px 4px 16px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
     transform: 'translateY(-2px)',
   },
   '&:focus-visible': {
@@ -205,14 +207,15 @@ const GridCard = styled(Box)({
 })
 
 const TrendCard = styled(Box)({
-  borderRadius: '8px',
+  borderRadius: '12px',
   overflow: 'hidden',
   cursor: 'pointer',
   position: 'relative',
   border: `1px solid ${T.border}`,
+  boxShadow: T.panelShadow,
   transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
   '&:hover': {
-    boxShadow: 'rgba(26,26,26,0.24) 0px 8px 24px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
     transform: 'translateY(-2px)',
   },
   '&:hover .trend-img': { transform: 'scale(1.04)' },
@@ -224,14 +227,15 @@ const TrendCard = styled(Box)({
 
 const TrendCardH = styled(Box)({
   display: 'flex',
-  borderRadius: '8px',
+  borderRadius: '12px',
   overflow: 'hidden',
   cursor: 'pointer',
   border: `1px solid ${T.border}`,
   transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
   backgroundColor: T.white,
+  boxShadow: T.panelShadow,
   '&:hover': {
-    boxShadow: 'rgba(26,26,26,0.24) 0px 4px 16px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
     transform: 'translateY(-2px)',
   },
   '&:hover .trend-h-img': { transform: 'scale(1.05)' },
@@ -806,10 +810,11 @@ export default function HomePage() {
           ].map((item, i) => (
             <Grid item xs={6} md={3} key={i}>
               <Box sx={{
-                p: 2, backgroundColor: T.blueLt, borderRadius: '8px',
+                p: 2, backgroundColor: T.blueLt, borderRadius: '12px',
                 border: `1px solid ${T.border}`, height: '100%',
-                transition: `box-shadow ${T.motion} ease`,
-                '&:hover': { boxShadow: T.shadow1 },
+                boxShadow: T.panelShadow,
+                transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
+                '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' },
               }}>
                 <Box sx={{ mb: 1.5 }}>{item.icon}</Box>
                 <Typography sx={{ fontWeight: 700, fontSize: '0.929rem', color: T.text, mb: 0.5 }}>{item.title}</Typography>
@@ -975,8 +980,12 @@ export default function HomePage() {
                       aria-label={`${d.name}: ${d.rooms} phòng`}
                       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && navigate(`/listings?district=${encodeURIComponent(d.name)}`)}
                       sx={{
-                        position: 'relative', height: 140, borderRadius: '8px', overflow: 'hidden',
+                        position: 'relative', height: 140, borderRadius: '12px', overflow: 'hidden',
                         cursor: 'pointer',
+                        border: `1px solid ${T.border}`,
+                        boxShadow: T.panelShadow,
+                        transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
+                        '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' },
                         '&:hover .district-img': { transform: 'scale(1.06)' },
                         '&:focus-visible': { outline: `2px solid ${T.blue}`, outlineOffset: '2px' },
                       }}
@@ -1070,10 +1079,11 @@ export default function HomePage() {
           {statistics.map((stat, i) => (
             <Grid item xs={6} md={3} key={i}>
               <Box sx={{
-                p: 2.5, backgroundColor: T.white, borderRadius: '8px',
+                p: 2.5, backgroundColor: T.white, borderRadius: '12px',
                 border: `1px solid ${T.border}`, textAlign: 'center',
+                boxShadow: T.panelShadow,
                 transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
-                '&:hover': { boxShadow: T.shadow1, transform: 'translateY(-2px)' },
+                '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' },
               }}>
                 <Box sx={{ mb: 1, display: 'flex', justifyContent: 'center' }}>{stat.icon}</Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.429rem', color: T.text, mb: 0.25 }}>{stat.value}</Typography>
@@ -1107,10 +1117,12 @@ export default function HomePage() {
             ].map((item, i) => (
               <Grid item xs={12} sm={6} md={3} key={i}>
                 <Box sx={{
-                  p: 3, borderRadius: '8px', border: `1px solid ${T.border}`,
+                  p: 3, borderRadius: '12px', border: `1px solid ${T.border}`,
                   height: '100%', display: 'flex', flexDirection: 'column', gap: 2,
-                  transition: `box-shadow ${T.motion} ease`,
-                  '&:hover': { boxShadow: T.shadow1 },
+                  backgroundColor: T.white,
+                  boxShadow: T.panelShadow,
+                  transition: `box-shadow ${T.motion} ease, transform ${T.motion} ease`,
+                  '&:hover': { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)', transform: 'translateY(-2px)' },
                 }}>
                   <Box sx={{ fontSize: '1.714rem' }}>{item.icon}</Box>
                   <Box sx={{ flex: 1 }}>
