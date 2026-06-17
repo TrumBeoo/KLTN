@@ -1,8 +1,5 @@
 const db = require('../config/database');
-const NodeCache = require('node-cache');
-
-// Cache with 5 minutes TTL
-const roomCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+const cacheService = require('./cacheService');
 
 class RoomService {
   async getRoomById(roomId, currentUserId = null) {
@@ -102,37 +99,83 @@ class RoomService {
     return images;
   }
 
-  async getAllRooms(limit = 20, offset = 0, poiId = null, district = null) {
+  async getAllRooms(options = {}) {
+    const {
+      limit = 20,
+      offset = 0,
+      poiId = null,
+      district = null,
+      roomType = null,
+      minPrice = null,
+      maxPrice = null,
+      minArea = null,
+      maxArea = null,
+      amenityId = null,
+      sortBy = 'newest'
+    } = options;
+
+    const sortMap = {
+      newest: 'r.UpdatedAt DESC',
+      oldest: 'r.UpdatedAt ASC',
+      'price-asc': 'r.Price ASC, r.UpdatedAt DESC',
+      'price-desc': 'r.Price DESC, r.UpdatedAt DESC',
+      'area-asc': 'r.Area ASC, r.UpdatedAt DESC',
+      'area-desc': 'r.Area DESC, r.UpdatedAt DESC'
+    };
+
+    const orderBy = sortMap[sortBy] || sortMap.newest;
+
     // Create cache key
-    const cacheKey = `rooms_${limit}_${offset}_${poiId || 'all'}_${district || 'all'}`;
+    const cacheKey = cacheService.roomsKey([
+      limit,
+      offset,
+      poiId || 'all-poi',
+      district || 'all-district',
+      roomType || 'all-type',
+      minPrice || 'min-price',
+      maxPrice || 'max-price',
+      minArea || 'min-area',
+      maxArea || 'max-area',
+      amenityId || 'all-amenity',
+      sortBy
+    ].join('_'));
     
     // Check cache first
-    const cached = roomCache.get(cacheKey);
+    const cached = await cacheService.get(cacheKey);
     if (cached) {
       return cached;
     }
     
-    let query = `
-      SELECT r.*, 
-              l.Name as LandlordName, 
-              b.BuildingName, b.Address as BuildingAddress, b.District as BuildingDistrict,
-              loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
-              loc.Latitude, loc.Longitude,
-              lst.IsVisible as ListingVisible
-       FROM ROOM r
-       JOIN LANDLORD l ON r.LandlordID = l.LandlordID
-       LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
-       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
-       LEFT JOIN LISTING lst ON r.RoomID = lst.RoomID`;
+    const selectClause = `
+      SELECT DISTINCT r.*,
+             l.Name as LandlordName,
+             b.BuildingName, b.Address as BuildingAddress, b.District as BuildingDistrict,
+             loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
+             loc.Latitude, loc.Longitude,
+             lst.IsVisible as ListingVisible
+    `;
+    const countClause = 'SELECT COUNT(DISTINCT r.RoomID) as total';
+    let fromClause = `
+      FROM ROOM r
+      JOIN LANDLORD l ON r.LandlordID = l.LandlordID
+      LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+      LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
+      LEFT JOIN LISTING lst ON r.RoomID = lst.RoomID
+    `;
     
     const params = [];
     const conditions = [];
     
     if (poiId) {
-      query += `
-       INNER JOIN ROOM_POI rp ON r.RoomID = rp.RoomID`;
+      fromClause += ' INNER JOIN ROOM_POI rp ON r.RoomID = rp.RoomID';
       conditions.push('rp.POIID = ?');
       params.push(poiId);
+    }
+
+    if (amenityId) {
+      fromClause += ' INNER JOIN ROOM_AMENITY ra_filter ON r.RoomID = ra_filter.RoomID';
+      conditions.push('ra_filter.AmenityID = ?');
+      params.push(amenityId);
     }
     
     conditions.push("(r.Status IN ('available', 'viewing') AND (lst.IsVisible IS NULL OR lst.IsVisible = 1))");
@@ -142,18 +185,48 @@ class RoomService {
       conditions.push('(b.District = ? OR (b.District IS NULL AND loc.District = ?))');
       params.push(district, district);
     }
-    
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
+
+    if (roomType) {
+      conditions.push('r.RoomType = ?');
+      params.push(roomType);
+    }
+
+    if (minPrice !== null && minPrice !== undefined && minPrice !== '') {
+      conditions.push('r.Price >= ?');
+      params.push(Number(minPrice));
+    }
+
+    if (maxPrice !== null && maxPrice !== undefined && maxPrice !== '') {
+      conditions.push('r.Price <= ?');
+      params.push(Number(maxPrice));
+    }
+
+    if (minArea !== null && minArea !== undefined && minArea !== '') {
+      conditions.push('r.Area >= ?');
+      params.push(Number(minArea));
+    }
+
+    if (maxArea !== null && maxArea !== undefined && maxArea !== '') {
+      conditions.push('r.Area <= ?');
+      params.push(Number(maxArea));
     }
     
-    query += `
-       ORDER BY r.UpdatedAt DESC
-       LIMIT ? OFFSET ?`;
-    
-    params.push(limit, offset);
-    
-    const [rooms] = await db.query(query, params);
+    let whereClause = '';
+    if (conditions.length > 0) {
+      whereClause = ' WHERE ' + conditions.join(' AND ');
+    }
+
+    const [countRows] = await db.query(
+      `${countClause} ${fromClause} ${whereClause}`,
+      params
+    );
+
+    const [rooms] = await db.query(
+      `${selectClause} ${fromClause} ${whereClause}
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
     
     // Fetch images in single query instead of GROUP_CONCAT
     const roomIds = rooms.map(r => r.RoomID);
@@ -186,10 +259,18 @@ class RoomService {
     }));
     
     // Store in cache
-    roomCache.set(cacheKey, result);
+    const payload = {
+      data: result,
+      total: countRows[0]?.total || 0
+    };
+
+    await cacheService.set(cacheKey, payload, 300);
     
-    return result;
+    return payload;
   }
 }
 
-module.exports = new RoomService();
+const roomService = new RoomService();
+roomService.cacheService = cacheService;
+
+module.exports = roomService;

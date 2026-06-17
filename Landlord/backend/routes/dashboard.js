@@ -24,7 +24,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
     // Check cache first (TTL: 2 minutes for dashboard)
     const cacheKey = cacheService.dashboardKey(landlordId);
-    const cachedStats = cacheService.get(cacheKey);
+    const cachedStats = await cacheService.get(cacheKey);
     
     if (cachedStats) {
       return res.json({
@@ -110,7 +110,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
     };
 
     // Cache for 2 minutes
-    cacheService.set(cacheKey, result, 120);
+    await cacheService.set(cacheKey, result, 120);
 
     res.json({
       success: true,

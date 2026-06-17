@@ -6,9 +6,10 @@
  * Tokens: same as theme.js
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
+import { buildImageUrl } from '../utils/image'
 import SecondaryMenu from '../components/SecondaryMenu'
 import RoomMap from '../components/RoomMap'
 import SortMenu from '../components/SortMenu'
@@ -156,6 +157,7 @@ export default function ListingPage() {
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
   const [page, setPage]           = useState(1)
+  const [totalListings, setTotalListings] = useState(0)
   const [poiName, setPoiName]     = useState('')
   const [selectedRoomType, setSelectedRoomType] = useState('all')
   const [selectedDistrict, setSelectedDistrict] = useState(null)
@@ -180,13 +182,17 @@ export default function ListingPage() {
   const roomTypeParam = searchParams.get('roomType')
   const nearUniversity = searchParams.get('nearUniversity')
 
+  useEffect(() => {
+    setPage(1)
+  }, [poiId, district, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity])
+
   useEffect(() => { 
     // Debounce fetch to avoid excessive API calls
     const timer = setTimeout(() => {
       fetchRooms();
     }, 300);
     return () => clearTimeout(timer);
-  }, [poiId, district, selectedRoomType, selectedDistrict, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity])
+  }, [poiId, district, selectedRoomType, selectedDistrict, maxPrice, minArea, maxArea, amenity, roomTypeParam, nearUniversity, page, sortBy])
   
   useEffect(() => { fetchLatestRooms(); checkFavorites() }, [])
   
@@ -252,7 +258,7 @@ export default function ListingPage() {
 
   const fetchLatestRooms = async () => {
     try {
-      const res = await fetch(`${API_URL}/rooms`)
+      const res = await fetch(`${API_URL}/rooms?limit=10&offset=0&sortBy=newest`)
       const data = await res.json()
       if (data.success) {
         const formatted = data.data.map(room => {
@@ -263,12 +269,11 @@ export default function ListingPage() {
             location: room.BuildingAddress || 'Chưa cập nhật',
             price: room.Price?.toString() || '0',
             area: room.Area || 0,
-            image: imgUrl ? (imgUrl.startsWith('http') ? imgUrl : `${API_URL.replace('/api', '')}${imgUrl}`) : null,
+            image: buildImageUrl(imgUrl, API_URL.replace('/api', ''), { width: 320, height: 240 }),
             createdAt: room.CreatedAt || room.created_at || new Date().toISOString(),
           }
         })
-        const latest = [...formatted].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10)
-        setLatestListings(latest)
+        setLatestListings(formatted)
       }
     } catch (error) {
       console.error('Fetch latest rooms error:', error)
@@ -278,8 +283,10 @@ export default function ListingPage() {
   const fetchRooms = async () => {
     try {
       setLoading(true)
-      let url = `${API_URL}/rooms`
       const params = new URLSearchParams()
+      params.append('limit', PER_PAGE.toString())
+      params.append('offset', ((page - 1) * PER_PAGE).toString())
+      params.append('sortBy', sortBy)
       
       if (poiId) {
         params.append('poi', poiId)
@@ -287,53 +294,32 @@ export default function ListingPage() {
       if (district || selectedDistrict) {
         params.append('district', selectedDistrict || district)
       }
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`
+
+      const effectiveRoomType = roomTypeParam || selectedRoomType
+      if (effectiveRoomType && effectiveRoomType !== 'all') {
+        params.append('roomType', effectiveRoomType)
+      }
+
+      if (maxPrice) {
+        params.append('maxPrice', maxPrice)
+      }
+
+      if (minArea) {
+        params.append('minArea', minArea)
+      }
+
+      if (maxArea) {
+        params.append('maxArea', maxArea)
+      }
+
+      if (amenity) {
+        params.append('amenity', amenity)
       }
       
-      const res = await fetch(url)
+      const res = await fetch(`${API_URL}/rooms?${params.toString()}`)
       const data = await res.json()
       if (data.success) {
-        let filteredData = data.data
-        
-        // Filter by room type from URL or selected
-        const effectiveRoomType = roomTypeParam || selectedRoomType
-        if (effectiveRoomType && effectiveRoomType !== 'all') {
-          filteredData = filteredData.filter(room => room.RoomType === effectiveRoomType)
-        }
-        
-        // Filter by max price
-        if (maxPrice) {
-          const maxPriceNum = parseFloat(maxPrice)
-          filteredData = filteredData.filter(room => parseFloat(room.Price) <= maxPriceNum)
-        }
-        
-        // Filter by area range
-        if (minArea) {
-          const minAreaNum = parseFloat(minArea)
-          filteredData = filteredData.filter(room => parseFloat(room.Area) >= minAreaNum)
-        }
-        if (maxArea) {
-          const maxAreaNum = parseFloat(maxArea)
-          filteredData = filteredData.filter(room => parseFloat(room.Area) <= maxAreaNum)
-        }
-        
-        // Filter by amenity
-        if (amenity) {
-          filteredData = filteredData.filter(room => {
-            const amenities = parseAmenities(room.Amenities)
-            return amenities.includes(amenity)
-          })
-        }
-        
-        // Filter near university (placeholder - would need POI data)
-        if (nearUniversity === 'true') {
-          // This would need actual POI filtering logic
-          // For now, just pass through
-        }
-        
-        const formatted = filteredData.map(room => {
+        const formatted = data.data.map(room => {
           const imgUrl = room.images?.[0]?.ImageURL
           return {
             id: room.RoomID,
@@ -343,7 +329,7 @@ export default function ListingPage() {
             area: room.Area || 0,
             rating: 4.5,
             reviews: Math.floor(Math.random() * 80) + 5,
-            image: imgUrl ? (imgUrl.startsWith('http') ? imgUrl : `${API_URL.replace('/api', '')}${imgUrl}`) : null,
+            image: buildImageUrl(imgUrl, API_URL.replace('/api', ''), { width: 520, height: 360 }),
             status: (room.DisplayStatus || room.Status) === 'available' ? 'available'
               : (room.DisplayStatus || room.Status) === 'pending_viewing' ? 'pending'
               : (room.DisplayStatus || room.Status) === 'viewing' ? 'booked' : 'rented',
@@ -358,6 +344,7 @@ export default function ListingPage() {
           }
         })
         setListings(formatted)
+        setTotalListings(data.total || formatted.length)
         setMapRooms(formatted.filter(r => r.latitude && r.longitude).map(r => ({
           id: r.id, title: r.title, price: r.price, latitude: r.latitude, longitude: r.longitude,
         })))
@@ -442,39 +429,9 @@ export default function ListingPage() {
   const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
 
   // Sắp xếp listings với useMemo để tránh tính toán lại mỗi render
-  const sortedListings = useMemo(() => {
-    return [...listings].sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.createdAt) - new Date(a.createdAt)
-        case 'oldest':
-          return new Date(a.createdAt) - new Date(b.createdAt)
-        case 'price-asc':
-          return parseFloat(a.price) - parseFloat(b.price)
-        case 'price-desc':
-          return parseFloat(b.price) - parseFloat(a.price)
-        case 'area-asc':
-          return a.area - b.area
-        case 'area-desc':
-          return b.area - a.area
-        case 'rating':
-          return b.rating - a.rating
-        case 'views':
-          return b.views - a.views
-        default:
-          return 0
-      }
-    });
-  }, [listings, sortBy]);
-
-  const paginated = useMemo(() => 
-    sortedListings.slice((page - 1) * PER_PAGE, page * PER_PAGE),
-    [sortedListings, page]
-  );
-  
   const totalPages = useMemo(() => 
-    Math.ceil(sortedListings.length / PER_PAGE),
-    [sortedListings.length]
+    Math.ceil(totalListings / PER_PAGE),
+    [totalListings]
   );
 
   // Count active filters on mount and when params change
@@ -684,13 +641,13 @@ export default function ListingPage() {
               <Stack spacing={2}>
                 {loading
                   ? [1,2,3,4,5].map(i => <SkeletonCard key={i} />)
-                  : paginated.length === 0
+                  : listings.length === 0
                     ? (
                       <Box sx={{ textAlign: 'center', py: 8 }}>
                         <Typography sx={{ color: T.muted }}>Không có phòng nào</Typography>
                       </Box>
                     )
-                    : paginated.map(listing => (
+                    : listings.map(listing => (
                         <ListingCard
                           key={listing.id}
                           onClick={() => navigate(`/room/${listing.id}`)}

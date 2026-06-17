@@ -35,12 +35,17 @@ async function createIndexes() {
     await createIndexSafe('idx_room_code', 'ROOM', 'RoomCode');
     await createIndexSafe('idx_room_landlord_status', 'ROOM', 'LandlordID, Status');
     await createIndexSafe('idx_room_updated', 'ROOM', 'UpdatedAt');
+    await createIndexSafe('idx_room_price', 'ROOM', 'Price');
+    await createIndexSafe('idx_room_area', 'ROOM', 'Area');
+    await createIndexSafe('idx_room_type', 'ROOM', 'RoomType');
+    await createIndexSafe('idx_room_landlord_building_status_type_updated', 'ROOM', 'LandlordID, BuildingID, Status, RoomType, UpdatedAt');
 
     // LISTING table indexes
     await createIndexSafe('idx_listing_landlord', 'LISTING', 'LandlordID');
     await createIndexSafe('idx_listing_room', 'LISTING', 'RoomID');
     await createIndexSafe('idx_listing_visible', 'LISTING', 'IsVisible');
     await createIndexSafe('idx_listing_updated', 'LISTING', 'UpdatedAt');
+    await createIndexSafe('idx_listing_room_visible', 'LISTING', 'RoomID, IsVisible');
 
     // VIEWING_SCHEDULE table indexes
     await createIndexSafe('idx_viewing_room', 'VIEWING_SCHEDULE', 'RoomID');

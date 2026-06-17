@@ -4,6 +4,7 @@ const db = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const multer = require('multer');
 const cloudinaryService = require('../services/cloudinaryService');
+const cacheService = require('../services/cacheService');
 
 // Configure multer for memory storage (files will be uploaded to Cloudinary)
 const upload = multer({
@@ -18,6 +19,203 @@ const upload = multer({
     } else {
       cb(new Error('Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp)'));
     }
+  }
+});
+
+router.get('/', authMiddleware, async (req, res, next) => {
+  try {
+    const [landlords] = await db.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Khong tim thay thong tin chu nha'
+      });
+    }
+
+    const landlordId = landlords[0].LandlordID;
+    const { building, status, type } = req.query;
+    const cacheKey = cacheService.landlordKey(
+      req.user.accountId,
+      `rooms:${building || 'all'}:${status || 'all'}:${type || 'all'}`
+    );
+
+    const cachedRooms = await cacheService.get(cacheKey);
+    if (cachedRooms) {
+      return res.json({
+        success: true,
+        data: cachedRooms,
+        total: cachedRooms.length,
+        cached: true
+      });
+    }
+
+    let query = `
+      SELECT r.*, b.BuildingName,
+             COALESCE(vs.PendingViewings, 0) as PendingViewings,
+             COALESCE(vs.ApprovedViewings, 0) as ApprovedViewings,
+             img.Images
+      FROM ROOM r
+      LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+      LEFT JOIN (
+        SELECT RoomID,
+               SUM(CASE WHEN Status = 'Ch\u1edd duy\u1ec7t' THEN 1 ELSE 0 END) as PendingViewings,
+               SUM(CASE WHEN Status = '\u0110\u00e3 duy\u1ec7t' THEN 1 ELSE 0 END) as ApprovedViewings
+        FROM VIEWING_SCHEDULE
+        GROUP BY RoomID
+      ) vs ON vs.RoomID = r.RoomID
+      LEFT JOIN (
+        SELECT RoomID, GROUP_CONCAT(ImageURL ORDER BY DisplayOrder) as Images
+        FROM ROOM_IMAGE
+        GROUP BY RoomID
+      ) img ON img.RoomID = r.RoomID
+      WHERE r.LandlordID = ?
+    `;
+    const params = [landlordId];
+
+    if (building) {
+      query += ' AND r.BuildingID = ?';
+      params.push(building);
+    }
+    if (status) {
+      query += ' AND r.Status = ?';
+      params.push(status);
+    }
+    if (type) {
+      query += ' AND r.RoomType = ?';
+      params.push(type);
+    }
+
+    query += ' ORDER BY r.UpdatedAt DESC';
+
+    const [rooms] = await db.query(query, params);
+    const roomsWithStatus = rooms.map((room) => {
+      let displayStatus = room.Status;
+      if (room.Status === 'available') {
+        if (room.ApprovedViewings > 0) {
+          displayStatus = 'viewing';
+        } else if (room.PendingViewings > 0) {
+          displayStatus = 'pending_viewing';
+        }
+      }
+
+      return {
+        ...room,
+        DisplayStatus: displayStatus
+      };
+    });
+
+    await cacheService.set(cacheKey, roomsWithStatus, 120);
+
+    return res.json({
+      success: true,
+      data: roomsWithStatus,
+      total: roomsWithStatus.length
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// Optimized room list for landlord
+router.get('/', authMiddleware, async (req, res, next) => {
+  try {
+    const [landlords] = await db.query(
+      'SELECT LandlordID FROM LANDLORD WHERE AccountID = ?',
+      [req.user.accountId]
+    );
+
+    if (landlords.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'KhĂ´ng tĂ¬m tháº¥y thĂ´ng tin chá»§ nhĂ '
+      });
+    }
+
+    const landlordId = landlords[0].LandlordID;
+    const { building, status, type } = req.query;
+    const cacheKey = cacheService.landlordKey(
+      req.user.accountId,
+      `rooms-optimized:${building || 'all'}:${status || 'all'}:${type || 'all'}`
+    );
+
+    const cachedRooms = await cacheService.get(cacheKey);
+    if (cachedRooms) {
+      return res.json({
+        success: true,
+        data: cachedRooms,
+        total: cachedRooms.length,
+        cached: true
+      });
+    }
+
+    let query = `
+      SELECT r.*, b.BuildingName,
+             COALESCE(vs.PendingViewings, 0) as PendingViewings,
+             COALESCE(vs.ApprovedViewings, 0) as ApprovedViewings,
+             img.Images
+      FROM ROOM r
+      LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
+      LEFT JOIN (
+        SELECT RoomID,
+               SUM(CASE WHEN Status = 'Chá» duyá»‡t' THEN 1 ELSE 0 END) as PendingViewings,
+               SUM(CASE WHEN Status = 'ÄĂ£ duyá»‡t' THEN 1 ELSE 0 END) as ApprovedViewings
+        FROM VIEWING_SCHEDULE
+        GROUP BY RoomID
+      ) vs ON vs.RoomID = r.RoomID
+      LEFT JOIN (
+        SELECT RoomID, GROUP_CONCAT(ImageURL ORDER BY DisplayOrder) as Images
+        FROM ROOM_IMAGE
+        GROUP BY RoomID
+      ) img ON img.RoomID = r.RoomID
+      WHERE r.LandlordID = ?
+    `;
+    const params = [landlordId];
+
+    if (building) {
+      query += ' AND r.BuildingID = ?';
+      params.push(building);
+    }
+    if (status) {
+      query += ' AND r.Status = ?';
+      params.push(status);
+    }
+    if (type) {
+      query += ' AND r.RoomType = ?';
+      params.push(type);
+    }
+
+    query += ' ORDER BY r.UpdatedAt DESC';
+
+    const [rooms] = await db.query(query, params);
+    const roomsWithStatus = rooms.map((room) => {
+      let displayStatus = room.Status;
+      if (room.Status === 'available') {
+        if (room.ApprovedViewings > 0) {
+          displayStatus = 'viewing';
+        } else if (room.PendingViewings > 0) {
+          displayStatus = 'pending_viewing';
+        }
+      }
+
+      return {
+        ...room,
+        DisplayStatus: displayStatus
+      };
+    });
+
+    await cacheService.set(cacheKey, roomsWithStatus, 120);
+
+    return res.json({
+      success: true,
+      data: roomsWithStatus,
+      total: roomsWithStatus.length
+    });
+  } catch (error) {
+    return next(error);
   }
 });
 

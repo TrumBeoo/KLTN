@@ -5,6 +5,7 @@ const session = require('express-session');
 const passport = require('./config/passport');
 const compression = require('compression');
 require('dotenv').config();
+const cacheService = require('./services/cacheService');
 
 const authRoutes = require('./routes/auth');
 const notificationRoutes = require('./routes/notifications');
@@ -91,7 +92,10 @@ app.use('/api/tenants', tenantRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK' });
+  res.json({
+    status: 'OK',
+    cache: cacheService.getStats()
+  });
 });
 
 // 404 handler
@@ -115,6 +119,10 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5555;
 
+cacheService.init().catch((error) => {
+  console.error('Cache init failed, using memory cache:', error.message);
+});
+
 app.listen(PORT, () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const apiUrl = isProduction 
@@ -125,6 +133,7 @@ app.listen(PORT, () => {
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`API URL: ${apiUrl}`);
   console.log(`Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+  console.log(`Cache provider: ${cacheService.getStats().provider}`);
   
   // Start contract notification service
   contractNotificationService.start();

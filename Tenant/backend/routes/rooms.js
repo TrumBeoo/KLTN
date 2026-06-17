@@ -52,13 +52,40 @@ router.get('/rooms/:roomId', async (req, res) => {
 // Get all available rooms
 router.get('/rooms', async (req, res) => {
   try {
-    const { limit = 20, offset = 0, poi, district } = req.query;
+    const {
+      limit = 20,
+      offset = 0,
+      poi,
+      district,
+      roomType,
+      minPrice,
+      maxPrice,
+      minArea,
+      maxArea,
+      amenity,
+      sortBy
+    } = req.query;
 
-    const rooms = await roomService.getAllRooms(parseInt(limit), parseInt(offset), poi, district);
+    const rooms = await roomService.getAllRooms({
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
+      poiId: poi,
+      district,
+      roomType,
+      minPrice,
+      maxPrice,
+      minArea,
+      maxArea,
+      amenityId: amenity,
+      sortBy
+    });
 
     res.json({
       success: true,
-      data: rooms
+      data: rooms.data,
+      total: rooms.total,
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10)
     });
   } catch (error) {
     console.error('Get rooms error:', error);

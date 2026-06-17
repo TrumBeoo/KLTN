@@ -8,6 +8,10 @@ CREATE INDEX idx_room_location ON ROOM(LocationID);
 CREATE INDEX idx_room_building ON ROOM(BuildingID);
 CREATE INDEX idx_room_updated ON ROOM(UpdatedAt);
 CREATE INDEX idx_room_created ON ROOM(CreatedAt);
+CREATE INDEX idx_room_price ON ROOM(Price);
+CREATE INDEX idx_room_area ON ROOM(Area);
+CREATE INDEX idx_room_type ON ROOM(RoomType);
+CREATE INDEX idx_room_status_type_price_area_updated ON ROOM(Status, RoomType, Price, Area, UpdatedAt);
 
 -- Index for LOCATION table
 CREATE INDEX idx_location_district ON LOCATION(District);
@@ -34,6 +38,7 @@ CREATE INDEX idx_room_amenity_room ON ROOM_AMENITY(RoomID);
 -- Index for LISTING table
 CREATE INDEX idx_listing_room ON LISTING(RoomID);
 CREATE INDEX idx_listing_visible ON LISTING(IsVisible);
+CREATE INDEX idx_listing_room_visible ON LISTING(RoomID, IsVisible);
 
 -- Index for FAVORITE table
 CREATE INDEX idx_favorite_tenant ON FAVORITE(TenantID);

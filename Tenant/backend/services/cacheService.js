@@ -136,28 +136,8 @@ class CacheService {
     };
   }
 
-  landlordKey(accountId, resource) {
-    return `landlord:${accountId}:${resource}`;
-  }
-
-  roomKey(roomId) {
-    return `room:${roomId}`;
-  }
-
-  buildingKey(buildingId) {
-    return `building:${buildingId}`;
-  }
-
-  dashboardKey(landlordId) {
-    return `dashboard:${landlordId}`;
-  }
-
-  async clearLandlordCache(accountId) {
-    return this.delByPattern(`landlord:${accountId}`);
-  }
-
-  async clearRoomCache(roomId) {
-    return this.del(this.roomKey(roomId));
+  roomsKey(resource) {
+    return `rooms:${resource}`;
   }
 }
 

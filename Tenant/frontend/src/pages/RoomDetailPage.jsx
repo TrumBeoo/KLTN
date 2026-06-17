@@ -15,6 +15,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useScrollToTop } from '../hooks/useScrollToTop'
 import { useAuth } from '../hooks/useAuth'
 import { useNotification } from '../hooks/useNotification'
+import { buildImageUrl } from '../utils/image'
 import NotificationModal from '../components/NotificationModal'
 import {
   Box, Container, Grid, Typography, Button, Stack, IconButton,
@@ -238,7 +239,7 @@ export default function RoomDetailPage() {
   }
 
   const images = room?.images?.length > 0
-    ? room.images.map(img => img.ImageURL.startsWith('http') ? img.ImageURL : `${BASE}${img.ImageURL.startsWith('/') ? '' : '/'}${img.ImageURL}`)
+    ? room.images.map((img) => buildImageUrl(img.ImageURL, BASE, { width: 1400, height: 900 }))
     : []
 
   const handleScheduleSubmit = async e => {

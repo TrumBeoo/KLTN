@@ -3,6 +3,7 @@ import { useNotification } from '../hooks/useNotification'
 import NotificationModal from '../components/NotificationModal'
 import POISelector from '../components/POISelector'
 import ContractFormDialog from '../components/ContractFormDialog'
+import { buildImageUrl } from '../utils/image'
 import ManageListings from './ManageListings'
 import {
   Box,
@@ -72,7 +73,7 @@ const RoomImage = ({ imageUrl, roomCode }) => {
   const [isLoaded, setIsLoaded] = useState(false)
   
   // Clean URL - remove any leading slashes or whitespace
-  const cleanUrl = imageUrl ? imageUrl.trim().replace(/^\/+/, '') : null
+  const cleanUrl = imageUrl ? buildImageUrl(imageUrl.trim().replace(/^\/+/, ''), '', { width: 80, height: 80 }) : null
   
   useEffect(() => {
     console.log(`RoomImage for ${roomCode}:`)
