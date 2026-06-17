@@ -22,6 +22,7 @@ from config import (
 )
 from db import DatabaseClient, filter_privacy
 from chat_history import ChatHistoryManager
+import cache
 
 try:
     from groq import Groq
@@ -90,6 +91,11 @@ class _GroqClient:
             return ""
 
     def extract_intent(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        # Check cache first
+        cached = cache.cache_intent(message, context)
+        if cached:
+            return cached
+        
         context_str = ""
         if context:
             if context.get("current_room"):
@@ -110,10 +116,13 @@ class _GroqClient:
             try:
                 result = json.loads(clean)
                 result = self._parse_time_expressions(result, message)
+                cache.set_intent_cache(message, context, result)
                 return result
             except json.JSONDecodeError:
                 pass
-        return _rule_based_intent(message)
+        result = _rule_based_intent(message)
+        cache.set_intent_cache(message, context, result)
+        return result
 
     def _parse_time_expressions(self, intent_data: Dict, message: str) -> Dict:
         try:
@@ -556,21 +565,12 @@ class ChatOrchestrator:
 
             try:
                 if not is_temp:
-                    self._history.save_message(
-                        session_id=session_id, role="assistant",
-                        content=reply, intent=intent, filters=filters, response_data=safe_data)
-                    if user_id and db_data and isinstance(db_data, list):
-                        for room in db_data[:3]:
-                            room_code = room.get("RoomCode")
-                            if room_code:
-                                try:
-                                    self._history.track_room_interaction(
-                                        session_id=session_id, tenant_id=user_id,
-                                        room_id=room_code, action_type="viewed", context=message[:200])
-                                except Exception as e:
-                                    print(f"[Track room error] {e}")
+                    # Save history async, don't block response
+                    asyncio.create_task(
+                        self._save_history_async(session_id, reply, intent, filters, safe_data, user_id, db_data)
+                    )
             except Exception as e:
-                print(f"[ChatOrchestrator] Failed to save history: {e}")
+                print(f"[ChatOrchestrator] Failed to schedule history save: {e}")
 
             return {
                 "reply": reply,
@@ -595,6 +595,25 @@ class ChatOrchestrator:
                 "suggested_questions": ["Tìm phòng giá rẻ", "Phòng còn trống", "Thống kê phòng"],
                 "session_id": session_id if 'session_id' in locals() else "unknown",
             }
+
+    async def _save_history_async(self, session_id, reply, intent, filters, safe_data, user_id, db_data):
+        """Save history in background without blocking response"""
+        try:
+            self._history.save_message(
+                session_id=session_id, role="assistant",
+                content=reply, intent=intent, filters=filters, response_data=safe_data)
+            if user_id and db_data and isinstance(db_data, list):
+                for room in db_data[:3]:
+                    room_code = room.get("RoomCode")
+                    if room_code:
+                        try:
+                            self._history.track_room_interaction(
+                                session_id=session_id, tenant_id=user_id,
+                                room_id=room_code, action_type="viewed", context="")
+                        except Exception as e:
+                            print(f"[Track room error] {e}")
+        except Exception as e:
+            print(f"[ChatOrchestrator] Background save error: {e}")
 
     # ── Booking handlers ────────────────────────────────────────────────────
 
@@ -881,22 +900,38 @@ class ChatOrchestrator:
     # ── DB routing ────────────────────────────────────────
 
     def _query_db(self, intent: str, filters: Dict[str, Any]) -> Any:
+        # Check cache first
+        cached = cache.cache_db_query(intent, filters)
+        if cached is not None:
+            return cached
+        
         try:
+            result = None
             if intent == "get_stats":
-                return self._db.get_room_stats()
+                result = self._db.get_room_stats()
             elif intent == "get_cheap_rooms":
-                return self._db.get_cheap_rooms(max_price=filters.get("price_max"), limit=filters.get("limit", 5))
+                result = self._db.get_cheap_rooms(max_price=filters.get("price_max"), limit=filters.get("limit", 5))
             elif intent in ("get_available_rooms", "search_rooms", "recommend_rooms"):
-                return self._db.search_rooms(filters)
+                result = self._db.search_rooms(filters)
             elif intent == "get_buildings":
-                return self._db.get_buildings(filters)
+                result = self._db.get_buildings(filters)
             elif intent == "get_room_detail":
                 code = filters.get("room_code", "")
-                return self._db.get_room_detail(code)
+                # Check room detail cache separately
+                cached_room = cache.cache_room_detail(code)
+                if cached_room:
+                    return cached_room
+                result = self._db.get_room_detail(code)
+                if result:
+                    cache.set_room_detail_cache(code, result)
+                return result
             elif intent == "get_locations":
-                return self._db.get_locations(filters)
-            else:
-                return None
+                result = self._db.get_locations(filters)
+            
+            # Cache the result
+            if result is not None:
+                cache.set_db_cache(intent, filters, result)
+            return result
         except Exception as e:
             print(f"[DB routing error] {e}")
             return None

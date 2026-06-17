@@ -162,15 +162,24 @@ class DatabaseClient:
         order = _SORT_MAP.get(filters.get("sort_by", ""), "RAND()")
         limit = min(int(filters.get("limit", 5)), 20)
 
-        # Query includes RoomID for internal tracking, but it will be filtered out
-        query = f"""
-            SELECT r.RoomCode, r.RoomType, r.Area, r.Price, r.Description
-            FROM ROOM r
-            LEFT JOIN LOCATION l ON r.LocationID = l.LocationID
-            WHERE {where}
-            ORDER BY {order}
-            LIMIT %s
-        """
+        # Optimized: Only SELECT fields we need, avoid LEFT JOIN if district not needed
+        if district or ward:
+            query = f"""
+                SELECT r.RoomCode, r.RoomType, r.Area, r.Price, r.Description
+                FROM ROOM r
+                LEFT JOIN LOCATION l ON r.LocationID = l.LocationID
+                WHERE {where}
+                ORDER BY {order}
+                LIMIT %s
+            """
+        else:
+            query = f"""
+                SELECT r.RoomCode, r.RoomType, r.Area, r.Price, r.Description
+                FROM ROOM r
+                WHERE {where}
+                ORDER BY {order}
+                LIMIT %s
+            """
         params.append(limit)
         results = self._run(query, tuple(params))
         return filter_allowed_fields(results)

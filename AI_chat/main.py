@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from AI_chat import ChatOrchestrator
 from booking_service import BookingService
+import cache
 
 app = FastAPI(title="Rentify AI Chat", version="2.0.0")
 app.add_middleware(
@@ -176,6 +177,16 @@ async def cancel_booking(schedule_id: str, tenant_id: str):
     if success:
         return {"success": True, "message": "Đã hủy lịch"}
     return {"success": False, "message": "Không thể hủy lịch"}
+
+
+@app.post("/cache/clear")
+async def clear_cache(cache_type: str = "all"):
+    """Clear cache - admin only"""
+    if cache_type == "all":
+        cache.clear_all()
+    elif cache_type == "db":
+        cache.clear_db_cache()
+    return {"success": True, "message": f"Cleared {cache_type} cache"}
 
 
 # ── Optional: simple Tkinter GUI for local testing ───────
