@@ -491,10 +491,12 @@ export default function ListingPage() {
   const fmt = p => Math.floor(parseFloat(p)).toLocaleString('vi-VN')
 
   // Sắp xếp listings với useMemo để tránh tính toán lại mỗi render
-  const totalPages = useMemo(() => 
+  const totalPages = useMemo(() =>
     Math.ceil(totalListings / PER_PAGE),
     [totalListings]
-  );
+  )
+  const currentRangeStart = totalListings === 0 ? 0 : ((page - 1) * PER_PAGE) + 1
+  const currentRangeEnd = totalListings === 0 ? 0 : Math.min(page * PER_PAGE, totalListings)
 
   // Count active filters on mount and when params change
   useEffect(() => {
@@ -546,7 +548,7 @@ export default function ListingPage() {
         <Container maxWidth="lg">
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1.5 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.text }}>
-              <Box component="span" sx={{ color: T.blue }}>{listings.length}</Box>
+              <Box component="span" sx={{ color: T.blue }}>{totalListings}</Box>
               &nbsp;phòng{selectedRoomType && selectedRoomType !== 'all' ? ` ${selectedRoomType}` : ''}
               {roomTypeParam && roomTypeName ? ` ${roomTypeName}` : ''}
               {maxPrice ? ` dưới ${fmt(maxPrice)}đ` : ''}
@@ -554,6 +556,7 @@ export default function ListingPage() {
               {poiId && poiName ? ` gần ${poiName}` : 
                (selectedDistrict || district) ? ` tại ${selectedDistrict || district}` : 
                ' tại Hà Nội'}
+              {totalListings > 0 ? ` (${currentRangeStart}-${currentRangeEnd}/${totalListings})` : ''}
             </Typography>
             <Stack direction="row" spacing={1}>
               <SortMenu currentSort={sortBy} onSortChange={handleSortChange} />
