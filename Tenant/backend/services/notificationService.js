@@ -2,6 +2,32 @@ const db = require('../config/database');
 const { generateID } = require('../utils/validation');
 
 class NotificationService {
+  async getNotificationTotal(accountId) {
+    try {
+      const query = `
+        SELECT COUNT(*) as count
+        FROM NOTIFICATION n
+        JOIN TENANT t ON n.TargetID = t.TenantID
+        JOIN ACCOUNT a ON t.AccountID = a.AccountID
+        WHERE a.AccountID = ?
+      `;
+
+      const [result] = await db.query(query, [accountId]);
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Get notification total error:', error);
+      throw error;
+    }
+  }
+
+  async tenantExists(tenantId) {
+    const [rows] = await db.query(
+      'SELECT 1 FROM TENANT WHERE TenantID = ? LIMIT 1',
+      [tenantId]
+    );
+    return rows.length > 0;
+  }
+
   // Lấy danh sách thông báo của tenant
   async getNotifications(accountId, limit = 20, offset = 0) {
     try {
@@ -130,6 +156,11 @@ class NotificationService {
       throw new Error(`Invalid targetId: ${tenantId}`);
     }
     try {
+      const exists = await this.tenantExists(tenantId);
+      if (!exists) {
+        throw new Error(`Target tenant does not exist: ${tenantId}`);
+      }
+
       const notificationId = generateID('NTF');
       const query = `
         INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, Link, CreatedAt)

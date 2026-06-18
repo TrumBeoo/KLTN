@@ -1,9 +1,20 @@
 const db = require('../config/database');
 const axios = require('axios');
+const cacheService = require('./cacheService');
 
 const LANDLORD_API_URL = process.env.LANDLORD_API_URL || 'http://localhost:3333/api';
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'dev-internal-key';
+const NOTIFICATION_TIMEOUT_MS = parseInt(process.env.NOTIFICATION_TIMEOUT_MS || '5000', 10);
+const NOTIFICATION_MAX_RETRIES = parseInt(process.env.NOTIFICATION_MAX_RETRIES || '2', 10);
 
 class ViewingScheduleService {
+  async invalidateRoomCaches(roomId = null) {
+    await cacheService.delByPattern('rooms:');
+    if (roomId) {
+      await cacheService.delByPattern(roomId);
+    }
+  }
+
   async generateScheduleId() {
     const [rows] = await db.query(
       'SELECT ScheduleID FROM VIEWING_SCHEDULE ORDER BY ScheduleID DESC LIMIT 1'
@@ -48,6 +59,7 @@ class ViewingScheduleService {
       );
 
       await connection.commit();
+      await this.invalidateRoomCaches(roomId);
 
       // Send notification to landlord (async, don't wait)
       if (roomInfo) {
@@ -79,21 +91,72 @@ class ViewingScheduleService {
       const dateStr = date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       const content = `${tenantName} đã đặt lịch xem "${roomName}" vào ${time} ngày ${dateStr}`;
       const link = `/viewing-schedules`;
-      
-      const response = await axios.post(`${LANDLORD_API_URL}/notifications/create`, {
-        targetId: landlordId,
-        content: content,
-        type: 'Lịch xem',
-        link: link
-      });
-      
-      console.log('Notification sent successfully:', response.data);
+
+      const response = await this.postNotificationWithRetry(
+        `${LANDLORD_API_URL}/notifications/create`,
+        {
+          targetId: landlordId,
+          content,
+          type: 'Lịch xem',
+          link
+        },
+        () => this.createFallbackNotification(landlordId, content, 'Lịch xem', link)
+      );
+
+      console.log('Notification sent successfully:', response?.data || { fallback: true });
     } catch (error) {
       console.error('Error notifying landlord:');
       console.error('Message:', error.message);
       console.error('Response:', error.response?.data);
       console.error('Status:', error.response?.status);
     }
+  }
+
+  async postNotificationWithRetry(url, payload, fallbackFn) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= NOTIFICATION_MAX_RETRIES; attempt += 1) {
+      try {
+        return await axios.post(url, payload, {
+          timeout: NOTIFICATION_TIMEOUT_MS,
+          headers: {
+            'x-internal-api-key': INTERNAL_API_KEY
+          }
+        });
+      } catch (error) {
+        lastError = error;
+        console.error(`[Notification] Attempt ${attempt}/${NOTIFICATION_MAX_RETRIES} failed:`, error.message);
+      }
+    }
+
+    if (fallbackFn) {
+      await fallbackFn();
+      return null;
+    }
+
+    throw lastError;
+  }
+
+  async createFallbackNotification(targetId, content, type, link = null) {
+    if (!targetId || !targetId.startsWith('LAN')) {
+      throw new Error(`Fallback notification target is invalid: ${targetId}`);
+    }
+
+    const [rows] = await db.query(
+      'SELECT 1 FROM LANDLORD WHERE LandlordID = ? LIMIT 1',
+      [targetId]
+    );
+
+    if (rows.length === 0) {
+      throw new Error(`Fallback landlord target does not exist: ${targetId}`);
+    }
+
+    const notificationId = `NTF${Date.now().toString(36).slice(-3).toUpperCase()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+    await db.query(
+      `INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, Link, CreatedAt)
+       VALUES (?, ?, ?, ?, 'Chưa đọc', ?, NOW())`,
+      [notificationId, targetId, content, type, link]
+    );
   }
 
   async getTenantInfo(accountId) {
@@ -156,6 +219,7 @@ class ViewingScheduleService {
       );
 
       await connection.commit();
+      await this.invalidateRoomCaches(schedule.RoomID);
       return true;
     } catch (error) {
       await connection.rollback();

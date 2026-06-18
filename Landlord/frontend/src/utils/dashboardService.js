@@ -27,6 +27,7 @@ export const dashboardService = {
     try {
       const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
         method: 'GET',
+        cache: 'no-store',
         headers: getAuthHeaders()
       });
       
@@ -47,6 +48,7 @@ export const dashboardService = {
     try {
       const response = await fetch(`${API_BASE_URL}/dashboard/pending-viewings`, {
         method: 'GET',
+        cache: 'no-store',
         headers: getAuthHeaders()
       });
       
@@ -67,6 +69,7 @@ export const dashboardService = {
     try {
       const response = await fetch(`${API_BASE_URL}/dashboard/available-rooms`, {
         method: 'GET',
+        cache: 'no-store',
         headers: getAuthHeaders()
       });
       

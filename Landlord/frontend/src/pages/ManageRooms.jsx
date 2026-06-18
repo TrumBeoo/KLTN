@@ -735,7 +735,8 @@ export default function ManageRooms() {
       if (filters.status) params.append('status', filters.status)
       if (filters.type) params.append('type', filters.type)
 
-      const response = await fetch(`${API_URL}/rooms?${params}`, {
+      const response = await fetch(`${API_URL}/rooms?${params}&t=${Date.now()}`, {
+        cache: 'no-store',
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()

@@ -165,7 +165,10 @@ export default function RoomDetailPage() {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const res = await fetch(`${API}/rooms/${roomId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      const res = await fetch(`${API}/rooms/${roomId}?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const data = await res.json()
       if (data.success) setRoom(data.data)
     } catch {} finally { setLoading(false) }
@@ -224,7 +227,10 @@ export default function RoomDetailPage() {
     const token = localStorage.getItem('token')
     if (!token) { setUserSchedule(null); return }
     try {
-      const res = await fetch(`${API}/schedule/${roomId}`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await fetch(`${API}/schedule/${roomId}?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const data = await res.json()
       setUserSchedule(data.success && data.data ? data.data : null)
     } catch { setUserSchedule(null) }
@@ -234,7 +240,9 @@ export default function RoomDetailPage() {
     if (!date) return
     setLoadingSlots(true)
     try {
-      const res = await fetch(`${API}/available-slots/${roomId}?date=${date}`)
+      const res = await fetch(`${API}/available-slots/${roomId}?date=${date}&t=${Date.now()}`, {
+        cache: 'no-store',
+      })
       const data = await res.json()
       if (data.success) {
         let slots = data.data
@@ -275,6 +283,14 @@ export default function RoomDetailPage() {
       const data = await res.json()
       if (data.success) {
         setOpenSchedule(false)
+        const scheduledDateTime = new Date(`${scheduleData.date}T${scheduleData.time}:00+07:00`).toISOString()
+        setUserSchedule({
+          ScheduleID: data.scheduleId,
+          DateTime: scheduledDateTime,
+          Status: 'Chờ duyệt',
+          CreatedAt: new Date().toISOString(),
+        })
+        setRoom(prev => prev ? { ...prev, DisplayStatus: 'pending_viewing' } : prev)
         setScheduleData({ date: '', time: '', name: '', phone: '' })
         window.dispatchEvent(new CustomEvent('viewing-schedule:changed', {
           detail: {

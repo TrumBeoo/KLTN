@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const notificationService = require('../services/notificationService');
 const authMiddleware = require('../middleware/auth');
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'dev-internal-key';
 
 // Lấy số lượng thông báo chưa đọc (PHẢI ĐẶT TRƯỚC route /:notificationId)
 router.get('/unread-count', authMiddleware, async (req, res) => {
@@ -33,12 +34,13 @@ router.get('/', authMiddleware, async (req, res) => {
     );
 
     const unreadCount = await notificationService.getUnreadCount(req.user.accountId);
+    const total = await notificationService.getNotificationTotal(req.user.accountId);
 
     res.json({
       success: true,
       data: notifications,
       unreadCount,
-      total: notifications.length
+      total
     });
   } catch (error) {
     console.error('Get notifications error:', error);
@@ -52,6 +54,14 @@ router.get('/', authMiddleware, async (req, res) => {
 // Tạo thông báo (internal API - không cần auth)
 router.post('/create', async (req, res) => {
   try {
+    const internalApiKey = req.headers['x-internal-api-key'];
+    if (internalApiKey !== INTERNAL_API_KEY) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden'
+      });
+    }
+
     console.log('=== Received notification create request ===');
     console.log('Body:', req.body);
     

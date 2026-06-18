@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const roomService = require('../services/roomService');
 
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
+
 // Get room by ID
 router.get('/rooms/:roomId', async (req, res) => {
   try {

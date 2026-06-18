@@ -3,6 +3,11 @@ const router = express.Router();
 const viewingScheduleService = require('../services/viewingScheduleService');
 const authMiddleware = require('../middleware/auth');
 
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
+
 // Get available time slots for a room on a specific date
 router.get('/available-slots/:roomId', async (req, res) => {
   try {

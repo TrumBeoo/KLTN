@@ -9,12 +9,21 @@ class RoomService {
               l.Name as LandlordName, l.Phone as LandlordPhone, l.Email as LandlordEmail,
               loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
               loc.Latitude, loc.Longitude,
+              COALESCE(vs.PendingViewings, 0) as PendingViewings,
+              COALESCE(vs.ApprovedViewings, 0) as ApprovedViewings,
               GROUP_CONCAT(DISTINCT CONCAT(s.Name) SEPARATOR '||') as ServicesFromTable,
               GROUP_CONCAT(DISTINCT CONCAT(f.Name) SEPARATOR '||') as FurnitureFromTable,
               GROUP_CONCAT(DISTINCT CONCAT(ru.Name) SEPARATOR '||') as RulesFromTable
        FROM ROOM r
        JOIN LANDLORD l ON r.LandlordID = l.LandlordID
        LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
+       LEFT JOIN (
+         SELECT RoomID,
+                SUM(CASE WHEN Status = 'Chờ duyệt' THEN 1 ELSE 0 END) as PendingViewings,
+                SUM(CASE WHEN Status = 'Đã duyệt' THEN 1 ELSE 0 END) as ApprovedViewings
+         FROM VIEWING_SCHEDULE
+         GROUP BY RoomID
+       ) vs ON vs.RoomID = r.RoomID
        LEFT JOIN ROOM_SERVICE rs ON r.RoomID = rs.RoomID
        LEFT JOIN SERVICE s ON rs.ServiceID = s.ServiceID
        LEFT JOIN ROOM_FURNITURE rf ON r.RoomID = rf.RoomID
@@ -65,11 +74,15 @@ class RoomService {
       }
     }
     
-    // Set display status
-    if (userScheduleStatus) {
-      room.DisplayStatus = userScheduleStatus === 'Đã duyệt' ? 'viewing' : 'pending_viewing';
+    // Display status should reflect any active viewing on the room, not only the current tenant.
+    if (room.Status === 'rented') {
+      room.DisplayStatus = 'rented';
+    } else if (room.ApprovedViewings > 0 || userScheduleStatus === 'Đã duyệt') {
+      room.DisplayStatus = 'viewing';
+    } else if (room.PendingViewings > 0 || userScheduleStatus === 'Chờ duyệt') {
+      room.DisplayStatus = 'pending_viewing';
     } else {
-      room.DisplayStatus = room.Status === 'rented' ? 'rented' : 'available';
+      room.DisplayStatus = 'available';
     }
     
     return room;
@@ -152,7 +165,9 @@ class RoomService {
              b.BuildingName, b.Address as BuildingAddress, b.District as BuildingDistrict,
              loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
              loc.Latitude, loc.Longitude,
-             lst.IsVisible as ListingVisible
+             lst.IsVisible as ListingVisible,
+             COALESCE(vs.PendingViewings, 0) as PendingViewings,
+             COALESCE(vs.ApprovedViewings, 0) as ApprovedViewings
     `;
     const countClause = 'SELECT COUNT(DISTINCT r.RoomID) as total';
     let fromClause = `
@@ -161,6 +176,13 @@ class RoomService {
       LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
       LEFT JOIN LOCATION loc ON r.LocationID = loc.LocationID
       LEFT JOIN LISTING lst ON r.RoomID = lst.RoomID
+      LEFT JOIN (
+        SELECT RoomID,
+               SUM(CASE WHEN Status = 'Chờ duyệt' THEN 1 ELSE 0 END) as PendingViewings,
+               SUM(CASE WHEN Status = 'Đã duyệt' THEN 1 ELSE 0 END) as ApprovedViewings
+        FROM VIEWING_SCHEDULE
+        GROUP BY RoomID
+      ) vs ON vs.RoomID = r.RoomID
     `;
     
     const params = [];
@@ -247,14 +269,21 @@ class RoomService {
       imagesByRoom[img.RoomID].push({ ImageURL: img.ImageURL });
     });
     
-    // Map rooms với images và đồng bộ district từ BUILDING hoặc LOCATION
+    // Map rooms với images và tính trạng thái hiển thị theo lịch xem thực tế.
     const result = rooms.map(room => ({
       ...room,
       District: room.BuildingDistrict || room.District,
       Ward: room.Ward,
       Street: room.Street,
       Address: room.BuildingAddress || room.LocationAddress,
-      DisplayStatus: room.Status,
+      DisplayStatus:
+        room.Status === 'rented'
+          ? 'rented'
+          : room.ApprovedViewings > 0
+            ? 'viewing'
+            : room.PendingViewings > 0
+              ? 'pending_viewing'
+              : 'available',
       images: imagesByRoom[room.RoomID] || []
     }));
     

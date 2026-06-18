@@ -3,6 +3,9 @@ const notificationService = require('./notificationService');
 const axios = require('axios');
 
 const TENANT_API_URL = process.env.TENANT_API_URL || 'http://localhost:5000/api';
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'dev-internal-key';
+const NOTIFICATION_TIMEOUT_MS = parseInt(process.env.NOTIFICATION_TIMEOUT_MS || '5000', 10);
+const NOTIFICATION_MAX_RETRIES = parseInt(process.env.NOTIFICATION_MAX_RETRIES || '2', 10);
 
 class ViewingScheduleService {
   async getSchedulesByLandlord(landlordId) {
@@ -208,14 +211,20 @@ class ViewingScheduleService {
       // Hiển thị giờ Việt Nam (UTC+7) trong thông báo
       const dateTimeStr = date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
       const content = `Lịch xem phòng "${roomName}" vào lúc ${dateTimeStr} đã được chủ nhà duyệt.`;
-      
-      const response = await axios.post(`${TENANT_API_URL}/notifications/create`, {
-        targetId: tenantId,
-        content: content,
-        type: 'Lịch xem'
-      });
-      
-      console.log('Notification sent successfully:', response.data);
+      const link = '/profile';
+
+      const response = await this.postNotificationWithRetry(
+        `${TENANT_API_URL}/notifications/create`,
+        {
+          targetId: tenantId,
+          content,
+          type: 'Lịch xem',
+          link
+        },
+        () => this.createFallbackNotification(tenantId, content, 'Lịch xem', link)
+      );
+
+      console.log('Notification sent successfully:', response?.data || { fallback: true });
     } catch (error) {
       console.error('Error notifying tenant:');
       console.error('Message:', error.message);
@@ -236,20 +245,73 @@ class ViewingScheduleService {
       // Hiển thị giờ Việt Nam (UTC+7) trong thông báo
       const dateTimeStr = date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
       const content = `Lịch xem phòng "${roomName}" vào lúc ${dateTimeStr} đã bị từ chối.`;
-      
-      const response = await axios.post(`${TENANT_API_URL}/notifications/create`, {
-        targetId: tenantId,
-        content: content,
-        type: 'Lịch xem'
-      });
-      
-      console.log('Notification sent successfully:', response.data);
+      const link = '/profile';
+
+      const response = await this.postNotificationWithRetry(
+        `${TENANT_API_URL}/notifications/create`,
+        {
+          targetId: tenantId,
+          content,
+          type: 'Lịch xem',
+          link
+        },
+        () => this.createFallbackNotification(tenantId, content, 'Lịch xem', link)
+      );
+
+      console.log('Notification sent successfully:', response?.data || { fallback: true });
     } catch (error) {
       console.error('Error notifying tenant:');
       console.error('Message:', error.message);
       console.error('Response:', error.response?.data);
       console.error('Status:', error.response?.status);
     }
+  }
+
+  async postNotificationWithRetry(url, payload, fallbackFn) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= NOTIFICATION_MAX_RETRIES; attempt += 1) {
+      try {
+        return await axios.post(url, payload, {
+          timeout: NOTIFICATION_TIMEOUT_MS,
+          headers: {
+            'x-internal-api-key': INTERNAL_API_KEY
+          }
+        });
+      } catch (error) {
+        lastError = error;
+        console.error(`[Notification] Attempt ${attempt}/${NOTIFICATION_MAX_RETRIES} failed:`, error.message);
+      }
+    }
+
+    if (fallbackFn) {
+      await fallbackFn();
+      return null;
+    }
+
+    throw lastError;
+  }
+
+  async createFallbackNotification(targetId, content, type, link = null) {
+    if (!targetId || !targetId.startsWith('TEN')) {
+      throw new Error(`Fallback notification target is invalid: ${targetId}`);
+    }
+
+    const [rows] = await db.query(
+      'SELECT 1 FROM TENANT WHERE TenantID = ? LIMIT 1',
+      [targetId]
+    );
+
+    if (rows.length === 0) {
+      throw new Error(`Fallback tenant target does not exist: ${targetId}`);
+    }
+
+    const notificationId = `NTF${Date.now().toString(36).slice(-3).toUpperCase()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+    await db.query(
+      `INSERT INTO NOTIFICATION (NotificationID, TargetID, Content, Type, Status, Link, CreatedAt)
+       VALUES (?, ?, ?, ?, 'Chưa đọc', ?, NOW())`,
+      [notificationId, targetId, content, type, link]
+    );
   }
 }
 

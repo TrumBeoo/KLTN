@@ -6,6 +6,11 @@ const multer = require('multer');
 const cloudinaryService = require('../services/cloudinaryService');
 const cacheService = require('../services/cacheService');
 
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
+
 // Configure multer for memory storage (files will be uploaded to Cloudinary)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -38,32 +43,24 @@ router.get('/', authMiddleware, async (req, res, next) => {
 
     const landlordId = landlords[0].LandlordID;
     const { building, status, type } = req.query;
-    const cacheKey = cacheService.landlordKey(
-      req.user.accountId,
-      `rooms:${building || 'all'}:${status || 'all'}:${type || 'all'}`
-    );
-
-    const cachedRooms = await cacheService.get(cacheKey);
-    if (cachedRooms) {
-      return res.json({
-        success: true,
-        data: cachedRooms,
-        total: cachedRooms.length,
-        cached: true
-      });
-    }
 
     let query = `
       SELECT r.*, b.BuildingName,
              COALESCE(vs.PendingViewings, 0) as PendingViewings,
              COALESCE(vs.ApprovedViewings, 0) as ApprovedViewings,
-             img.Images
+             img.Images,
+             CASE
+               WHEN r.Status = 'rented' THEN 'rented'
+               WHEN COALESCE(vs.ApprovedViewings, 0) > 0 THEN 'viewing'
+               WHEN COALESCE(vs.PendingViewings, 0) > 0 THEN 'pending_viewing'
+               ELSE 'available'
+             END as DisplayStatus
       FROM ROOM r
       LEFT JOIN BUILDING b ON r.BuildingID = b.BuildingID
       LEFT JOIN (
         SELECT RoomID,
-               SUM(CASE WHEN Status = 'Ch\u1edd duy\u1ec7t' THEN 1 ELSE 0 END) as PendingViewings,
-               SUM(CASE WHEN Status = '\u0110\u00e3 duy\u1ec7t' THEN 1 ELSE 0 END) as ApprovedViewings
+               SUM(CASE WHEN Status = 'Chờ duyệt' THEN 1 ELSE 0 END) as PendingViewings,
+               SUM(CASE WHEN Status = 'Đã duyệt' THEN 1 ELSE 0 END) as ApprovedViewings
         FROM VIEWING_SCHEDULE
         GROUP BY RoomID
       ) vs ON vs.RoomID = r.RoomID
@@ -81,8 +78,16 @@ router.get('/', authMiddleware, async (req, res, next) => {
       params.push(building);
     }
     if (status) {
-      query += ' AND r.Status = ?';
-      params.push(status);
+      if (status === 'pending_viewing') {
+        query += ` AND r.Status = 'available' AND COALESCE(vs.PendingViewings, 0) > 0`;
+      } else if (status === 'viewing') {
+        query += ` AND r.Status = 'available' AND COALESCE(vs.ApprovedViewings, 0) > 0`;
+      } else if (status === 'available') {
+        query += ` AND r.Status = 'available' AND COALESCE(vs.PendingViewings, 0) = 0 AND COALESCE(vs.ApprovedViewings, 0) = 0`;
+      } else {
+        query += ' AND r.Status = ?';
+        params.push(status);
+      }
     }
     if (type) {
       query += ' AND r.RoomType = ?';
@@ -92,28 +97,11 @@ router.get('/', authMiddleware, async (req, res, next) => {
     query += ' ORDER BY r.UpdatedAt DESC';
 
     const [rooms] = await db.query(query, params);
-    const roomsWithStatus = rooms.map((room) => {
-      let displayStatus = room.Status;
-      if (room.Status === 'available') {
-        if (room.ApprovedViewings > 0) {
-          displayStatus = 'viewing';
-        } else if (room.PendingViewings > 0) {
-          displayStatus = 'pending_viewing';
-        }
-      }
-
-      return {
-        ...room,
-        DisplayStatus: displayStatus
-      };
-    });
-
-    await cacheService.set(cacheKey, roomsWithStatus, 120);
 
     return res.json({
       success: true,
-      data: roomsWithStatus,
-      total: roomsWithStatus.length
+      data: rooms,
+      total: rooms.length
     });
   } catch (error) {
     return next(error);
