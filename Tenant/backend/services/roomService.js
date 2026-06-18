@@ -9,8 +9,8 @@ class RoomService {
               l.Name as LandlordName, l.Phone as LandlordPhone, l.Email as LandlordEmail,
               loc.District, loc.Ward, loc.Street, loc.Address as LocationAddress,
               loc.Latitude, loc.Longitude,
-              COALESCE(vs.PendingViewings, 0) as PendingViewings,
-              COALESCE(vs.ApprovedViewings, 0) as ApprovedViewings,
+              MAX(COALESCE(vs.PendingViewings, 0)) as PendingViewings,
+              MAX(COALESCE(vs.ApprovedViewings, 0)) as ApprovedViewings,
               GROUP_CONCAT(DISTINCT CONCAT(s.Name) SEPARATOR '||') as ServicesFromTable,
               GROUP_CONCAT(DISTINCT CONCAT(f.Name) SEPARATOR '||') as FurnitureFromTable,
               GROUP_CONCAT(DISTINCT CONCAT(ru.Name) SEPARATOR '||') as RulesFromTable
