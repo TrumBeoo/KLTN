@@ -1,6 +1,26 @@
 const db = require('../config/database');
 const cacheService = require('./cacheService');
 
+const normalizeSegment = (value) => (value || '').trim().toLowerCase();
+
+const dedupeTrailingHyphenSegments = (value) => {
+  if (!value || typeof value !== 'string') return value;
+
+  const segments = value
+    .split(' - ')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  while (
+    segments.length >= 2 &&
+    normalizeSegment(segments[segments.length - 1]) === normalizeSegment(segments[segments.length - 2])
+  ) {
+    segments.pop();
+  }
+
+  return segments.join(' - ');
+};
+
 class RoomService {
   async getRoomById(roomId, currentUserId = null) {
     // Single optimized query với JOINs thay vì nhiều queries riêng lẻ
@@ -84,6 +104,10 @@ class RoomService {
     } else {
       room.DisplayStatus = 'available';
     }
+
+    room.Title = dedupeTrailingHyphenSegments(room.Title);
+    room.BuildingAddress = dedupeTrailingHyphenSegments(room.BuildingAddress);
+    room.LocationAddress = dedupeTrailingHyphenSegments(room.LocationAddress);
     
     return room;
   }
@@ -272,10 +296,13 @@ class RoomService {
     // Map rooms với images và tính trạng thái hiển thị theo lịch xem thực tế.
     const result = rooms.map(room => ({
       ...room,
+      Title: dedupeTrailingHyphenSegments(room.Title),
+      BuildingAddress: dedupeTrailingHyphenSegments(room.BuildingAddress),
+      LocationAddress: dedupeTrailingHyphenSegments(room.LocationAddress),
       District: room.BuildingDistrict || room.District,
       Ward: room.Ward,
       Street: room.Street,
-      Address: room.BuildingAddress || room.LocationAddress,
+      Address: dedupeTrailingHyphenSegments(room.BuildingAddress || room.LocationAddress),
       DisplayStatus:
         room.Status === 'rented'
           ? 'rented'

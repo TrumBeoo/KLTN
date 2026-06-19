@@ -206,7 +206,26 @@ function RangeSlider({ label, min, max, step, value, onChange, unit = '' }) {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export default function RoommateProfileForm({ onSubmit, onCancel }) {
+const DEFAULT_FORM_DATA = {
+  name: '',
+  age: '',
+  gender: 'any',
+  occupation: '',
+  university: '',
+  bio: '',
+  lifestyle: [],
+  interests: [],
+  sleepTime: '23:00',
+  wakeTime: '07:00',
+  cleanLevel: 3,
+  noiseLevel: 2,
+  budget: [2, 6],
+  locations: [],
+  genderPreference: 'any',
+  duration: 'long-term',
+}
+
+export default function RoommateProfileForm({ onSubmit, onCancel, initialData = null }) {
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     // Step 1: Thông tin cơ bản
@@ -231,6 +250,19 @@ export default function RoommateProfileForm({ onSubmit, onCancel }) {
     genderPreference: 'any',
     duration: 'long-term',
   })
+
+  useEffect(() => {
+    if (!initialData) return
+
+    setFormData({
+      ...DEFAULT_FORM_DATA,
+      ...initialData,
+      budget: initialData.budget || DEFAULT_FORM_DATA.budget,
+      locations: initialData.locations || [],
+      lifestyle: initialData.lifestyle || [],
+      interests: initialData.interests || [],
+    })
+  }, [initialData])
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))

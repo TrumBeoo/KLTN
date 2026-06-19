@@ -108,6 +108,58 @@ function getScore(prefs, candidate) {
   return Math.min(s, 99)
 }
 
+function normalizeGender(value) {
+  if (value === 'male') return 'Nam'
+  if (value === 'female') return 'Nữ'
+  if (value === 'other') return 'Khác'
+  return value || 'Khác'
+}
+
+function buildMatchFactors(profile) {
+  const factors = []
+
+  if (profile.PreferredLocation) factors.push(`Ưu tiên ${profile.PreferredLocation}`)
+  if (profile.Job) factors.push(profile.Job)
+  if (profile.lifestyles?.length) factors.push(...profile.lifestyles.slice(0, 2))
+  if (profile.interests?.length) factors.push(...profile.interests.slice(0, 2))
+
+  return factors.slice(0, 4)
+}
+
+function normalizePublicProfile(profile) {
+  const locations = profile.PreferredLocation
+    ? profile.PreferredLocation.split(',').map((item) => item.trim()).filter(Boolean)
+    : []
+
+  const lifestyles = Array.isArray(profile.lifestyles) ? profile.lifestyles : []
+  const interests = Array.isArray(profile.interests) ? profile.interests : []
+  const tags = [...lifestyles, ...interests].slice(0, 4)
+
+  return {
+    id: profile.TenantID,
+    tenantId: profile.TenantID,
+    name: profile.Name || 'Người dùng Rentify',
+    age: profile.Age || '',
+    gender: normalizeGender(profile.Gender),
+    occupation: profile.Job || 'Đang cập nhật',
+    university: profile.University || '',
+    district: locations[0] || 'Hà Nội',
+    budget: [Number(profile.BudgetMin) || 2, Number(profile.BudgetMax) || 6],
+    image: profile.AvatarURL || '',
+    tags,
+    lifestyle: lifestyles,
+    interests,
+    bio: profile.Bio || 'Đang tìm người ở ghép phù hợp tại Hà Nội.',
+    sleepTime: '23:00',
+    wakeTime: '07:00',
+    cleanLevel: 3,
+    noiseLevel: 2,
+    matchFactors: buildMatchFactors(profile),
+    locations,
+    duration: profile.Duration || 'long-term',
+  }
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function Tag({ children, color = 'default' }) {
@@ -536,6 +588,7 @@ export default function RoommateMatchingPage() {
   const [hasProfile, setHasProfile] = useState(false)
   const [showProfileForm, setShowProfileForm] = useState(false)
   const [userProfile, setUserProfile] = useState(null)
+  const [candidatePool, setCandidatePool] = useState([])
   const scrollRef = useRef(null)
 
   // Check if user has profile on mount
@@ -544,6 +597,28 @@ export default function RoommateMatchingPage() {
       checkUserProfile()
     }
   }, [user])
+
+  useEffect(() => {
+    fetchPublicProfiles()
+  }, [])
+
+  const fetchPublicProfiles = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tenant/roommate-profiles?limit=50`)
+      const data = await response.json()
+
+      if (!data.success || !Array.isArray(data.data)) {
+        setCandidatePool([])
+        return
+      }
+
+      const normalized = data.data.map(normalizePublicProfile)
+      setCandidatePool(normalized)
+    } catch (error) {
+      console.error('Error fetching roommate profiles:', error)
+      setCandidatePool([])
+    }
+  }
 
   const checkUserProfile = async () => {
     try {
@@ -562,8 +637,25 @@ export default function RoommateMatchingPage() {
       const data = await response.json()
       
       if (data.success && data.profile) {
+        const profileForForm = {
+          ...data.profile,
+          occupation: data.profile.Job || '',
+          university: data.profile.University || '',
+          lifestyle: data.profile.lifestyles || [],
+          interests: data.profile.interests || [],
+          budget: [
+            data.profile.preferences?.BudgetMin || 2,
+            data.profile.preferences?.BudgetMax || 6,
+          ],
+          locations: data.profile.preferences?.PreferredDistrict
+            ? data.profile.preferences.PreferredDistrict.split(', ').filter(Boolean)
+            : [],
+          genderPreference: data.profile.preferences?.PreferredGender || 'any',
+          duration: data.profile.preferences?.PreferredAmenities || 'long-term',
+        }
+
         setHasProfile(true)
-        setUserProfile(data.profile)
+        setUserProfile(profileForForm)
         
         // Update prefs from profile
         if (data.profile.preferences) {
@@ -604,8 +696,13 @@ export default function RoommateMatchingPage() {
       
       if (data.success) {
         setHasProfile(true)
-        setUserProfile(profileData)
+        setUserProfile((prev) => ({
+          ...(prev || {}),
+          ...profileData,
+          TenantID: prev?.TenantID || userProfile?.TenantID,
+        }))
         setShowProfileForm(false)
+        fetchPublicProfiles()
         
         // Update prefs from profile
         setPrefs({
@@ -626,12 +723,13 @@ export default function RoommateMatchingPage() {
   }
 
   useEffect(() => {
-    const scored = CANDIDATES
+    const scored = candidatePool
+      .filter(c => c.tenantId !== userProfile?.TenantID)
       .map(c => ({ ...c, _score: getScore(prefs, c) }))
       .filter(c => c._score >= 50)
       .sort((a, b) => b._score - a._score)
     setQueue(scored)
-  }, [prefs])
+  }, [candidatePool, prefs, userProfile])
 
   const handleLike = (c) => {
     setLiked(p => [...p, c])
@@ -672,6 +770,7 @@ export default function RoommateMatchingPage() {
       <RoommateProfileForm
         onSubmit={handleProfileSubmit}
         onCancel={showProfileForm ? () => setShowProfileForm(false) : null}
+        initialData={showProfileForm ? userProfile : null}
       />
     )
   }
@@ -753,7 +852,7 @@ export default function RoommateMatchingPage() {
               </button>
             </>
           )}
-          <div style={{ marginTop: 12, fontSize: 12, color: C.subtle }}>Đã có {CANDIDATES.length} người đang tìm roommate tại Hà Nội</div>
+          <div style={{ marginTop: 12, fontSize: 12, color: C.subtle }}>Đã có {candidatePool.length} người đang tìm roommate tại Hà Nội</div>
         </div>
       </div>
     )
@@ -879,8 +978,8 @@ export default function RoommateMatchingPage() {
                   {queue.length > 0 ? `${queue.length} người phù hợp` : 'Hết danh sách'}
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  {CANDIDATES.slice(0, 5).map((_, i) => (
-                    <div key={i} style={{ height: 3, width: 24, borderRadius: 2, background: i < (CANDIDATES.length - queue.length) ? C.accent : 'rgba(255,255,255,0.1)' }} />
+                  {candidatePool.slice(0, 5).map((_, i) => (
+                    <div key={i} style={{ height: 3, width: 24, borderRadius: 2, background: i < (candidatePool.length - queue.length) ? C.accent : 'rgba(255,255,255,0.1)' }} />
                   ))}
                 </div>
               </div>

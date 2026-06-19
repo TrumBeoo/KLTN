@@ -7,6 +7,14 @@ const cloudinaryService = require('../services/cloudinaryService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+const parseDelimitedList = (value) => {
+  if (!value) return [];
+  return value
+    .split('||')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 // Get all roommate profiles (public)
 router.get('/roommate-profiles', async (req, res) => {
   try {
@@ -22,22 +30,44 @@ router.get('/roommate-profiles', async (req, res) => {
         t.University,
         t.Job,
         t.Bio,
-        t.BudgetMin,
-        t.BudgetMax,
-        t.PreferredDistrict as PreferredLocation,
-        COALESCE(t.BudgetMin, 0) as Budget,
+        tp.BudgetMin,
+        tp.BudgetMax,
+        tp.PreferredDistrict as PreferredLocation,
+        tp.PreferredGender,
+        tp.PreferredAmenities as Duration,
         a.AvatarURL,
-        t.CreatedAt
+        t.CreatedAt,
+        (
+          SELECT GROUP_CONCAT(DISTINCT lm.Name ORDER BY lm.Name SEPARATOR '||')
+          FROM TENANT_LIFESTYLE tl
+          JOIN LIFESTYLE_MASTER lm ON tl.LifestyleID = lm.LifestyleID
+          WHERE tl.TenantID = t.TenantID
+        ) as LifestyleList,
+        (
+          SELECT GROUP_CONCAT(DISTINCT im.Name ORDER BY im.Name SEPARATOR '||')
+          FROM TENANT_INTEREST ti
+          JOIN INTEREST_MASTER im ON ti.InterestID = im.InterestID
+          WHERE ti.TenantID = t.TenantID
+        ) as InterestList
       FROM TENANT t
       JOIN ACCOUNT a ON t.AccountID = a.AccountID
-      WHERE t.BudgetMin IS NOT NULL 
-        AND t.BudgetMax IS NOT NULL
+      JOIN TENANT_PREFERENCE tp ON t.TenantID = tp.TenantID
+      WHERE tp.BudgetMin IS NOT NULL 
+        AND tp.BudgetMax IS NOT NULL
         AND a.Status = 'active'
+        AND TRIM(COALESCE(t.Name, '')) <> ''
+        AND TRIM(COALESCE(t.Bio, '')) <> ''
       ORDER BY t.CreatedAt DESC
       LIMIT ? OFFSET ?
     `, [limit, offset]);
 
-    res.json({ success: true, data: profiles });
+    const publicProfiles = profiles.map((profile) => ({
+      ...profile,
+      lifestyles: parseDelimitedList(profile.LifestyleList),
+      interests: parseDelimitedList(profile.InterestList),
+    }));
+
+    res.json({ success: true, data: publicProfiles });
   } catch (error) {
     console.error('Get roommate profiles error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server' });
@@ -408,6 +438,7 @@ router.get('/roommate-profile', authMiddleware, async (req, res) => {
     `, [tenantId]);
 
     const roommateProfile = {
+      TenantID: tenantId,
       ...profile[0],
       preferences: preferences[0] || {},
       lifestyles: lifestyles.map(l => l.Name),

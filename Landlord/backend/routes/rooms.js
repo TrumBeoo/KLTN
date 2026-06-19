@@ -406,6 +406,24 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     }
 
+    const [duplicateRooms] = await connection.query(
+      `SELECT RoomID, DraftStatus
+       FROM ROOM
+       WHERE LandlordID = ? AND BuildingID = ? AND RoomCode = ?
+       LIMIT 1`,
+      [landlordId, buildingId, roomCode]
+    );
+
+    if (duplicateRooms.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: duplicateRooms[0].DraftStatus === 'published'
+          ? 'Phòng này đã được tạo và publish trước đó'
+          : 'Phòng này đã được tạo trước đó'
+      });
+    }
+
     // Generate RoomID
     const [lastRoom] = await connection.query(
       'SELECT RoomID FROM ROOM ORDER BY RoomID DESC LIMIT 1'
@@ -552,6 +570,24 @@ router.put('/:id', authMiddleware, async (req, res) => {
           message: `Quận của địa điểm (${providedLocation[0].District}) không khớp với quận của tòa nhà (${buildingDistrict})`
         });
       }
+    }
+
+    const [duplicateRooms] = await connection.query(
+      `SELECT RoomID, DraftStatus
+       FROM ROOM
+       WHERE LandlordID = ? AND BuildingID = ? AND RoomCode = ? AND RoomID <> ?
+       LIMIT 1`,
+      [landlordId, buildingId, roomCode, req.params.id]
+    );
+
+    if (duplicateRooms.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: duplicateRooms[0].DraftStatus === 'published'
+          ? 'Mã phòng này đã tồn tại và đang được publish'
+          : 'Mã phòng này đã tồn tại'
+      });
     }
 
     const amenitiesJson = JSON.stringify(amenities || []);

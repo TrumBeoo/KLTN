@@ -967,12 +967,12 @@ export default function HomePage() {
           </SectionHeader>
           <Grid container spacing={2}>
             {loadingDistricts
-              ? [1,2,3,4,5,6,7,8].map(i => (
+              ? [1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
                   <Grid item xs={6} sm={3} md={3} lg={3} key={i}>
                     <Skeleton variant="rectangular" sx={{ borderRadius: '8px', height: 140 }} animation="wave" />
                   </Grid>
                 ))
-              : districts.slice(0, 8).map(d => (
+              : districts.slice(0, 12).map(d => (
                   <Grid item xs={6} sm={3} md={3} lg={3} key={d.name}>
                     <Box
                       onClick={() => navigate(`/listings?district=${encodeURIComponent(d.name)}`)}

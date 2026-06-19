@@ -137,8 +137,8 @@ router.post('/publish-draft/:roomId', async (req, res) => {
 
     // Get room
     const [rooms] = await connection.query(
-      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ? AND DraftStatus = ?',
-      [req.params.roomId, landlordId, 'draft']
+      'SELECT * FROM ROOM WHERE RoomID = ? AND LandlordID = ?',
+      [req.params.roomId, landlordId]
     );
 
     if (rooms.length === 0) {
@@ -147,6 +147,11 @@ router.post('/publish-draft/:roomId', async (req, res) => {
     }
 
     const room = rooms[0];
+
+    if (room.DraftStatus === 'published') {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'PhĂ²ng Ä‘Ă£ Ä‘Æ°á»£c publish' });
+    }
 
     // Check if listing already exists
     const [existingListings] = await connection.query(
@@ -679,6 +684,35 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
 
     // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
+    const [existingRooms] = await connection.query(
+      `SELECT r.RoomID, r.DraftStatus, l.ListingID
+       FROM ROOM r
+       LEFT JOIN LISTING l ON l.RoomID = r.RoomID
+       WHERE r.LandlordID = ? AND r.BuildingID = ? AND r.RoomCode = ?
+       LIMIT 1`,
+      [landlordId, buildingId, detail.RoomCode]
+    );
+
+    if (existingRooms.length > 0) {
+      await connection.query(
+        'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ?, ListingID = ? WHERE UploadDetailID = ?',
+        ['success', existingRooms[0].RoomID, existingRooms[0].ListingID || null, detail.UploadDetailID]
+      );
+
+      await connection.commit();
+      return res.json({
+        success: true,
+        message: existingRooms[0].ListingID
+          ? 'PhĂ²ng nĂ y Ä‘Ă£ Ä‘Æ°á»£c táº¡o vĂ  publish trÆ°á»›c Ä‘Ă³'
+          : 'PhĂ²ng nĂ y Ä‘Ă£ Ä‘Æ°á»£c táº¡o trÆ°á»›c Ä‘Ă³',
+        data: {
+          roomId: existingRooms[0].RoomID,
+          listingId: existingRooms[0].ListingID || null,
+          detailId: detail.UploadDetailID
+        }
+      });
+    }
+
     // Generate RoomID
     const [lastRoom] = await connection.query(
       'SELECT RoomID FROM ROOM ORDER BY RoomID DESC LIMIT 1'
@@ -967,6 +1001,29 @@ router.post('/bulk-create/:jobId', async (req, res) => {
         }
 
         // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
+
+        const [existingRooms] = await connection.query(
+          `SELECT r.RoomID, r.DraftStatus, l.ListingID
+           FROM ROOM r
+           LEFT JOIN LISTING l ON l.RoomID = r.RoomID
+           WHERE r.LandlordID = ? AND r.BuildingID = ? AND r.RoomCode = ?
+           LIMIT 1`,
+          [landlordId, buildingId, detail.RoomCode]
+        );
+
+        if (existingRooms.length > 0) {
+          await connection.query(
+            'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ?, ListingID = ?, ErrorMessage = NULL WHERE UploadDetailID = ?',
+            ['success', existingRooms[0].RoomID, existingRooms[0].ListingID || null, detail.UploadDetailID]
+          );
+          rooms.push({
+            roomId: existingRooms[0].RoomID,
+            roomCode: detail.RoomCode,
+            reused: true
+          });
+          successCount++;
+          continue;
+        }
 
         console.log(`[BULK CREATE] Processing: ${detail.RoomCode}`);
 

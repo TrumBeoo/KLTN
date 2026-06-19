@@ -485,7 +485,7 @@ router.post('/', async (req, res) => {
     const landlordId = landlords[0].LandlordID
 
     const [rooms] = await db.query(`
-      SELECT r.RoomID FROM ROOM r
+      SELECT r.RoomID, r.DraftStatus FROM ROOM r
       WHERE r.RoomID = ? AND r.LandlordID = ?
     `, [roomId, landlordId])
 
@@ -493,6 +493,13 @@ router.post('/', async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy phòng hoặc bạn không có quyền truy cập'
+      })
+    }
+
+    if (rooms[0].DraftStatus === 'published') {
+      return res.status(400).json({
+        success: false,
+        message: 'PhĂ²ng nĂ y Ä‘Ă£ Ä‘Æ°á»£c publish'
       })
     }
 
@@ -527,7 +534,7 @@ router.post('/', async (req, res) => {
 
     // Đồng bộ Title sang bảng ROOM
     await db.query(`
-      UPDATE ROOM SET Title = ?, UpdatedAt = NOW()
+      UPDATE ROOM SET Title = ?, DraftStatus = 'published', UpdatedAt = NOW()
       WHERE RoomID = ?
     `, [title, roomId])
 

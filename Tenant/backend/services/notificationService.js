@@ -2,17 +2,23 @@ const db = require('../config/database');
 const { generateID } = require('../utils/validation');
 
 class NotificationService {
+  async getTenantIdByAccountId(accountId) {
+    const [rows] = await db.query(
+      'SELECT TenantID FROM TENANT WHERE AccountID = ? LIMIT 1',
+      [accountId]
+    );
+    return rows[0]?.TenantID || null;
+  }
+
   async getNotificationTotal(accountId) {
     try {
-      const query = `
-        SELECT COUNT(*) as count
-        FROM NOTIFICATION n
-        JOIN TENANT t ON n.TargetID = t.TenantID
-        JOIN ACCOUNT a ON t.AccountID = a.AccountID
-        WHERE a.AccountID = ?
-      `;
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return 0;
 
-      const [result] = await db.query(query, [accountId]);
+      const [result] = await db.query(
+        'SELECT COUNT(*) as count FROM NOTIFICATION WHERE TargetID = ?',
+        [tenantId]
+      );
       return result[0]?.count || 0;
     } catch (error) {
       console.error('Get notification total error:', error);
@@ -31,24 +37,25 @@ class NotificationService {
   // Lấy danh sách thông báo của tenant
   async getNotifications(accountId, limit = 20, offset = 0) {
     try {
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return [];
+
       const query = `
         SELECT 
-          n.NotificationID,
-          n.Content,
-          n.Type,
-          n.Status,
-          n.Link,
-          n.CreatedAt,
-          t.TenantID
-        FROM NOTIFICATION n
-        JOIN TENANT t ON n.TargetID = t.TenantID
-        JOIN ACCOUNT a ON t.AccountID = a.AccountID
-        WHERE a.AccountID = ?
-        ORDER BY n.CreatedAt DESC
+          NotificationID,
+          Content,
+          Type,
+          Status,
+          Link,
+          CreatedAt,
+          TargetID as TenantID
+        FROM NOTIFICATION
+        WHERE TargetID = ?
+        ORDER BY CreatedAt DESC
         LIMIT ? OFFSET ?
       `;
       
-      const [notifications] = await db.query(query, [accountId, limit, offset]);
+      const [notifications] = await db.query(query, [tenantId, limit, offset]);
       return notifications;
     } catch (error) {
       console.error('Get notifications error:', error);
@@ -59,6 +66,17 @@ class NotificationService {
   // Lấy số lượng thông báo chưa đọc
   async getUnreadCount(accountId) {
     try {
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return 0;
+
+      const [safeResult] = await db.query(
+        `SELECT COUNT(*) as count
+         FROM NOTIFICATION
+         WHERE TargetID = ? AND Status = 'ChÆ°a Ä‘á»c'`,
+        [tenantId]
+      );
+      return safeResult[0]?.count || 0;
+
       const query = `
         SELECT COUNT(*) as count
         FROM NOTIFICATION n
@@ -78,6 +96,17 @@ class NotificationService {
   // Đánh dấu thông báo là đã đọc
   async markAsRead(notificationId, accountId) {
     try {
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return false;
+
+      const [safeResult] = await db.query(
+        `UPDATE NOTIFICATION
+         SET Status = 'ÄĂ£ Ä‘á»c'
+         WHERE NotificationID = ? AND TargetID = ?`,
+        [notificationId, tenantId]
+      );
+      return safeResult.affectedRows > 0;
+
       const query = `
         UPDATE NOTIFICATION n
         JOIN TENANT t ON n.TargetID = t.TenantID
@@ -97,6 +126,17 @@ class NotificationService {
   // Đánh dấu tất cả thông báo là đã đọc
   async markAllAsRead(accountId) {
     try {
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return 0;
+
+      const [safeResult] = await db.query(
+        `UPDATE NOTIFICATION
+         SET Status = 'ÄĂ£ Ä‘á»c'
+         WHERE TargetID = ? AND Status = 'ChÆ°a Ä‘á»c'`,
+        [tenantId]
+      );
+      return safeResult.affectedRows;
+
       const query = `
         UPDATE NOTIFICATION n
         JOIN TENANT t ON n.TargetID = t.TenantID
@@ -116,6 +156,15 @@ class NotificationService {
   // Xóa thông báo
   async deleteNotification(notificationId, accountId) {
     try {
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return false;
+
+      const [safeResult] = await db.query(
+        'DELETE FROM NOTIFICATION WHERE NotificationID = ? AND TargetID = ?',
+        [notificationId, tenantId]
+      );
+      return safeResult.affectedRows > 0;
+
       const query = `
         DELETE n FROM NOTIFICATION n
         JOIN TENANT t ON n.TargetID = t.TenantID
@@ -134,6 +183,15 @@ class NotificationService {
   // Xóa tất cả thông báo
   async deleteAllNotifications(accountId) {
     try {
+      const tenantId = await this.getTenantIdByAccountId(accountId);
+      if (!tenantId) return 0;
+
+      const [safeResult] = await db.query(
+        'DELETE FROM NOTIFICATION WHERE TargetID = ?',
+        [tenantId]
+      );
+      return safeResult.affectedRows;
+
       const query = `
         DELETE n FROM NOTIFICATION n
         JOIN TENANT t ON n.TargetID = t.TenantID
