@@ -166,7 +166,7 @@ class DatabaseClient:
         # Optimized: Only SELECT fields we need, avoid LEFT JOIN if district not needed
         if district or ward:
             query = f"""
-                SELECT r.RoomCode, r.RoomType, r.Area, r.Price, r.Description
+                SELECT r.RoomID, r.RoomCode, r.Title, r.RoomType, r.Area, r.Price, r.Description
                 FROM ROOM r
                 LEFT JOIN LOCATION l ON r.LocationID = l.LocationID
                 WHERE {where}
@@ -175,7 +175,7 @@ class DatabaseClient:
             """
         else:
             query = f"""
-                SELECT r.RoomCode, r.RoomType, r.Area, r.Price, r.Description
+                SELECT r.RoomID, r.RoomCode, r.Title, r.RoomType, r.Area, r.Price, r.Description
                 FROM ROOM r
                 WHERE {where}
                 ORDER BY {order}
@@ -233,7 +233,7 @@ class DatabaseClient:
 
     def get_room_detail(self, room_code: str) -> Dict:
         results = self._run("""
-            SELECT RoomCode, RoomType, Area, Price, Description
+            SELECT RoomID, RoomCode, Title, RoomType, Area, Price, Description
             FROM ROOM WHERE RoomCode = %s LIMIT 1
         """, (room_code,))
         return results[0] if results else {}

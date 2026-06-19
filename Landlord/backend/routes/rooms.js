@@ -11,6 +11,109 @@ router.use((req, res, next) => {
   next();
 });
 
+function normalizeComparableText(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeComparableAmenities(value) {
+  if (Array.isArray(value)) {
+    return JSON.stringify(
+      value
+        .map(item => String(item).trim())
+        .filter(Boolean)
+        .sort()
+    );
+  }
+
+  return normalizeComparableText(value);
+}
+
+async function findRoomConflict(connection, {
+  landlordId,
+  buildingId,
+  roomCode,
+  roomType,
+  area,
+  price,
+  maxPeople,
+  description,
+  amenities,
+  furniture = '',
+  service = '',
+  rules = '',
+  floorType = '',
+  title = '',
+  excludeRoomId = null
+}) {
+  const normalizedRoomCode = normalizeComparableText(roomCode);
+  const normalizedTitle = normalizeComparableText(title);
+  const normalizedDescription = normalizeComparableText(description);
+  const normalizedRoomType = normalizeComparableText(roomType);
+  const normalizedFurniture = normalizeComparableText(furniture);
+  const normalizedAmenities = normalizeComparableAmenities(amenities);
+  const normalizedService = normalizeComparableText(service);
+  const normalizedRules = normalizeComparableText(rules);
+  const normalizedFloorType = normalizeComparableText(floorType);
+
+  const [conflicts] = await connection.query(
+    `SELECT
+        RoomID,
+        BuildingID,
+        DraftStatus,
+        CASE
+          WHEN BuildingID = ? AND RoomCode = ? THEN 'same_building_room_code'
+          ELSE 'cross_building_same_details'
+        END AS ConflictType
+      FROM ROOM
+      WHERE LandlordID = ?
+        AND (? IS NULL OR RoomID <> ?)
+        AND (
+          (BuildingID = ? AND RoomCode = ?)
+          OR (
+            BuildingID <> ?
+            AND RoomCode = ?
+            AND COALESCE(RoomType, '') = ?
+            AND COALESCE(Area, 0) = ?
+            AND COALESCE(Price, 0) = ?
+            AND COALESCE(MaxPeople, 0) = ?
+            AND COALESCE(Description, '') = ?
+            AND COALESCE(Furniture, '') = ?
+            AND COALESCE(Amenities, '') = ?
+            AND COALESCE(Service, '') = ?
+            AND COALESCE(Rules, '') = ?
+            AND COALESCE(FloorType, '') = ?
+            AND (? = '' OR COALESCE(Title, '') = ?)
+          )
+        )
+      LIMIT 1`,
+    [
+      buildingId,
+      normalizedRoomCode,
+      landlordId,
+      excludeRoomId,
+      excludeRoomId,
+      buildingId,
+      normalizedRoomCode,
+      buildingId,
+      normalizedRoomCode,
+      normalizedRoomType,
+      Number(area || 0),
+      Number(price || 0),
+      Number(maxPeople || 0),
+      normalizedDescription,
+      normalizedFurniture,
+      normalizedAmenities,
+      normalizedService,
+      normalizedRules,
+      normalizedFloorType,
+      normalizedTitle,
+      normalizedTitle
+    ]
+  );
+
+  return conflicts[0] || null;
+}
+
 // Configure multer for memory storage (files will be uploaded to Cloudinary)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -345,7 +448,9 @@ router.post('/', authMiddleware, async (req, res) => {
       locationId
     } = req.body;
 
-    if (!buildingId || !roomCode || !roomType || !area || !price || !maxPeople) {
+    const normalizedRoomCode = (roomCode || '').trim();
+
+    if (!buildingId || !normalizedRoomCode || !roomType || !area || !price || !maxPeople) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng nhập đầy đủ thông tin bắt buộc'
@@ -405,22 +510,27 @@ router.post('/', authMiddleware, async (req, res) => {
         });
       }
     }
+    const conflictRoom = await findRoomConflict(connection, {
+      landlordId,
+      buildingId,
+      roomCode: normalizedRoomCode,
+      roomType,
+      area,
+      price,
+      maxPeople,
+      description,
+      amenities
+    });
 
-    const [duplicateRooms] = await connection.query(
-      `SELECT RoomID, DraftStatus
-       FROM ROOM
-       WHERE LandlordID = ? AND BuildingID = ? AND RoomCode = ?
-       LIMIT 1`,
-      [landlordId, buildingId, roomCode]
-    );
-
-    if (duplicateRooms.length > 0) {
+    if (conflictRoom) {
       await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: duplicateRooms[0].DraftStatus === 'published'
-          ? 'Phòng này đã được tạo và publish trước đó'
-          : 'Phòng này đã được tạo trước đó'
+        message: conflictRoom.ConflictType === 'same_building_room_code'
+          ? (conflictRoom.DraftStatus === 'published'
+            ? 'Trong cùng tòa nhà, mã phòng này đã được tạo và publish trước đó'
+            : 'Trong cùng tòa nhà, mã phòng này đã tồn tại')
+          : 'Phòng này đang trùng toàn bộ thông tin với một phòng ở tòa nhà khác'
       });
     }
 
@@ -437,7 +547,7 @@ router.post('/', authMiddleware, async (req, res) => {
       roomId = 'ROM00001';
     }
 
-    const amenitiesJson = JSON.stringify(amenities || []);
+    const amenitiesJson = normalizeComparableAmenities(amenities);
 
     await connection.query(
       `INSERT INTO ROOM (
@@ -449,7 +559,7 @@ router.post('/', authMiddleware, async (req, res) => {
         landlordId,
         buildingId,
         finalLocationId,
-        roomCode,
+        normalizedRoomCode,
         roomType,
         area,
         price,
@@ -503,6 +613,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
       status,
       locationId
     } = req.body;
+
+    const normalizedRoomCode = (roomCode || '').trim();
 
     await connection.beginTransaction();
 
@@ -571,26 +683,32 @@ router.put('/:id', authMiddleware, async (req, res) => {
         });
       }
     }
+    const conflictRoom = await findRoomConflict(connection, {
+      landlordId,
+      buildingId,
+      roomCode: normalizedRoomCode,
+      roomType,
+      area,
+      price,
+      maxPeople,
+      description,
+      amenities,
+      excludeRoomId: req.params.id
+    });
 
-    const [duplicateRooms] = await connection.query(
-      `SELECT RoomID, DraftStatus
-       FROM ROOM
-       WHERE LandlordID = ? AND BuildingID = ? AND RoomCode = ? AND RoomID <> ?
-       LIMIT 1`,
-      [landlordId, buildingId, roomCode, req.params.id]
-    );
-
-    if (duplicateRooms.length > 0) {
+    if (conflictRoom) {
       await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: duplicateRooms[0].DraftStatus === 'published'
-          ? 'Mã phòng này đã tồn tại và đang được publish'
-          : 'Mã phòng này đã tồn tại'
+        message: conflictRoom.ConflictType === 'same_building_room_code'
+          ? (conflictRoom.DraftStatus === 'published'
+            ? 'Trong cùng tòa nhà, mã phòng này đã tồn tại và đang được publish'
+            : 'Trong cùng tòa nhà, mã phòng này đã tồn tại')
+          : 'Phòng này đang trùng toàn bộ thông tin với một phòng ở tòa nhà khác'
       });
     }
 
-    const amenitiesJson = JSON.stringify(amenities || []);
+    const amenitiesJson = normalizeComparableAmenities(amenities);
 
     await connection.query(
       `UPDATE ROOM SET
@@ -609,7 +727,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       [
         buildingId,
         finalLocationId,
-        roomCode,
+        normalizedRoomCode,
         roomType,
         area,
         price,

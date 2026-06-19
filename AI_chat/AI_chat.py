@@ -10,9 +10,12 @@ Architecture (Human-in-the-loop):
        → DATABASE
 """
 
+import asyncio
 import json
 import re
-from typing import Any, Dict, List, Optional, Tuple
+import time
+import unicodedata
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 from config import (
     GROQ_API_KEY, GROQ_MODEL,
@@ -58,7 +61,7 @@ def _out_of_area_reply(message: str) -> str:
     return random.choice(variants)
 
 # ── Intents that must NOT query the DB ───────────────────
-_NO_DB_INTENTS = {"general_chat", "schedule_viewing", "check_schedule", "cancel_viewing"}
+_NO_DB_INTENTS = {"general_chat", "booking_guide", "schedule_viewing", "check_schedule", "cancel_viewing"}
 
 # ── Booking flow states ───────────────────────────────────
 BOOKING_STATE_INIT         = "awaiting_time"
@@ -66,6 +69,23 @@ BOOKING_STATE_SLOT_SELECT  = "awaiting_slot_selection"
 BOOKING_STATE_READY        = "ready_to_confirm"
 BOOKING_STATE_CONFIRMED    = "confirmed"
 BOOKING_STATE_CANCELLED    = "cancelled"
+
+BOOKING_GUIDE_REPLY = """Để đặt lịch xem phòng trên Rentify, bạn làm lần lượt như sau:
+
+1. **Đăng nhập** vào tài khoản Rentify để hệ thống lưu lịch hẹn.
+2. **Chọn phòng** bạn quan tâm, sau đó gửi mã phòng cho mình (ví dụ: `ROM00011`).
+3. Nhắn ngày hoặc thời gian muốn xem, chẳng hạn: **“Đặt lịch xem phòng ROM00011 vào chiều mai”**.
+4. Chọn một **khung giờ còn trống** mà mình hiển thị trong chat.
+5. Kiểm tra thông tin trên thẻ xác nhận rồi bấm **Xác nhận đặt lịch**.
+6. Sau khi đặt thành công, vào **Hồ sơ → Lịch xem phòng** để theo dõi hoặc hủy lịch.
+
+Lưu ý: thao tác này là **đặt lịch đi xem phòng**, chưa phải ký hợp đồng thuê phòng. Bạn có thể bắt đầu bằng cách gửi cho mình mã phòng muốn xem nhé!"""
+
+BOOKING_GUIDE_SUGGESTIONS = [
+    "Đặt lịch xem phòng",
+    "Xem lịch đã đặt",
+    "Tìm phòng phù hợp",
+]
 
 
 # ── Groq wrapper ──────────────────────────────────────────
@@ -92,10 +112,21 @@ class _GroqClient:
             return ""
 
     def extract_intent(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        # Instructional booking questions must override stale cached search intents.
+        fast_result = _rule_based_intent(message)
+        if fast_result.get("intent") == "booking_guide":
+            cache.set_intent_cache(message, context, fast_result)
+            return fast_result
+
         # Check cache first
         cached = cache.cache_intent(message, context)
         if cached:
             return cached
+
+        # Fast path for common and obvious intents to avoid an extra Groq call.
+        if fast_result.get("intent") != "general_chat":
+            cache.set_intent_cache(message, context, fast_result)
+            return fast_result
         
         context_str = ""
         if context:
@@ -110,7 +141,7 @@ class _GroqClient:
             system="Bạn là AI phân tích intent. Chỉ trả về JSON hợp lệ, không có text thừa.",
             user=INTENT_PROMPT.format(message=message, context=context_str),
             temperature=0.1,
-            max_tokens=400,
+            max_tokens=220,
         )
         if raw:
             clean = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
@@ -198,10 +229,10 @@ class _GroqClient:
         data_str = json.dumps(data, ensure_ascii=False, indent=2) if has_data else "Không có dữ liệu"
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        messages += history[-6:]
+        messages += history[-4:]
         messages.append({
             "role": "user",
-            "content": RESPONSE_PROMPT.format(message=message, data=data_str[:3500])
+            "content": RESPONSE_PROMPT.format(message=message, data=data_str[:2200])
         })
 
         if not self._client:
@@ -212,7 +243,7 @@ class _GroqClient:
                 model=GROQ_MODEL,
                 messages=messages,
                 temperature=0.75,
-                max_tokens=600,
+                max_tokens=420,
             )
             reply = resp.choices[0].message.content.strip()
             if has_data and isinstance(data, list) and reply:
@@ -221,6 +252,44 @@ class _GroqClient:
         except Exception as e:
             print(f"[Groq reply error] {e}")
             return _template_reply(data, message)
+
+    def stream_generate_reply(self, message: str, data: Any, history: List[Dict], intent: str = ""):
+        has_data = bool(data)
+        data_str = json.dumps(data, ensure_ascii=False, indent=2) if has_data else "KhĂ´ng cĂ³ dá»¯ liá»‡u"
+
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        messages += history[-4:]
+        messages.append({
+            "role": "user",
+            "content": RESPONSE_PROMPT.format(message=message, data=data_str[:2200])
+        })
+
+        if not self._client:
+            fallback = _template_reply(data, message)
+            for chunk in _chunk_text(fallback):
+                yield chunk
+            return
+
+        try:
+            stream = self._client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=messages,
+                temperature=0.75,
+                max_tokens=420,
+                stream=True,
+            )
+            for part in stream:
+                try:
+                    delta = part.choices[0].delta.content or ""
+                except Exception:
+                    delta = ""
+                if delta:
+                    yield delta
+        except Exception as e:
+            print(f"[Groq stream reply error] {e}")
+            fallback = _template_reply(data, message)
+            for chunk in _chunk_text(fallback):
+                yield chunk
 
 
 # ── Hallucination guard ──────────────────────────────────
@@ -234,12 +303,44 @@ def _strip_hallucinated_rooms(reply: str, real_data: List[Dict]) -> str:
     return reply
 
 
+def _chunk_text(text: str, chunk_size: int = 24):
+    if not text:
+        return
+    start = 0
+    while start < len(text):
+        yield text[start:start + chunk_size]
+        start += chunk_size
+
+
 # ── Rule-based fallbacks ──────────────────────────────────
 
 def _rule_based_intent(message: str) -> Dict[str, Any]:
     msg = message.lower()
     filters: Dict[str, Any] = {"limit": 5}
     intent = "general_chat"
+
+    # Questions asking HOW to book must not start a search or booking flow.
+    normalized_msg = unicodedata.normalize("NFD", msg)
+    normalized_msg = "".join(
+        char for char in normalized_msg if unicodedata.category(char) != "Mn"
+    ).replace("đ", "d")
+    guide_keywords = [
+        "huong dan", "cach ", "lam sao", "quy trinh", "cac buoc",
+        "khong biet", "chua biet", "can chi", "chi toi", "chi minh",
+    ]
+    booking_topics = ["dat phong", "dat lich", "xem phong", "hen xem", "book phong"]
+    if (any(keyword in normalized_msg for keyword in guide_keywords)
+            and any(topic in normalized_msg for topic in booking_topics)):
+        return {"intent": "booking_guide", "filters": filters, "sort_by": None}
+
+    booking_action_keywords = [
+        "dat lich", "xem phong", "hen xem", "muon xem", "book", "schedule",
+    ]
+    if any(keyword in normalized_msg for keyword in booking_action_keywords):
+        room_match = re.search(r'(ROM\d{5,})', msg.upper())
+        if room_match:
+            filters["room_code"] = room_match.group(1)
+        return {"intent": "schedule_viewing", "filters": filters, "sort_by": None}
 
     greetings = ["hello", "hi", "xin chào", "chào", "hey", "alo"]
     if any(g in msg for g in greetings) and len(msg.split()) <= 4:
@@ -440,13 +541,24 @@ class ChatOrchestrator:
         history: List[Dict[str, str]] = [],
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
+        force_new_session: bool = False,
     ) -> Dict[str, Any]:
-        
+        request_started = time.perf_counter()
+        checkpoint = request_started
+
+        def mark(step_name: str) -> str:
+            nonlocal checkpoint
+            now = time.perf_counter()
+            elapsed_ms = round((now - checkpoint) * 1000, 2)
+            checkpoint = now
+            return f"{step_name}={elapsed_ms}ms"
+
         try:
+            timing_logs = []
             # ── 0. Session management ─────────────────────────────────────────
             try:
                 if not session_id:
-                    session_id = self._history.get_or_create_session(user_id)
+                    session_id = self._history.get_or_create_session(user_id, force_new=force_new_session)
                     if not session_id:
                         import uuid
                         session_id = f"TEMP_{uuid.uuid4().hex[:8]}"
@@ -459,9 +571,12 @@ class ChatOrchestrator:
             
             try:
                 if not is_temp:
-                    self._history.save_message(session_id=session_id, role="user", content=message)
+                    asyncio.create_task(
+                        self._save_user_message_async(session_id=session_id, content=message)
+                    )
             except Exception as e:
                 print(f"[ChatOrchestrator] Failed to save user message: {e}")
+            timing_logs.append(mark("session"))
 
             # ── 1. Location guard ─────────────────────────────────────────────
             if _is_out_of_area(message):
@@ -489,7 +604,7 @@ class ChatOrchestrator:
             if context.get("booking_state") in [BOOKING_STATE_INIT, BOOKING_STATE_SLOT_SELECT]:
                 intent_data = self._ai.extract_intent(message, context)
                 # Override intent to continue booking flow
-                if intent_data.get("intent") != "cancel_viewing":
+                if intent_data.get("intent") not in {"cancel_viewing", "booking_guide"}:
                     intent_data["intent"] = "schedule_viewing"
             else:
                 intent_data = self._ai.extract_intent(message, context)
@@ -498,6 +613,23 @@ class ChatOrchestrator:
             filters = intent_data.get("filters", {})
             if intent_data.get("sort_by"):
                 filters["sort_by"] = intent_data["sort_by"]
+            timing_logs.append(mark("intent"))
+
+            if intent == "booking_guide":
+                if not is_temp:
+                    asyncio.create_task(
+                        self._save_history_async(
+                            session_id, BOOKING_GUIDE_REPLY, intent, {}, None, user_id, None
+                        )
+                    )
+                return {
+                    "reply": BOOKING_GUIDE_REPLY,
+                    "intent": intent,
+                    "filters": {},
+                    "data": None,
+                    "suggested_questions": BOOKING_GUIDE_SUGGESTIONS,
+                    "session_id": session_id,
+                }
 
             # ── 3. Handle booking intents ─────────────────────────────────────
             if intent == "schedule_viewing":
@@ -545,16 +677,21 @@ class ChatOrchestrator:
                     db_data = self._db.demo_rooms()
 
             safe_data = filter_privacy(db_data) if db_data else db_data
+            timing_logs.append(mark("db"))
 
             # ── 5. AI reply ───────────────────────────────────────────────────
             try:
-                reply = self._ai.generate_reply(message=message, data=safe_data, history=history, intent=intent)
+                if intent in {"search_rooms", "get_cheap_rooms", "get_available_rooms", "recommend_rooms", "get_room_detail"}:
+                    reply = _template_reply(safe_data, message)
+                else:
+                    reply = self._ai.generate_reply(message=message, data=safe_data, history=history, intent=intent)
                 if not reply:
                     reply = "Xin lỗi, mình đang gặp chút vấn đề kỹ thuật. Bạn có thể thử hỏi lại được không?"
                 reply = _add_privacy_note(reply)
             except Exception as e:
                 print(f"[ChatOrchestrator] AI reply error: {e}")
                 reply = _template_reply(safe_data, message)
+            timing_logs.append(mark("reply"))
 
             # ── 6. Update context ─────────────────────────────────────────────
             if db_data and isinstance(db_data, list) and len(db_data) > 0:
@@ -574,6 +711,9 @@ class ChatOrchestrator:
                     )
             except Exception as e:
                 print(f"[ChatOrchestrator] Failed to schedule history save: {e}")
+
+            total_ms = round((time.perf_counter() - request_started) * 1000, 2)
+            print(f"[ChatOrchestrator][Timing] session_id={session_id} intent={intent} total={total_ms}ms {' '.join(timing_logs)}")
 
             return {
                 "reply": reply,
@@ -598,6 +738,198 @@ class ChatOrchestrator:
                 "suggested_questions": ["Tìm phòng giá rẻ", "Phòng còn trống", "Thống kê phòng"],
                 "session_id": session_id if 'session_id' in locals() else "unknown",
             }
+
+    async def process_stream(
+        self,
+        message: str,
+        history: List[Dict[str, str]] = [],
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        force_new_session: bool = False,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        request_started = time.perf_counter()
+        checkpoint = request_started
+
+        def mark(step_name: str) -> str:
+            nonlocal checkpoint
+            now = time.perf_counter()
+            elapsed_ms = round((now - checkpoint) * 1000, 2)
+            checkpoint = now
+            return f"{step_name}={elapsed_ms}ms"
+
+        timing_logs = []
+        try:
+            try:
+                if not session_id:
+                    session_id = self._history.get_or_create_session(user_id, force_new=force_new_session)
+                    if not session_id:
+                        import uuid
+                        session_id = f"TEMP_{uuid.uuid4().hex[:8]}"
+            except Exception:
+                import uuid
+                session_id = f"TEMP_{uuid.uuid4().hex[:8]}"
+
+            is_temp = session_id.startswith("TEMP_")
+            if not is_temp:
+                asyncio.create_task(
+                    self._save_user_message_async(session_id=session_id, content=message)
+                )
+            timing_logs.append(mark("session"))
+            yield {"type": "meta", "session_id": session_id}
+
+            if _is_out_of_area(message):
+                reply = _out_of_area_reply(message)
+                if not is_temp:
+                    asyncio.create_task(
+                        self._save_history_async(session_id, reply, "out_of_area", {}, None, user_id, None)
+                    )
+                yield {
+                    "type": "final",
+                    "reply": reply,
+                    "intent": "out_of_area",
+                    "filters": {},
+                    "data": None,
+                    "suggested_questions": SUGGESTIONS_BY_INTENT.get("out_of_area", DEFAULT_SUGGESTIONS),
+                    "session_id": session_id,
+                }
+                return
+
+            context = self._session_context.get(session_id, {})
+            if context.get("booking_state") in [BOOKING_STATE_INIT, BOOKING_STATE_SLOT_SELECT]:
+                intent_data = self._ai.extract_intent(message, context)
+                if intent_data.get("intent") not in {"cancel_viewing", "booking_guide"}:
+                    intent_data["intent"] = "schedule_viewing"
+            else:
+                intent_data = self._ai.extract_intent(message, context)
+
+            intent = intent_data.get("intent", "general_chat")
+            filters = intent_data.get("filters", {})
+            if intent_data.get("sort_by"):
+                filters["sort_by"] = intent_data["sort_by"]
+            timing_logs.append(mark("intent"))
+
+            if intent == "booking_guide":
+                if not is_temp:
+                    asyncio.create_task(
+                        self._save_history_async(
+                            session_id, BOOKING_GUIDE_REPLY, intent, {}, None, user_id, None
+                        )
+                    )
+                yield {
+                    "type": "final",
+                    "reply": BOOKING_GUIDE_REPLY,
+                    "intent": intent,
+                    "filters": {},
+                    "data": None,
+                    "suggested_questions": BOOKING_GUIDE_SUGGESTIONS,
+                    "session_id": session_id,
+                }
+                return
+
+            if intent == "schedule_viewing":
+                result = await self._handle_schedule_viewing(message, filters, user_id, session_id, context)
+                if not is_temp:
+                    asyncio.create_task(
+                        self._save_history_async(session_id, result.get("reply", ""), intent, filters, result.get("data"), user_id, None)
+                    )
+                yield {"type": "final", **result}
+                return
+            if intent == "check_schedule":
+                result = await self._handle_check_schedule(user_id, session_id)
+                if not is_temp:
+                    asyncio.create_task(
+                        self._save_history_async(session_id, result.get("reply", ""), intent, {}, None, user_id, None)
+                    )
+                yield {"type": "final", **result}
+                return
+            if intent == "cancel_viewing":
+                result = await self._handle_cancel_viewing(message, user_id, session_id)
+                if not is_temp:
+                    asyncio.create_task(
+                        self._save_history_async(session_id, result.get("reply", ""), intent, {}, None, user_id, None)
+                    )
+                yield {"type": "final", **result}
+                return
+
+            db_data: Any = None
+            if intent not in _NO_DB_INTENTS:
+                try:
+                    db_data = self._query_db(intent, filters)
+                    if not db_data and not self._db.is_connected():
+                        db_data = self._db.demo_rooms()
+                except Exception as e:
+                    print(f"[ChatOrchestrator][Stream] DB query error: {e}")
+                    db_data = self._db.demo_rooms()
+
+            safe_data = filter_privacy(db_data) if db_data else db_data
+            timing_logs.append(mark("db"))
+
+            reply_parts: List[str] = []
+            if intent in {"search_rooms", "get_cheap_rooms", "get_available_rooms", "recommend_rooms", "get_room_detail"}:
+                draft_reply = _template_reply(safe_data, message)
+                for chunk in _chunk_text(draft_reply):
+                    reply_parts.append(chunk)
+                    yield {"type": "chunk", "content": chunk, "session_id": session_id}
+            else:
+                for chunk in self._ai.stream_generate_reply(message=message, data=safe_data, history=history, intent=intent):
+                    reply_parts.append(chunk)
+                    yield {"type": "chunk", "content": chunk, "session_id": session_id}
+
+            reply = "".join(reply_parts).strip()
+            if not reply:
+                reply = _template_reply(safe_data, message)
+
+            final_reply = _add_privacy_note(reply)
+            if final_reply != reply:
+                extra = final_reply[len(reply):]
+                if extra:
+                    yield {"type": "chunk", "content": extra, "session_id": session_id}
+            timing_logs.append(mark("reply"))
+
+            if db_data and isinstance(db_data, list) and len(db_data) > 0:
+                self._session_context[session_id] = {
+                    **context,
+                    "last_search_results": db_data,
+                    "current_room": db_data[0].get("RoomCode") if db_data else None,
+                }
+
+            suggestions = SUGGESTIONS_BY_INTENT.get(intent, DEFAULT_SUGGESTIONS)
+            if not is_temp:
+                asyncio.create_task(
+                    self._save_history_async(session_id, final_reply, intent, filters, safe_data, user_id, db_data)
+                )
+
+            total_ms = round((time.perf_counter() - request_started) * 1000, 2)
+            print(f"[ChatOrchestrator][StreamTiming] session_id={session_id} intent={intent} total={total_ms}ms {' '.join(timing_logs)}")
+
+            yield {
+                "type": "final",
+                "reply": final_reply,
+                "intent": intent,
+                "filters": filters,
+                "data": safe_data,
+                "suggested_questions": suggestions[:3],
+                "session_id": session_id,
+            }
+        except Exception as e:
+            import traceback
+            print(f"[ChatOrchestrator][Stream] Critical error: {traceback.format_exc()}")
+            yield {
+                "type": "error",
+                "reply": "Xin lá»—i, mĂ¬nh Ä‘ang gáº·p chĂºt váº¥n Ä‘á» ká»¹ thuáº­t. Báº¡n cĂ³ thá»ƒ thá»­ há»i láº¡i Ä‘Æ°á»£c khĂ´ng? đŸ™",
+                "intent": "error",
+                "filters": {},
+                "data": None,
+                "suggested_questions": ["TĂ¬m phĂ²ng giĂ¡ ráº»", "PhĂ²ng cĂ²n trá»‘ng", "Thá»‘ng kĂª phĂ²ng"],
+                "session_id": session_id if 'session_id' in locals() else "unknown",
+                "error": str(e),
+            }
+
+    async def _save_user_message_async(self, session_id: str, content: str):
+        try:
+            self._history.save_message(session_id=session_id, role="user", content=content)
+        except Exception as e:
+            print(f"[ChatOrchestrator] Background user save error: {e}")
 
     async def _save_history_async(self, session_id, reply, intent, filters, safe_data, user_id, db_data):
         """Save history in background without blocking response"""

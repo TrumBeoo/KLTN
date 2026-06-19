@@ -103,7 +103,7 @@ router.post('/preview-excel', upload.single('file'), async (req, res) => {
       const row = data[index]
       
       const parsed = {
-        roomCode: row['room_code'] || row['Mã phòng'] || '',
+        roomCode: ((row['room_code'] || row['Mã phòng'] || '') + '').trim(),
         title: row['title'] || row['Tiêu đề'] || '',
         price: (row['price'] || row['Giá']) ? parseFloat(row['price'] || row['Giá']) : 0,
         area: (row['area'] || row['Diện tích']) ? parseFloat(row['area'] || row['Diện tích']) : 20,
@@ -200,7 +200,7 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
       const uploadDetailId = 'UD' + String(detailCount).padStart(8, '0')
       
       const parsed = {
-        roomCode: row['room_code'] || row['Mã phòng'],
+        roomCode: ((row['room_code'] || row['Mã phòng'] || '') + '').trim(),
         title: row['title'] || row['Tiêu đề'],
         price: parseFloat(row['price'] || row['Giá']) || 0,
         area: parseFloat(row['area'] || row['Diện tích']) || 20,
@@ -232,7 +232,7 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
 
       try {
         const [rooms] = await connection.query(
-          'SELECT RoomID FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
+          'SELECT RoomID, BuildingID, DraftStatus FROM ROOM WHERE RoomCode = ? AND LandlordID = ?',
           [parsed.roomCode, landlordId]
         )
 
@@ -240,7 +240,15 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
           throw new Error('Không tìm thấy phòng')
         }
 
+        if (rooms.length > 1) {
+          throw new Error('Mã phòng bị trùng ở nhiều tòa nhà, vui lòng publish theo tòa nhà cụ thể')
+        }
+
         const roomId = rooms[0].RoomID
+
+        if (rooms[0].DraftStatus === 'published') {
+          throw new Error('Phòng đã được publish')
+        }
         
         const [existingListings] = await connection.query(
           'SELECT ListingID FROM LISTING WHERE RoomID = ?',
@@ -270,7 +278,7 @@ router.post('/upload-excel', upload.single('file'), async (req, res) => {
 
         // Đồng bộ Title sang bảng ROOM
         await connection.query(`
-          UPDATE ROOM SET Title = ?, UpdatedAt = NOW()
+          UPDATE ROOM SET Title = ?, DraftStatus = 'published', UpdatedAt = NOW()
           WHERE RoomID = ?
         `, [parsed.title, roomId])
 

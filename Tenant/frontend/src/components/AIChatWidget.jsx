@@ -1,11 +1,11 @@
-/**
- * AIChatWidget — Hybrid Chat + Agent
+﻿/**
+ * AIChatWidget â€” Hybrid Chat + Agent
  *
  * Architecture (Human-in-the-loop):
- *   AI detects intent → collects info → builds payload
- *   → renders BookingCard inside chat (user sees & confirms)
- *   → user clicks [Xác nhận] → Frontend calls Tenant backend API
- *   → Backend validates + creates booking + notifies landlord
+ *   AI detects intent â†’ collects info â†’ builds payload
+ *   â†’ renders BookingCard inside chat (user sees & confirms)
+ *   â†’ user clicks [XĂ¡c nháº­n] â†’ Frontend calls Tenant backend API
+ *   â†’ Backend validates + creates booking + notifies landlord
  *
  * AI NEVER creates bookings directly. Backend is the execution engine.
  *
@@ -38,7 +38,7 @@ import {
 } from '@mui/icons-material'
 import { styled, keyframes } from '@mui/material/styles'
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Design tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const T = {
   blue:    '#006ce4',
   blueDk:  '#003f8a',
@@ -57,7 +57,11 @@ const T = {
   orangeLt:'#fef6e8',
 }
 
-// ─── Animations ───────────────────────────────────────────────────────────────
+const WELCOME_TEXT = '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả'
+const WELCOME_ANON_TEXT = `${WELCOME_TEXT}\n\n⚠️ **Lưu ý:** Đăng nhập để lưu lịch sử chat và đặt lịch xem phòng!`
+const WELCOME_AUTH_TEXT = `${WELCOME_TEXT}\n\nBạn cần tìm gì hôm nay?`
+
+// â”€â”€â”€ Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -80,7 +84,7 @@ const cardSlide = keyframes`
   to   { opacity: 1; transform: translateY(0) scale(1); }
 `
 
-// ─── Styled components ────────────────────────────────────────────────────────
+// â”€â”€â”€ Styled components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ChatWindow = styled(Paper)(({ theme }) => ({
   width: 380,
   height: 560,
@@ -137,19 +141,19 @@ const SuggestionChip = styled(Chip)({
   '&:hover': { backgroundColor: '#d0e8ff', borderColor: T.blue, transform: 'translateY(-1px)' },
 })
 
-// ─── BookingCard component ─────────────────────────────────────────────────────
+// â”€â”€â”€ BookingCard component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /**
  * Renders inline inside the chat conversation.
- * NO modal popups — everything stays conversational.
+ * NO modal popups â€” everything stays conversational.
  *
  * States:
- *   idle        → show info + [Xác nhận] + [Hủy]
- *   confirming  → loading spinner while calling backend
- *   success     → success animation + schedule ID
- *   error       → error message + [Thử lại]
- *   cancelled   → soft cancelled state
+ *   idle        â†’ show info + [XĂ¡c nháº­n] + [Há»§y]
+ *   confirming  â†’ loading spinner while calling backend
+ *   success     â†’ success animation + schedule ID
+ *   error       â†’ error message + [Thá»­ láº¡i]
+ *   cancelled   â†’ soft cancelled state
  */
-function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, onResult }) {
+function BookingCard({ card, userId, authToken, tenantBackendUrl, onResult }) {
   const [status, setStatus]       = useState('idle')   // idle | confirming | success | error | cancelled
   const [errorMsg, setErrorMsg]   = useState('')
   const [scheduleId, setScheduleId] = useState(null)
@@ -166,11 +170,11 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
 
   const fmt = p => p ? Math.floor(parseFloat(p)).toLocaleString('vi-VN') : null
   const price = fmt(room_info.price)
-  const resolvedRoomId = room_id || roomCodeMap?.[room_code] || null
+  const resolvedRoomId = room_id || null
   // Remove /api suffix if present to avoid duplication
   const BACKEND_URL = (tenantBackendUrl || 'http://localhost:5000/api').replace(/\/api$/, '')
 
-  // ── User clicks "Xác nhận đặt lịch" ──────────────────────────────────────
+  // â”€â”€ User clicks "XĂ¡c nháº­n Ä‘áº·t lá»‹ch" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleConfirm = async () => {
     console.log('[BookingCard] Confirm clicked', { userId, authToken: authToken ? 'present' : 'missing' })
     
@@ -197,7 +201,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
           `${BACKEND_URL.replace('/api', '')}:8000/booking/available-slots/${room_code}?date=${viewing_date}`,
           { method: 'GET' }
         )
-        // Actually we just need roomId — fetch from tenant backend
+        // Actually we just need roomId â€” fetch from tenant backend
       } catch (_) {}
 
       // Step 2: Call Tenant backend to create the schedule
@@ -265,7 +269,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
     setErrorMsg('')
   }
 
-  // ── Card container styles by state ────────────────────────────────────────
+  // â”€â”€ Card container styles by state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const borderColor = {
     idle:       T.blue,
     confirming: T.blue,
@@ -294,7 +298,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
           transition: 'border-color 300ms ease, box-shadow 300ms ease',
         }}
       >
-        {/* ── Header bar ──────────────────────────────────────────────── */}
+        {/* â”€â”€ Header bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Box sx={{
           background: status === 'success'
             ? `linear-gradient(135deg, ${T.green}, #00a040)`
@@ -322,7 +326,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
           )}
         </Box>
 
-        {/* ── Room info ────────────────────────────────────────────────── */}
+        {/* â”€â”€ Room info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Box sx={{ px: 2, pt: 1.75, pb: 1 }}>
           <Stack direction="row" alignItems="flex-start" spacing={1.5} sx={{ mb: 1.5 }}>
             <Box sx={{
@@ -357,7 +361,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
             </Box>
           </Stack>
 
-          {/* ── Date/Time details ──────────────────────────────────────── */}
+          {/* â”€â”€ Date/Time details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <Box sx={{
             bgcolor: status === 'success' ? T.greenLt : T.blueLt,
             borderRadius: '8px', px: 1.5, py: 1.25,
@@ -386,7 +390,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
             </Stack>
           </Box>
 
-          {/* ── Status timeline ────────────────────────────────────────── */}
+          {/* â”€â”€ Status timeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {status === 'idle' && (
             <Box sx={{ mb: 1.5 }}>
               <Typography sx={{ fontSize: '0.714rem', color: T.muted, mb: 0.75 }}>
@@ -396,7 +400,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
                 {[
                   { icon: '✅', label: 'Lịch được ghi nhận ngay lập tức' },
                   { icon: '🔔', label: 'Chủ nhà nhận thông báo' },
-                  { icon: '⏱', label: 'Xác nhận trong vòng 15–30 phút' },
+                  { icon: '⏱', label: 'Xác nhận trong vòng 15-30 phút' },
                 ].map((step, i) => (
                   <Stack key={i} direction="row" alignItems="center" spacing={0.75}>
                     <Typography sx={{ fontSize: '0.857rem', lineHeight: 1 }}>{step.icon}</Typography>
@@ -407,7 +411,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
             </Box>
           )}
 
-          {/* ── Success state ─────────────────────────────────────────── */}
+          {/* â”€â”€ Success state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {status === 'success' && (
             <Box sx={{
               textAlign: 'center', py: 1,
@@ -428,7 +432,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
             </Box>
           )}
 
-          {/* ── Error state ───────────────────────────────────────────── */}
+          {/* â”€â”€ Error state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {status === 'error' && (
             <Box sx={{ mb: 1 }}>
               <Stack direction="row" alignItems="flex-start" spacing={0.75}
@@ -441,7 +445,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
             </Box>
           )}
 
-          {/* ── Cancelled state ───────────────────────────────────────── */}
+          {/* â”€â”€ Cancelled state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {status === 'cancelled' && (
             <Box sx={{ textAlign: 'center', py: 0.75 }}>
               <Typography sx={{ fontSize: '0.857rem', color: T.muted }}>
@@ -451,7 +455,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
           )}
         </Box>
 
-        {/* ── Action buttons ───────────────────────────────────────────── */}
+        {/* â”€â”€ Action buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {(status === 'idle' || status === 'error') && (
           <Box sx={{ px: 2, pb: 1.75, display: 'flex', gap: 1 }}>
             {status === 'error' ? (
@@ -511,7 +515,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
           </Box>
         )}
 
-        {/* ── Confirming state ─────────────────────────────────────────── */}
+        {/* â”€â”€ Confirming state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {status === 'confirming' && (
           <Box sx={{ px: 2, pb: 1.75 }}>
             <Box sx={{
@@ -527,7 +531,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
           </Box>
         )}
 
-        {/* ── Footer note ──────────────────────────────────────────────── */}
+        {/* â”€â”€ Footer note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {status === 'idle' && (
           <Box sx={{
             px: 2, pb: 1.25,
@@ -544,7 +548,7 @@ function BookingCard({ card, userId, authToken, tenantBackendUrl, roomCodeMap, o
   )
 }
 
-// ─── SlotPicker — inline slot selection chips ─────────────────────────────────
+// â”€â”€â”€ SlotPicker â€” inline slot selection chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SlotPicker({ slots, onSelect }) {
   if (!slots || slots.length === 0) return null
   return (
@@ -587,7 +591,7 @@ function SlotPicker({ slots, onSelect }) {
   )
 }
 
-// ─── formatMessage — markdown-lite + room code links ─────────────────────────
+// â”€â”€â”€ formatMessage â€” markdown-lite + room code links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RoomCodeStyles = `
   .room-link {
     color: #006ce4;
@@ -608,7 +612,17 @@ const RoomCodeStyles = `
 function formatMessage(text, roomData = null) {
   if (!text) return ''
 
-  let html = text
+  const markdownLinks = []
+  const protectedText = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^)\s]+)\)/g, (_, label, href) => {
+    const token = `__MD_LINK_${markdownLinks.length}__`
+    const isExternal = /^https?:\/\//.test(href)
+    markdownLinks.push(
+      `<a href="${href}" class="room-link" data-code="${label}"${isExternal ? ' target="_blank" rel="noreferrer"' : ''}>${label}</a>`
+    )
+    return token
+  })
+
+  let html = protectedText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g,     '<em>$1</em>')
     .replace(/`(.*?)`/g,       '<code style="background:#f2f4f8;padding:1px 5px;border-radius:3px;font-size:0.857em;font-family:monospace">$1</code>')
@@ -631,10 +645,14 @@ function formatMessage(text, roomData = null) {
   html = html.replace(/\b(ROM\d{5,})\b(?![^<]*>)/g,
     `<a href="/room/$1" class="room-link" data-code="$1">$1</a>`)
 
+  markdownLinks.forEach((linkHtml, index) => {
+    html = html.replace(`__MD_LINK_${index}__`, linkHtml)
+  })
+
   return html
 }
 
-// ─── Quick prompts ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Quick prompts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const QUICK_PROMPTS = [
   'Phòng còn trống?',
   'Phòng giá rẻ nhất',
@@ -642,7 +660,7 @@ const QUICK_PROMPTS = [
   'Đặt lịch xem phòng',
 ]
 
-// ─── Main AIChatWidget ────────────────────────────────────────────────────────
+// â”€â”€â”€ Main AIChatWidget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function AIChatWidget({
   apiUrl          = 'http://localhost:8000',
   tenantBackendUrl = 'http://localhost:5000/api',
@@ -656,70 +674,44 @@ export default function AIChatWidget({
   const [loading, setLoading]           = useState(false)
   const [suggestions, setSuggestions]   = useState(QUICK_PROMPTS)
   const [history, setHistory]           = useState([])
-  const [sessionId, setSessionId]       = useState(null) // Không lưu vào localStorage cho anonymous
+  const [sessionId, setSessionId]       = useState(null) // KhĂ´ng lÆ°u vĂ o localStorage cho anonymous
   const [pendingSlots, setPendingSlots] = useState(null) // { slots, message_id }
-  const [roomCodeMap, setRoomCodeMap]   = useState({}) // Map: RoomCode -> RoomID
   const messagesEndRef = useRef(null)
   const inputRef       = useRef(null)
+  const startFreshSessionRef = useRef(false)
 
-  // ── Fetch room code mapping on mount ───────────────────────────────────
+  // â”€â”€ LÆ°u sessionId vĂ o localStorage CHá»ˆ KHI Ä‘Ă£ Ä‘Äƒng nháº­p â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
-    const fetchRoomCodeMap = async () => {
-      try {
-        const API_URL = tenantBackendUrl.replace('/api', '')
-        const res = await fetch(`${API_URL}/api/rooms?limit=1000`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.success && Array.isArray(data.data)) {
-            const map = {}
-            data.data.forEach(room => {
-              if (room.RoomCode && room.RoomID) {
-                map[room.RoomCode] = room.RoomID
-              }
-            })
-            setRoomCodeMap(map)
-            console.log('[AIChatWidget] Room code map loaded:', Object.keys(map).length, 'rooms')
-          }
-        }
-      } catch (err) {
-        console.error('[AIChatWidget] Failed to load room code map:', err)
-      }
-    }
-    fetchRoomCodeMap()
-  }, [tenantBackendUrl])
-
-  // ── Lưu sessionId vào localStorage CHỈ KHI đã đăng nhập ───────────────────────────────────────
-  useEffect(() => {
-    // CHỈ lưu nếu user đã đăng nhập (có userId và authToken)
+    // CHá»ˆ lÆ°u náº¿u user Ä‘Ă£ Ä‘Äƒng nháº­p (cĂ³ userId vĂ  authToken)
     if (userId && authToken && sessionId) {
       const storageKey = `ai_chat_session_${userId}`
       localStorage.setItem(storageKey, sessionId)
       console.log('[AIChatWidget] Session saved for user:', userId, 'sessionId:', sessionId)
     } else if (!userId || !authToken) {
-      // Không có userId hoặc authToken - không lưu vào localStorage
-      // Xóa session cũ nếu có
+      // KhĂ´ng cĂ³ userId hoáº·c authToken - khĂ´ng lÆ°u vĂ o localStorage
+      // XĂ³a session cÅ© náº¿u cĂ³
       if (userId) {
         localStorage.removeItem(`ai_chat_session_${userId}`)
       }
     }
   }, [sessionId, userId, authToken])
 
-  // ── Load chat history CHỈ KHI đã đăng nhập ────────────────────────────────────────
+  // â”€â”€ Load chat history CHá»ˆ KHI Ä‘Ă£ Ä‘Äƒng nháº­p â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const loadChatHistory = async () => {
-      // KIỂM TRA CHẶT CHẼ: Chỉ load khi đã đăng nhập
+      // KIá»‚M TRA CHáº¶T CHáº¼: Chá»‰ load khi Ä‘Ă£ Ä‘Äƒng nháº­p
       if (!userId || !authToken) {
         console.log('[AIChatWidget] No userId/authToken - skipping history load')
-        // Hiện welcome message cho anonymous user
+        // Hiá»‡n welcome message cho anonymous user
         setMessages([{
           id: 'welcome', role: 'assistant', timestamp: new Date(),
-          text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\n⚠️ **Lưu ý:** Đăng nhập để lưu lịch sử chat và đặt lịch xem phòng!',
+          text: WELCOME_ANON_TEXT,
         }])
         setTimeout(() => inputRef.current?.focus(), 350)
         return
       }
 
-      // Kiểm tra sessionId từ localStorage cho user này
+      // Kiá»ƒm tra sessionId tá»« localStorage cho user nĂ y
       const storageKey = `ai_chat_session_${userId}`
       const storedSessionId = localStorage.getItem(storageKey)
       
@@ -728,13 +720,13 @@ export default function AIChatWidget({
         setSessionId(storedSessionId)
       }
       
-      // Nếu có sessionId (từ state hoặc localStorage), load history
+      // Náº¿u cĂ³ sessionId (tá»« state hoáº·c localStorage), load history
       const targetSessionId = sessionId || storedSessionId
       if (!targetSessionId) {
         console.log('[AIChatWidget] No session to load - starting fresh')
         setMessages([{
           id: 'welcome', role: 'assistant', timestamp: new Date(),
-          text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+          text: WELCOME_AUTH_TEXT,
         }])
         setTimeout(() => inputRef.current?.focus(), 350)
         return
@@ -746,12 +738,12 @@ export default function AIChatWidget({
         
         if (!res.ok) {
           console.warn('[AIChatWidget] Failed to load session:', res.status)
-          // Xóa sessionId không hợp lệ
+          // XĂ³a sessionId khĂ´ng há»£p lá»‡
           localStorage.removeItem(storageKey)
           setSessionId(null)
           setMessages([{
             id: 'welcome', role: 'assistant', timestamp: new Date(),
-            text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+            text: WELCOME_AUTH_TEXT,
           }])
           return
         }
@@ -782,17 +774,17 @@ export default function AIChatWidget({
           console.log('[AIChatWidget] No messages in session')
           setMessages([{
             id: 'welcome', role: 'assistant', timestamp: new Date(),
-            text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+            text: WELCOME_AUTH_TEXT,
           }])
         }
       } catch (err) {
         console.error('[AIChatWidget] Failed to load chat history:', err)
-        // Xóa sessionId lỗi
+        // XĂ³a sessionId lá»—i
         localStorage.removeItem(storageKey)
         setSessionId(null)
         setMessages([{
           id: 'welcome', role: 'assistant', timestamp: new Date(),
-          text: '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có thể giúp bạn:\n• Tìm kiếm phòng phù hợp\n• Đặt lịch xem phòng ngay trong chat\n• Tư vấn khu vực, giá cả\n\nBạn cần tìm gì hôm nay?',
+          text: WELCOME_AUTH_TEXT,
         }])
       }
       
@@ -802,25 +794,26 @@ export default function AIChatWidget({
     loadChatHistory()
   }, [userId, authToken, apiUrl])
 
-  // ── On mount ───────────────────────────────────────────────────────────────
+  // â”€â”€ On mount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
-    // useEffect load history sẽ xử lý việc hiện thị welcome message
-    // Không cần làm gì ở đây
+    // useEffect load history sáº½ xá»­ lĂ½ viá»‡c hiá»‡n thá»‹ welcome message
+    // KhĂ´ng cáº§n lĂ m gĂ¬ á»Ÿ Ä‘Ă¢y
   }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading, pendingSlots])
 
-  // ── Reset ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleReset = () => {
     setMessages([])
     setHistory([])
     setSuggestions(QUICK_PROMPTS)
     setSessionId(null)
     setPendingSlots(null)
+    startFreshSessionRef.current = true
     
-    // Xóa localStorage cho user hiện tại
+    // XĂ³a localStorage cho user hiá»‡n táº¡i
     if (userId) {
       localStorage.removeItem(`ai_chat_session_${userId}`)
       console.log('[AIChatWidget] Cleared session for user:', userId)
@@ -832,7 +825,7 @@ export default function AIChatWidget({
     }]), 80)
   }
 
-  // ── Booking card result callback ────────────────────────────────────────────
+  // â”€â”€ Booking card result callback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleBookingResult = useCallback((result) => {
     if (result.type === 'success') {
       const successMsg = {
@@ -851,13 +844,34 @@ export default function AIChatWidget({
     }
   }, [])
 
-  // ── Slot selected from SlotPicker ────────────────────────────────────────────
+  // â”€â”€ Slot selected from SlotPicker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSlotSelect = useCallback((slot) => {
     setPendingSlots(null)
     sendMessage(slot)
   }, [])
 
-  // ── Core send function ────────────────────────────────────────────────────
+  const upsertAssistantMessage = useCallback((messageId, patch) => {
+    setMessages(prev => {
+      const index = prev.findIndex(msg => msg.id === messageId)
+      if (index === -1) {
+        return [...prev, {
+          id: messageId,
+          role: 'assistant',
+          timestamp: new Date(),
+          ...patch,
+        }]
+      }
+
+      const next = [...prev]
+      next[index] = {
+        ...next[index],
+        ...patch,
+      }
+      return next
+    })
+  }, [])
+
+  // â”€â”€ Core send function â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const sendMessage = useCallback(async (text) => {
     const userText = (text || input).trim()
     if (!userText) return
@@ -870,89 +884,147 @@ export default function AIChatWidget({
     setPendingSlots(null)
 
     const newHistory = [...history, { role: 'user', content: userText }]
+    const botMsgId = `a-${Date.now()}`
+    const payload = {
+      message: userText,
+      conversation_history: newHistory.slice(-8),
+      user_id: userId,
+      session_id: sessionId,
+      force_new_session: startFreshSessionRef.current,
+    }
 
-    try {
+    const applyFinalResponse = (data, fallbackText = '') => {
+      if (data.session_id && !sessionId) setSessionId(data.session_id)
+      startFreshSessionRef.current = false
+
+      const enrichedData = data.data
+
+      if (data.booking_card) {
+        upsertAssistantMessage(botMsgId, {
+          text: data.reply || fallbackText || 'Kiểm tra thông tin và xác nhận nhé!',
+          data: enrichedData,
+          intent: data.intent,
+          booking_card: data.booking_card,
+          booking_state: data.booking_state,
+          timestamp: new Date(),
+        })
+        setSuggestions([])
+      } else if (data.booking_state === 'awaiting_slot_selection' && data.available_slots?.length > 0) {
+        upsertAssistantMessage(botMsgId, {
+          text: data.reply || fallbackText,
+          data: enrichedData,
+          intent: data.intent,
+          booking_state: data.booking_state,
+          timestamp: new Date(),
+        })
+        setPendingSlots({ slots: data.available_slots, msgId: botMsgId })
+        setSuggestions([])
+      } else {
+        upsertAssistantMessage(botMsgId, {
+          text: data.reply || fallbackText || 'Xin lỗi, có lỗi xảy ra.',
+          data: enrichedData,
+          intent: data.intent,
+          timestamp: new Date(),
+        })
+        setSuggestions(data.suggested_questions || [])
+      }
+
+      setHistory([...newHistory, { role: 'assistant', content: data.reply || fallbackText || '' }])
+    }
+
+    const fallbackToNonStream = async () => {
       const res = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message:               userText,
-          conversation_history:  newHistory.slice(-8),
-          user_id:               userId,
-          session_id:            sessionId,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
+      applyFinalResponse(data)
+    }
 
-      // Persist session
-      if (data.session_id && !sessionId) setSessionId(data.session_id)
+    try {
+      const streamRes = await fetch(`${apiUrl}/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify(payload),
+      })
 
-      // ── Enrich room data with RoomID if only RoomCode is present ──
-      let enrichedData = data.data
-      if (data.data && Array.isArray(data.data)) {
-        enrichedData = data.data.map(room => {
-          // If room has RoomCode but no RoomID, use roomCodeMap
-          if (room.RoomCode && !room.RoomID && roomCodeMap[room.RoomCode]) {
-            return { ...room, RoomID: roomCodeMap[room.RoomCode] }
+      if (!streamRes.ok || !streamRes.body) {
+        await fallbackToNonStream()
+        return
+      }
+
+      const reader = streamRes.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let streamedText = ''
+      let finalPayload = null
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const events = buffer.split('\n\n')
+        buffer = events.pop() || ''
+
+        for (const rawEvent of events) {
+          const dataLine = rawEvent.split('\n').find(line => line.startsWith('data: '))
+          if (!dataLine) continue
+
+          const event = JSON.parse(dataLine.slice(6))
+
+          if (event.type === 'meta') {
+            if (event.session_id && !sessionId) setSessionId(event.session_id)
+            continue
           }
-          return room
-        })
-      }
 
-      const botMsgId = `a-${Date.now()}`
+          if (event.type === 'chunk') {
+            streamedText += event.content || ''
+            upsertAssistantMessage(botMsgId, {
+              text: streamedText,
+              timestamp: new Date(),
+            })
+            continue
+          }
 
-      // ── If AI returned a booking_card → add it as a special message ──
-      if (data.booking_card) {
-        const cardMsg = {
-          id: botMsgId, role: 'assistant', timestamp: new Date(),
-          text: data.reply || 'Kiểm tra thông tin và xác nhận nhé! 👇',
-          data: enrichedData,
-          intent: data.intent,
-          booking_card: data.booking_card,            // ← structured payload
-          booking_state: data.booking_state,
+          if (event.type === 'final') {
+            finalPayload = event
+            applyFinalResponse(event, streamedText)
+            break
+          }
+
+          if (event.type === 'error') {
+            throw new Error(event.error || event.reply || 'Streaming failed')
+          }
         }
-        setMessages(prev => [...prev, cardMsg])
-        setSuggestions([])
-      }
-      // ── If AI shows available slots → render SlotPicker ──────────────
-      else if (data.booking_state === 'awaiting_slot_selection' && data.available_slots?.length > 0) {
-        const slotMsg = {
-          id: botMsgId, role: 'assistant', timestamp: new Date(),
-          text: data.reply,
-          data: enrichedData,
-          intent: data.intent,
-          booking_state: data.booking_state,
-        }
-        setMessages(prev => [...prev, slotMsg])
-        setPendingSlots({ slots: data.available_slots, msgId: botMsgId })
-        setSuggestions([])
-      }
-      // ── Normal message ─────────────────────────────────────────────────
-      else {
-        const botMsg = {
-          id: botMsgId, role: 'assistant', timestamp: new Date(),
-          text: data.reply || 'Xin lỗi, có lỗi xảy ra.',
-          data: enrichedData,
-          intent: data.intent,
-        }
-        setMessages(prev => [...prev, botMsg])
-        setSuggestions(data.suggested_questions || [])
+
+        if (finalPayload) break
       }
 
-      setHistory([...newHistory, { role: 'assistant', content: data.reply || '' }])
-
+      if (!finalPayload) {
+        await fallbackToNonStream()
+      }
     } catch (err) {
       console.error('[AIChatWidget] Error:', err)
-      setMessages(prev => [...prev, {
-        id: `err-${Date.now()}`, role: 'assistant', timestamp: new Date(),
-        text: '⚠️ Không thể kết nối. Vui lòng kiểm tra server và thử lại.',
-      }])
+      try {
+        await fallbackToNonStream()
+      } catch (fallbackErr) {
+        console.error('[AIChatWidget] Fallback error:', fallbackErr)
+        setMessages(prev => [...prev, {
+          id: `err-${Date.now()}`, role: 'assistant', timestamp: new Date(),
+          text: '⚠️ Không thể kết nối. Vui lòng kiểm tra server và thử lại.',
+        }])
+      }
     } finally {
       setLoading(false)
     }
-  }, [input, history, userId, sessionId, apiUrl, tenantBackendUrl, roomCodeMap])
+  }, [input, history, userId, sessionId, apiUrl, upsertAssistantMessage])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
@@ -971,14 +1043,8 @@ export default function AIChatWidget({
         return
       }
       
-      // Fallback: get RoomCode and lookup from roomCodeMap
       const code = link.getAttribute('data-code')
-      if (code && roomCodeMap[code]) {
-        navigate(`/room/${roomCodeMap[code]}`)
-        onClose?.()
-        return
-      }
-      
+
       // Last fallback: navigate with code (might fail with 404)
       if (code) {
         console.warn('[AIChatWidget] No RoomID found for code:', code)
@@ -988,13 +1054,13 @@ export default function AIChatWidget({
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <>
       <style>{RoomCodeStyles}</style>
       <ChatWindow role="dialog" aria-label="Chat với Ren AI" aria-modal="true">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Box sx={{
           px: 2, py: 1.5,
           background: `linear-gradient(135deg, ${T.blue} 0%, ${T.blueDk} 100%)`,
@@ -1028,7 +1094,7 @@ export default function AIChatWidget({
           </IconButton>
         </Box>
 
-        {/* ── Messages ───────────────────────────────────────────────────── */}
+        {/* â”€â”€ Messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Box
           sx={{
             flex: 1, overflowY: 'auto', px: 1.75, py: 1.5,
@@ -1073,7 +1139,7 @@ export default function AIChatWidget({
                 />
               </Stack>
 
-              {/* BookingCard — rendered below the AI message bubble */}
+              {/* BookingCard â€” rendered below the AI message bubble */}
               {msg.booking_card && (
                 <Box sx={{ pl: 4, mt: 0.25 }}>
                   <BookingCard
@@ -1081,13 +1147,12 @@ export default function AIChatWidget({
                     userId={userId}
                     authToken={authToken}
                     tenantBackendUrl={tenantBackendUrl}
-                    roomCodeMap={roomCodeMap}
                     onResult={handleBookingResult}
                   />
                 </Box>
               )}
 
-              {/* SlotPicker — rendered after the slot-suggestion message */}
+              {/* SlotPicker â€” rendered after the slot-suggestion message */}
               {pendingSlots && pendingSlots.msgId === msg.id && (
                 <Box sx={{ pl: 4, mt: 0.25 }}>
                   <SlotPicker
@@ -1121,7 +1186,7 @@ export default function AIChatWidget({
           <div ref={messagesEndRef} />
         </Box>
 
-        {/* ── Suggestion chips ────────────────────────────────────────────── */}
+        {/* â”€â”€ Suggestion chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {suggestions.length > 0 && !loading && (
           <Box sx={{ px: 1.75, pb: 0.75, flexShrink: 0 }}>
             <Stack direction="row" sx={{ flexWrap: 'wrap', gap: '5px' }}>
@@ -1138,7 +1203,7 @@ export default function AIChatWidget({
           </Box>
         )}
 
-        {/* ── Input bar ───────────────────────────────────────────────────── */}
+        {/* â”€â”€ Input bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Box sx={{
           px: 1.75, py: 1.25,
           borderTop: `1px solid ${T.border}`,
@@ -1190,3 +1255,5 @@ export default function AIChatWidget({
     </>
   )
 }
+
+

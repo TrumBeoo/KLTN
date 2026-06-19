@@ -4,9 +4,10 @@ main.py - Rentify AI Chat API (FastAPI entry point)
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
+import json
 import time
 
 from AI_chat import ChatOrchestrator
@@ -33,6 +34,7 @@ class ChatRequest(BaseModel):
     conversation_history: Optional[List[Dict[str, str]]] = []
     user_id: Optional[str] = None
     session_id: Optional[str] = None
+    force_new_session: Optional[bool] = False
 
 
 @app.get("/health")
@@ -68,6 +70,7 @@ async def chat(req: ChatRequest):
             history=req.conversation_history or [],
             user_id=req.user_id,
             session_id=req.session_id,
+            force_new_session=bool(req.force_new_session),
         )
         
         latency_ms = round((time.perf_counter() - started_at) * 1000, 2)
@@ -95,6 +98,42 @@ async def chat(req: ChatRequest):
                 "session_id": req.session_id or "unknown"
             }
         )
+
+
+@app.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    async def event_generator():
+        try:
+            async for event in orchestrator.process_stream(
+                message=req.message,
+                history=req.conversation_history or [],
+                user_id=req.user_id,
+                session_id=req.session_id,
+                force_new_session=bool(req.force_new_session),
+            ):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            payload = {
+                "type": "error",
+                "reply": "Xin lá»—i, mĂ¬nh Ä‘ang gáº·p chĂºt váº¥n Ä‘á» ká»¹ thuáº­t. Báº¡n thá»­ láº¡i sau nhĂ©! đŸ™",
+                "intent": "error",
+                "filters": {},
+                "data": None,
+                "suggested_questions": ["TĂ¬m phĂ²ng giĂ¡ ráº»", "PhĂ²ng cĂ²n trá»‘ng", "Thá»‘ng kĂª phĂ²ng"],
+                "session_id": req.session_id or "unknown",
+                "error": str(e),
+            }
+            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/metrics")

@@ -27,7 +27,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 
 # ── Room field whitelist (only these are exposed to AI/users) ─
-ALLOWED_ROOM_FIELDS = {"RoomCode", "RoomType", "Area", "Price", "Description"}
+ALLOWED_ROOM_FIELDS = {"RoomID", "RoomCode", "Title", "RoomType", "Area", "Price", "Description"}
 
 # ── Privacy fields (hidden from responses) ────────────────
 PRIVACY_FIELDS = {

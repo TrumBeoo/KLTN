@@ -9,6 +9,112 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authMiddleware);
 
+function normalizeComparableText(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeComparableAmenities(value) {
+  if (Array.isArray(value)) {
+    return JSON.stringify(
+      value
+        .map(item => String(item).trim())
+        .filter(Boolean)
+        .sort()
+    );
+  }
+
+  return normalizeComparableText(value);
+}
+
+async function findRoomConflict(connection, {
+  landlordId,
+  buildingId,
+  roomCode,
+  roomType,
+  area,
+  price,
+  maxPeople,
+  description,
+  furniture = '',
+  amenities = '',
+  service = '',
+  rules = '',
+  floorType = '',
+  title = '',
+  excludeRoomId = null
+}) {
+  const normalizedRoomCode = normalizeComparableText(roomCode);
+  const normalizedTitle = normalizeComparableText(title);
+  const normalizedDescription = normalizeComparableText(description);
+  const normalizedRoomType = normalizeComparableText(roomType);
+  const normalizedFurniture = normalizeComparableText(furniture);
+  const normalizedAmenities = normalizeComparableAmenities(amenities);
+  const normalizedService = normalizeComparableText(service);
+  const normalizedRules = normalizeComparableText(rules);
+  const normalizedFloorType = normalizeComparableText(floorType);
+
+  const [conflicts] = await connection.query(
+    `SELECT
+        r.RoomID,
+        r.BuildingID,
+        r.DraftStatus,
+        l.ListingID,
+        CASE
+          WHEN r.BuildingID = ? AND r.RoomCode = ? THEN 'same_building_room_code'
+          ELSE 'cross_building_same_details'
+        END AS ConflictType
+      FROM ROOM r
+      LEFT JOIN LISTING l ON l.RoomID = r.RoomID
+      WHERE r.LandlordID = ?
+        AND (? IS NULL OR r.RoomID <> ?)
+        AND (
+          (r.BuildingID = ? AND r.RoomCode = ?)
+          OR (
+            r.BuildingID <> ?
+            AND r.RoomCode = ?
+            AND COALESCE(r.RoomType, '') = ?
+            AND COALESCE(r.Area, 0) = ?
+            AND COALESCE(r.Price, 0) = ?
+            AND COALESCE(r.MaxPeople, 0) = ?
+            AND COALESCE(r.Description, '') = ?
+            AND COALESCE(r.Furniture, '') = ?
+            AND COALESCE(r.Amenities, '') = ?
+            AND COALESCE(r.Service, '') = ?
+            AND COALESCE(r.Rules, '') = ?
+            AND COALESCE(r.FloorType, '') = ?
+            AND (? = '' OR COALESCE(r.Title, '') = ?)
+          )
+        )
+      LIMIT 1`,
+    [
+      buildingId,
+      normalizedRoomCode,
+      landlordId,
+      excludeRoomId,
+      excludeRoomId,
+      buildingId,
+      normalizedRoomCode,
+      buildingId,
+      normalizedRoomCode,
+      normalizedRoomType,
+      Number(area || 0),
+      Number(price || 0),
+      Number(maxPeople || 0),
+      normalizedDescription,
+      normalizedFurniture,
+      normalizedAmenities,
+      normalizedService,
+      normalizedRules,
+      normalizedFloorType,
+      normalizedTitle,
+      normalizedTitle
+    ]
+  );
+
+  return conflicts[0] || null;
+}
+
+
 // Get draft batches (grouped by upload job)
 router.get('/draft-batches', async (req, res) => {
   const connection = await db.getConnection();
@@ -639,6 +745,8 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     }
 
     const detail = details[0];
+    const normalizedRoomCode = (detail.RoomCode || '').trim();
+
 
     // Check if already created
     if (detail.RoomID) {
@@ -684,32 +792,52 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
 
     // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
-    const [existingRooms] = await connection.query(
-      `SELECT r.RoomID, r.DraftStatus, l.ListingID
-       FROM ROOM r
-       LEFT JOIN LISTING l ON l.RoomID = r.RoomID
-       WHERE r.LandlordID = ? AND r.BuildingID = ? AND r.RoomCode = ?
-       LIMIT 1`,
-      [landlordId, buildingId, detail.RoomCode]
-    );
+    const conflictRoom = await findRoomConflict(connection, {
+      landlordId,
+      buildingId,
+      roomCode: normalizedRoomCode,
+      roomType: detail.RoomType,
+      area: detail.Area || 20,
+      price: detail.Price || 0,
+      maxPeople: detail.MaxPeople || 1,
+      description: detail.Description || '',
+      furniture: detail.Furniture || '',
+      amenities: detail.Amenities || '',
+      service: detail.Service || '',
+      rules: detail.Rules || '',
+      floorType: detail.FloorType || '',
+      title: detail.Title || ''
+    });
 
-    if (existingRooms.length > 0) {
+    if (conflictRoom) {
+      if (conflictRoom.ConflictType === 'same_building_room_code') {
+        await connection.query(
+          'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ?, ListingID = ? WHERE UploadDetailID = ?',
+          ['success', conflictRoom.RoomID, conflictRoom.ListingID || null, detail.UploadDetailID]
+        );
+
+        await connection.commit();
+        return res.json({
+          success: true,
+          message: conflictRoom.ListingID
+            ? 'Trong cung toa nha, phong nay da duoc tao va publish truoc do'
+            : 'Trong cung toa nha, phong nay da duoc tao truoc do',
+          data: {
+            roomId: conflictRoom.RoomID,
+            listingId: conflictRoom.ListingID || null,
+            detailId: detail.UploadDetailID
+          }
+        });
+      }
+
       await connection.query(
-        'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ?, ListingID = ? WHERE UploadDetailID = ?',
-        ['success', existingRooms[0].RoomID, existingRooms[0].ListingID || null, detail.UploadDetailID]
+        'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ? WHERE UploadDetailID = ?',
+        ['failed', 'Phong nay trung toan bo thong tin voi mot phong o toa nha khac', detail.UploadDetailID]
       );
-
       await connection.commit();
-      return res.json({
-        success: true,
-        message: existingRooms[0].ListingID
-          ? 'PhĂ²ng nĂ y Ä‘Ă£ Ä‘Æ°á»£c táº¡o vĂ  publish trÆ°á»›c Ä‘Ă³'
-          : 'PhĂ²ng nĂ y Ä‘Ă£ Ä‘Æ°á»£c táº¡o trÆ°á»›c Ä‘Ă³',
-        data: {
-          roomId: existingRooms[0].RoomID,
-          listingId: existingRooms[0].ListingID || null,
-          detailId: detail.UploadDetailID
-        }
+      return res.status(400).json({
+        success: false,
+        message: 'Phong nay trung toan bo thong tin voi mot phong o toa nha khac'
       });
     }
 
@@ -729,21 +857,22 @@ router.post('/create-single/:jobId/:detailId', async (req, res) => {
     // Create room with LocationID
     await connection.query(`
       INSERT INTO ROOM (
-        RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
+        RoomID, LandlordID, BuildingID, LocationID, RoomCode, Title, RoomType, Area, Price, 
         MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, Status, DraftStatus, CreatedAt, UpdatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [
-      roomId, landlordId, buildingId, locationId, detail.RoomCode, 
-      detail.RoomType || 'Phòng trọ',
+      roomId, landlordId, buildingId, locationId, normalizedRoomCode,
+      normalizeComparableText(detail.Title) || null,
+      normalizeComparableText(detail.RoomType) || 'Phòng trọ',
       detail.Area || 20, 
       detail.Price || 0, 
       detail.MaxPeople || 1, 
-      detail.Description || '',
-      detail.Furniture || '',
-      detail.Amenities || '',
-      detail.Service || '',
-      detail.Rules || '',
-      detail.FloorType || '',
+      normalizeComparableText(detail.Description),
+      normalizeComparableText(detail.Furniture),
+      normalizeComparableText(detail.Amenities),
+      normalizeComparableText(detail.Service),
+      normalizeComparableText(detail.Rules),
+      normalizeComparableText(detail.FloorType),
       'available', 'draft'
     ]);
 
@@ -1002,26 +1131,44 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
         // Bỏ qua kiểm tra trùng mã phòng - cho phép tạo phòng mới ngay cả khi mã giống nhau
 
-        const [existingRooms] = await connection.query(
-          `SELECT r.RoomID, r.DraftStatus, l.ListingID
-           FROM ROOM r
-           LEFT JOIN LISTING l ON l.RoomID = r.RoomID
-           WHERE r.LandlordID = ? AND r.BuildingID = ? AND r.RoomCode = ?
-           LIMIT 1`,
-          [landlordId, buildingId, detail.RoomCode]
-        );
+        const normalizedDetailRoomCode = (detail.RoomCode || '').trim();
+        const conflictRoom = await findRoomConflict(connection, {
+          landlordId,
+          buildingId,
+          roomCode: normalizedDetailRoomCode,
+          roomType: detail.RoomType,
+          area: detail.Area,
+          price: detail.Price || 0,
+          maxPeople: detail.MaxPeople || 1,
+          description: detail.Description || '',
+          furniture: detail.Furniture || '',
+          amenities: detail.Amenities || '',
+          service: detail.Service || '',
+          rules: detail.Rules || '',
+          floorType: detail.FloorType || '',
+          title: detail.Title || ''
+        });
 
-        if (existingRooms.length > 0) {
+        if (conflictRoom) {
+          if (conflictRoom.ConflictType === 'same_building_room_code') {
+            await connection.query(
+              'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ?, ListingID = ?, ErrorMessage = NULL WHERE UploadDetailID = ?',
+              ['success', conflictRoom.RoomID, conflictRoom.ListingID || null, detail.UploadDetailID]
+            );
+            rooms.push({
+              roomId: conflictRoom.RoomID,
+              roomCode: detail.RoomCode,
+              reused: true
+            });
+            successCount++;
+            continue;
+          }
+
           await connection.query(
-            'UPDATE UPLOAD_DETAIL SET Status = ?, RoomID = ?, ListingID = ?, ErrorMessage = NULL WHERE UploadDetailID = ?',
-            ['success', existingRooms[0].RoomID, existingRooms[0].ListingID || null, detail.UploadDetailID]
+            'UPDATE UPLOAD_DETAIL SET Status = ?, ErrorMessage = ?, RoomID = NULL, ListingID = NULL WHERE UploadDetailID = ?',
+            ['failed', 'Phong nay trung toan bo thong tin voi mot phong o toa nha khac', detail.UploadDetailID]
           );
-          rooms.push({
-            roomId: existingRooms[0].RoomID,
-            roomCode: detail.RoomCode,
-            reused: true
-          });
-          successCount++;
+          failedCount++;
           continue;
         }
 
@@ -1045,13 +1192,13 @@ router.post('/bulk-create/:jobId', async (req, res) => {
 
         await connection.query(`
           INSERT INTO ROOM (
-            RoomID, LandlordID, BuildingID, LocationID, RoomCode, RoomType, Area, Price, 
+            RoomID, LandlordID, BuildingID, LocationID, RoomCode, Title, RoomType, Area, Price, 
             MaxPeople, Description, Furniture, Amenities, Service, Rules, FloorType, Status, DraftStatus, CreatedAt, UpdatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available', 'draft', NOW(), NOW())
         `, [
-          roomId, landlordId, buildingId, locationId, detail.RoomCode, detail.RoomType,
-          detail.Area, detail.Price || 0, detail.MaxPeople || 1, detail.Description,
-          detail.Furniture || '', detail.Amenities || '', detail.Service || '', detail.Rules || '', detail.FloorType || ''
+          roomId, landlordId, buildingId, locationId, normalizedDetailRoomCode, normalizeComparableText(detail.Title) || null, normalizeComparableText(detail.RoomType),
+          detail.Area, detail.Price || 0, detail.MaxPeople || 1, normalizeComparableText(detail.Description),
+          normalizeComparableText(detail.Furniture), normalizeComparableText(detail.Amenities), normalizeComparableText(detail.Service), normalizeComparableText(detail.Rules), normalizeComparableText(detail.FloorType)
         ]);
 
         // Insert into relational tables

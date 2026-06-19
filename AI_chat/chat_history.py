@@ -113,7 +113,12 @@ class ChatHistoryManager:
             return tenant_id
         return None
     
-    def get_or_create_session(self, user_id: Optional[str] = None, reuse_anonymous: bool = False) -> str:
+    def get_or_create_session(
+        self,
+        user_id: Optional[str] = None,
+        reuse_anonymous: bool = False,
+        force_new: bool = False
+    ) -> str:
         """Lấy session active hoặc tạo mới
         
         Args:
@@ -135,6 +140,14 @@ class ChatHistoryManager:
             else:
                 print(f"[ChatHistory] WARNING: Invalid user_id format: {user_id}")
         
+        if force_new:
+            session_id = self.create_session(tenant_id)
+            if not session_id:
+                print("[ChatHistory] WARNING: Failed to force create new session, returning None")
+                return None
+            print(f"[ChatHistory] ✓ Created forced new session: {session_id}")
+            return session_id
+
         if tenant_id:
             # Tìm session active gần nhất của tenant
             query = """
