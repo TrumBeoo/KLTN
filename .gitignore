@@ -3,4 +3,6 @@ node_modules/
 dist/
 DB/
 img/
+!Tenant/frontend/public/img/
+!Tenant/frontend/public/img/**
 MD/
