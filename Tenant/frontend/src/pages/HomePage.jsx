@@ -332,7 +332,7 @@ export default function HomePage() {
   const [guestCount, setGuestCount]       = useState(1)
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-  const LANDLORD_URL = import.meta.env.VITE_LANDLORD_URL || 'https://landlord-kltn.vercel.app'
+  const LANDLORD_URL = import.meta.env.VITE_LANDLORD_URL || 'https://landlordrentify.vercel.app'
 
   const statistics = [
     { value: '10.000+', label: 'Phòng trọ đăng ký',  icon: <HomeIcon sx={{ fontSize: 32, color: T.blue }} /> },
@@ -1113,7 +1113,7 @@ export default function HomePage() {
               { icon: '🏠', title: 'Bạn là chủ nhà?',
                 desc: 'Đăng tin miễn phí, tiếp cận hàng nghìn người thuê đang tìm kiếm',
                 btn: 'Đăng phòng miễn phí', btnColor: '#f5a623', btnTextColor: T.white,
-                onClick: () => window.location.href = 'https://landlord-kltn.vercel.app/login' },
+                onClick: () => window.location.href = `${LANDLORD_URL.replace(/\/$/, '')}/login` },
             ].map((item, i) => (
               <Grid item xs={12} sm={6} md={3} key={i}>
                 <Box sx={{
