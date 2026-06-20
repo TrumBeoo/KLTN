@@ -36,11 +36,11 @@ export default function NearMetroStations() {
       const data = await res.json()
       if (data.success && data.data && data.data.length > 0) {
         const defaultImages = [
-          'https://images.unsplash.com/photo-1554224311-beee415c201f?w=400&q=80',
-          'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=400&q=80',
-          'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=80',
-          'https://images.unsplash.com/photo-1569025690938-a00729c9e1f9?w=400&q=80',
-          'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400&q=80',
+          '/img/Cầu Giấy/z7762717375986_189a701f94bc6db440649e6ae10f4059.jpg',
+          '/img/Cầu Giấy/z7761181202211_1d4cf52395f51622ea14b9ea9ef3840c.jpg',
+          '/img/Tây Hồ - Hoàn Kiếm/z7760593030224_59d77a9c0fed1ebedc8dfbb72de51e7d.jpg',
+          '/img/Thanh Xuân - Hà Đông - Thanh Trì/z7762870388592_c7ddea9a9ceebc2abe31bd982058be97.jpg',
+          '/img/Hoàng Mai - Hai Bà Trưng/z7762439494359_6bb5b4cd682ecd0ca03ae2ed8a859c3c.jpg',
         ]
         
         // Filter stations by line based on POIID

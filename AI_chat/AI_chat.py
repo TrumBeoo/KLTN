@@ -114,7 +114,8 @@ class _GroqClient:
     def extract_intent(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         # Instructional booking questions must override stale cached search intents.
         fast_result = _rule_based_intent(message)
-        if fast_result.get("intent") == "booking_guide":
+        if fast_result.get("intent") == "booking_guide" or fast_result.get("fast_path"):
+            fast_result.pop("fast_path", None)
             cache.set_intent_cache(message, context, fast_result)
             return fast_result
 
@@ -333,6 +334,16 @@ def _rule_based_intent(message: str) -> Dict[str, Any]:
             and any(topic in normalized_msg for topic in booking_topics)):
         return {"intent": "booking_guide", "filters": filters, "sort_by": None}
 
+    if any(keyword in normalized_msg for keyword in [
+        "lich da dat", "xem lich", "kiem tra lich", "lich hen", "lich xem cua",
+    ]):
+        return {"intent": "check_schedule", "filters": filters, "sort_by": None}
+
+    if any(keyword in normalized_msg for keyword in [
+        "huy lich", "cancel", "khong xem nua", "doi lich", "chuyen lich",
+    ]):
+        return {"intent": "cancel_viewing", "filters": filters, "sort_by": None}
+
     booking_action_keywords = [
         "dat lich", "xem phong", "hen xem", "muon xem", "book", "schedule",
     ]
@@ -341,6 +352,39 @@ def _rule_based_intent(message: str) -> Dict[str, Any]:
         if room_match:
             filters["room_code"] = room_match.group(1)
         return {"intent": "schedule_viewing", "filters": filters, "sort_by": None}
+
+    price_match = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:tr(?:ieu)?)", normalized_msg)
+    if price_match:
+        amount = float(price_match.group(1).replace(",", ".")) * 1_000_000
+        if any(keyword in normalized_msg for keyword in ["duoi", "toi da", "khong qua", "under"]):
+            filters["price_max"] = amount
+        elif any(keyword in normalized_msg for keyword in ["tren", "tu ", "hon"]):
+            filters["price_min"] = amount
+        else:
+            filters["price_max"] = amount
+
+    if any(keyword in normalized_msg for keyword in ["gia re", "re nhat", "tiet kiem"]):
+        filters["sort_by"] = "price_asc"
+        return {"intent": "get_cheap_rooms", "filters": filters, "sort_by": "price_asc"}
+    if any(keyword in normalized_msg for keyword in ["con trong", "dang trong", "chua thue"]):
+        return {"intent": "get_available_rooms", "filters": filters, "sort_by": None}
+    if any(keyword in normalized_msg for keyword in ["thong ke", "tong quan", "bao nhieu phong"]):
+        return {"intent": "get_stats", "filters": filters, "sort_by": None}
+    if any(keyword in normalized_msg for keyword in ["toa nha", "chung cu"]):
+        return {"intent": "get_buildings", "filters": filters, "sort_by": None}
+    if any(keyword in normalized_msg for keyword in ["khu vuc", "dia diem", "quan nao"]):
+        return {"intent": "get_locations", "filters": filters, "sort_by": None}
+    if any(keyword in normalized_msg for keyword in [
+        "tim", "co phong", "phong nao", "muon thue", "goi y phong",
+    ]):
+        return {"intent": "search_rooms", "filters": filters, "sort_by": filters.get("sort_by")}
+
+    if any(greeting in normalized_msg.split() for greeting in ["hello", "hi", "chao", "hey", "alo"]):
+        if len(normalized_msg.split()) <= 5:
+            return {
+                "intent": "general_chat", "filters": filters,
+                "sort_by": None, "fast_path": True,
+            }
 
     greetings = ["hello", "hi", "xin chào", "chào", "hey", "alo"]
     if any(g in msg for g in greetings) and len(msg.split()) <= 4:
@@ -759,6 +803,13 @@ class ChatOrchestrator:
 
         timing_logs = []
         try:
+            # Flush an event before session/DB/LLM work so the UI responds at once.
+            yield {
+                "type": "status",
+                "content": "Mình đang xử lý yêu cầu của bạn...",
+                "session_id": session_id,
+            }
+
             try:
                 if not session_id:
                     session_id = self._history.get_or_create_session(user_id, force_new=force_new_session)

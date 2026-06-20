@@ -984,6 +984,14 @@ export default function AIChatWidget({
             continue
           }
 
+          if (event.type === 'status') {
+            upsertAssistantMessage(botMsgId, {
+              text: event.content || 'Mình đang xử lý yêu cầu của bạn...',
+              timestamp: new Date(),
+            })
+            continue
+          }
+
           if (event.type === 'chunk') {
             streamedText += event.content || ''
             upsertAssistantMessage(botMsgId, {

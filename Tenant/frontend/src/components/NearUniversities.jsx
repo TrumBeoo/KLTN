@@ -50,7 +50,7 @@ const defaultUniversities = [
     tag: 'Đi bộ 10-15 phút',
     tagColor: '#008234',
     priceFrom: '1.800.000',
-    image: 'https://images.unsplash.com/photo-1562774053-701939374585?w=800&q=80',
+    image: '/img/Cầu Giấy/z7760626402929_bc9c417f99cd46668914be0376940374.jpg',
   },
   {
     name: 'ĐH Ngoại Thương',
@@ -59,7 +59,7 @@ const defaultUniversities = [
     badge: 'Phổ biến',
     badgeColor: T.blue,
     priceFrom: '2.200.000',
-    image: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600&q=80',
+    image: '/img/Ba Đình - Đống Đa/z7760735760259_0c46655387c0005977fe8176c6151e84.jpg',
   },
   {
     name: 'ĐH Kinh Tế Quốc Dân',
@@ -68,7 +68,7 @@ const defaultUniversities = [
     badge: '⭐ Gần nhất',
     badgeColor: '#c8102e',
     priceFrom: '2.500.000',
-    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&q=80',
+    image: '/img/Cầu Giấy/z7761100948320_ddc5b92c5a7445a02f5327b048a91d02.jpg',
   },
   {
     name: 'ĐH FPT Hà Nội',
@@ -76,7 +76,7 @@ const defaultUniversities = [
     priceFrom: '2.000.000',
     tag: 'Gần khu công nghệ',
     tagColor: T.blue,
-    image: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=300&q=80',
+    image: '/img/Cầu Giấy/z7761850108357_81a2e18a911f0aa147bb47c9096f3a6f.jpg',
   },
   {
     name: 'ĐH Quốc Gia Hà Nội',
@@ -84,7 +84,7 @@ const defaultUniversities = [
     priceFrom: '1.900.000',
     tag: 'Khu vực Cầu Giấy',
     tagColor: T.muted,
-    image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=300&q=80',
+    image: '/img/Cầu Giấy/z7762478969473_38ce8d20e5081dafcbeb69e5e36025ab.jpg',
   },
   {
     name: 'Học viện Ngân Hàng',
@@ -92,7 +92,7 @@ const defaultUniversities = [
     priceFrom: '2.300.000',
     tag: 'An ninh tốt',
     tagColor: '#c8102e',
-    image: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?w=300&q=80',
+    image: '/img/Ba Đình - Đống Đa/z7761862528900_997b8c7ce1c5159672dbd0df45cf3f71.jpg',
   },
 ]
 
