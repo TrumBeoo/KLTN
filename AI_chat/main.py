@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
+import asyncio
 import json
 import time
 
@@ -27,6 +28,18 @@ app.add_middleware(
 
 orchestrator = ChatOrchestrator()
 booking_service = BookingService()
+
+
+@app.on_event("startup")
+async def startup_warmup():
+    """Warm critical dependencies in the background to reduce first-turn latency."""
+    async def _run_warmup():
+        try:
+            await asyncio.to_thread(orchestrator.warmup)
+        except Exception as e:
+            print(f"[Startup warmup] {e}")
+
+    asyncio.create_task(_run_warmup())
 
 
 class ChatRequest(BaseModel):
@@ -129,9 +142,10 @@ async def chat_stream(req: ChatRequest):
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "Content-Encoding": "identity",
         },
     )
 

@@ -27,6 +27,7 @@ from db import DatabaseClient, filter_privacy
 from chat_history import ChatHistoryManager
 from booking_service import BookingService
 import cache
+from performance import compress_room_data, reduce_history_size
 
 try:
     from groq import Groq
@@ -93,6 +94,20 @@ BOOKING_GUIDE_SUGGESTIONS = [
 class _GroqClient:
     def __init__(self):
         self._client = Groq(api_key=GROQ_API_KEY) if _GROQ_OK else None
+
+    def warmup(self) -> None:
+        """Prime the upstream model once so the first user turn feels faster."""
+        if not self._client:
+            return
+        try:
+            self._client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[{"role": "user", "content": "ping"}],
+                temperature=0,
+                max_tokens=1,
+            )
+        except Exception as e:
+            print(f"[Groq warmup skipped] {e}")
 
     def _call(self, system: str, user: str, temperature: float = 0.1, max_tokens: int = 600) -> str:
         if not self._client:
@@ -230,7 +245,7 @@ class _GroqClient:
         data_str = json.dumps(data, ensure_ascii=False, indent=2) if has_data else "Không có dữ liệu"
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        messages += history[-4:]
+        messages += reduce_history_size(history, max_messages=6)
         messages.append({
             "role": "user",
             "content": RESPONSE_PROMPT.format(message=message, data=data_str[:2200])
@@ -259,7 +274,7 @@ class _GroqClient:
         data_str = json.dumps(data, ensure_ascii=False, indent=2) if has_data else "KhĂ´ng cĂ³ dá»¯ liá»‡u"
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        messages += history[-4:]
+        messages += reduce_history_size(history, max_messages=6)
         messages.append({
             "role": "user",
             "content": RESPONSE_PROMPT.format(message=message, data=data_str[:2200])
@@ -579,6 +594,39 @@ class ChatOrchestrator:
         self._booking = BookingService()
         self._session_context = {}
 
+    def warmup(self) -> None:
+        """Warm the common dependencies without blocking normal requests."""
+        try:
+            self._db.is_connected()
+            stats = self._db.get_room_stats()
+            if stats:
+                cache.set_db_cache("get_stats", {}, stats)
+        except Exception as e:
+            print(f"[Warmup][DB] {e}")
+
+        try:
+            self._ai.warmup()
+        except Exception as e:
+            print(f"[Warmup][AI] {e}")
+
+    def _optimize_history(self, history: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        return reduce_history_size(history or [], max_messages=6)
+
+    def _optimize_data_for_response(self, data: Any) -> Any:
+        if isinstance(data, list):
+            return compress_room_data(data, max_rooms=5)
+        return data
+
+    def _stream_status(self, content: str, session_id: Optional[str] = None, stage: Optional[str] = None) -> Dict[str, Any]:
+        payload = {
+            "type": "status",
+            "content": content,
+            "session_id": session_id,
+        }
+        if stage:
+            payload["stage"] = stage
+        return payload
+
     async def process(
         self,
         message: str,
@@ -589,6 +637,7 @@ class ChatOrchestrator:
     ) -> Dict[str, Any]:
         request_started = time.perf_counter()
         checkpoint = request_started
+        optimized_history = self._optimize_history(history)
 
         def mark(step_name: str) -> str:
             nonlocal checkpoint
@@ -721,6 +770,7 @@ class ChatOrchestrator:
                     db_data = self._db.demo_rooms()
 
             safe_data = filter_privacy(db_data) if db_data else db_data
+            safe_data = self._optimize_data_for_response(safe_data)
             timing_logs.append(mark("db"))
 
             # ── 5. AI reply ───────────────────────────────────────────────────
@@ -728,7 +778,7 @@ class ChatOrchestrator:
                 if intent in {"search_rooms", "get_cheap_rooms", "get_available_rooms", "recommend_rooms", "get_room_detail"}:
                     reply = _template_reply(safe_data, message)
                 else:
-                    reply = self._ai.generate_reply(message=message, data=safe_data, history=history, intent=intent)
+                    reply = self._ai.generate_reply(message=message, data=safe_data, history=optimized_history, intent=intent)
                 if not reply:
                     reply = "Xin lỗi, mình đang gặp chút vấn đề kỹ thuật. Bạn có thể thử hỏi lại được không?"
                 reply = _add_privacy_note(reply)
@@ -793,6 +843,7 @@ class ChatOrchestrator:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         request_started = time.perf_counter()
         checkpoint = request_started
+        optimized_history = self._optimize_history(history)
 
         def mark(step_name: str) -> str:
             nonlocal checkpoint
@@ -804,6 +855,7 @@ class ChatOrchestrator:
         timing_logs = []
         try:
             # Flush an event before session/DB/LLM work so the UI responds at once.
+            yield self._stream_status("Da nhan cau hoi, minh bat dau xu ly ngay day.", session_id, "received")
             yield {
                 "type": "status",
                 "content": "Mình đang xử lý yêu cầu của bạn...",
@@ -827,6 +879,7 @@ class ChatOrchestrator:
                 )
             timing_logs.append(mark("session"))
             yield {"type": "meta", "session_id": session_id}
+            yield self._stream_status("Dang phan tich y dinh va ngu canh hoi thoai...", session_id, "intent")
 
             if _is_out_of_area(message):
                 reply = _out_of_area_reply(message)
@@ -878,6 +931,7 @@ class ChatOrchestrator:
                 return
 
             if intent == "schedule_viewing":
+                yield self._stream_status("Dang kiem tra thong tin dat lich va khung gio phu hop...", session_id, "booking")
                 result = await self._handle_schedule_viewing(message, filters, user_id, session_id, context)
                 if not is_temp:
                     asyncio.create_task(
@@ -886,6 +940,7 @@ class ChatOrchestrator:
                 yield {"type": "final", **result}
                 return
             if intent == "check_schedule":
+                yield self._stream_status("Dang lay lich xem phong cua ban...", session_id, "retrieval")
                 result = await self._handle_check_schedule(user_id, session_id)
                 if not is_temp:
                     asyncio.create_task(
@@ -894,6 +949,7 @@ class ChatOrchestrator:
                 yield {"type": "final", **result}
                 return
             if intent == "cancel_viewing":
+                yield self._stream_status("Dang kiem tra lich co the huy...", session_id, "retrieval")
                 result = await self._handle_cancel_viewing(message, user_id, session_id)
                 if not is_temp:
                     asyncio.create_task(
@@ -904,6 +960,7 @@ class ChatOrchestrator:
 
             db_data: Any = None
             if intent not in _NO_DB_INTENTS:
+                yield self._stream_status("Dang tim du lieu phu hop trong he thong...", session_id, "retrieval")
                 try:
                     db_data = self._query_db(intent, filters)
                     if not db_data and not self._db.is_connected():
@@ -913,16 +970,18 @@ class ChatOrchestrator:
                     db_data = self._db.demo_rooms()
 
             safe_data = filter_privacy(db_data) if db_data else db_data
+            safe_data = self._optimize_data_for_response(safe_data)
             timing_logs.append(mark("db"))
 
             reply_parts: List[str] = []
+            yield self._stream_status("Dang soan cau tra loi va stream noi dung cho ban...", session_id, "generation")
             if intent in {"search_rooms", "get_cheap_rooms", "get_available_rooms", "recommend_rooms", "get_room_detail"}:
                 draft_reply = _template_reply(safe_data, message)
                 for chunk in _chunk_text(draft_reply):
                     reply_parts.append(chunk)
                     yield {"type": "chunk", "content": chunk, "session_id": session_id}
             else:
-                for chunk in self._ai.stream_generate_reply(message=message, data=safe_data, history=history, intent=intent):
+                for chunk in self._ai.stream_generate_reply(message=message, data=safe_data, history=optimized_history, intent=intent):
                     reply_parts.append(chunk)
                     yield {"type": "chunk", "content": chunk, "session_id": session_id}
 

@@ -61,6 +61,14 @@ const WELCOME_TEXT = '👋 Xin chào! Tôi là **Ren** từ Rentify.\n\nTôi có
 const WELCOME_ANON_TEXT = `${WELCOME_TEXT}\n\n⚠️ **Lưu ý:** Đăng nhập để lưu lịch sử chat và đặt lịch xem phòng!`
 const WELCOME_AUTH_TEXT = `${WELCOME_TEXT}\n\nBạn cần tìm gì hôm nay?`
 
+const STREAM_STAGE_LABELS = {
+  received: 'Đã nhận câu hỏi',
+  intent: 'Đang phân tích',
+  retrieval: 'Đang tìm dữ liệu',
+  booking: 'Đang kiểm tra lịch',
+  generation: 'Đang trả lời',
+}
+
 // â”€â”€â”€ Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -676,6 +684,7 @@ export default function AIChatWidget({
   const [history, setHistory]           = useState([])
   const [sessionId, setSessionId]       = useState(null) // KhĂ´ng lÆ°u vĂ o localStorage cho anonymous
   const [pendingSlots, setPendingSlots] = useState(null) // { slots, message_id }
+  const [streamStage, setStreamStage]   = useState(null)
   const messagesEndRef = useRef(null)
   const inputRef       = useRef(null)
   const startFreshSessionRef = useRef(false)
@@ -801,6 +810,10 @@ export default function AIChatWidget({
   }, [])
 
   useEffect(() => {
+    fetch(`${apiUrl}/health`).catch(() => {})
+  }, [apiUrl])
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading, pendingSlots])
 
@@ -811,6 +824,7 @@ export default function AIChatWidget({
     setSuggestions(QUICK_PROMPTS)
     setSessionId(null)
     setPendingSlots(null)
+    setStreamStage(null)
     startFreshSessionRef.current = true
     
     // XĂ³a localStorage cho user hiá»‡n táº¡i
@@ -882,6 +896,7 @@ export default function AIChatWidget({
     setLoading(true)
     setSuggestions([])
     setPendingSlots(null)
+    setStreamStage('received')
 
     const newHistory = [...history, { role: 'user', content: userText }]
     const botMsgId = `a-${Date.now()}`
@@ -894,6 +909,7 @@ export default function AIChatWidget({
     }
 
     const applyFinalResponse = (data, fallbackText = '') => {
+      setStreamStage(null)
       if (data.session_id && !sessionId) setSessionId(data.session_id)
       startFreshSessionRef.current = false
 
@@ -985,6 +1001,7 @@ export default function AIChatWidget({
           }
 
           if (event.type === 'status') {
+            setStreamStage(event.stage || 'generation')
             upsertAssistantMessage(botMsgId, {
               text: event.content || 'Mình đang xử lý yêu cầu của bạn...',
               timestamp: new Date(),
@@ -1020,6 +1037,7 @@ export default function AIChatWidget({
       }
     } catch (err) {
       console.error('[AIChatWidget] Error:', err)
+      setStreamStage(null)
       try {
         await fallbackToNonStream()
       } catch (fallbackErr) {
@@ -1031,6 +1049,7 @@ export default function AIChatWidget({
       }
     } finally {
       setLoading(false)
+      setStreamStage(null)
     }
   }, [input, history, userId, sessionId, apiUrl, upsertAssistantMessage])
 
@@ -1080,7 +1099,7 @@ export default function AIChatWidget({
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ color: T.white, fontWeight: 800, fontSize: '0.929rem', lineHeight: 1.2 }}>
-              Ren · Rentify AI
+              Rentify AI
             </Typography>
             <Stack direction="row" alignItems="center" spacing={0.5}>
               <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#52c41a',
@@ -1089,6 +1108,25 @@ export default function AIChatWidget({
                 Trực tuyến · Có thể đặt lịch
               </Typography>
             </Stack>
+            {loading && streamStage && (
+              <Box sx={{
+                mt: 0.75,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.75,
+                px: 1,
+                py: 0.45,
+                borderRadius: '999px',
+                bgcolor: 'rgba(255,255,255,0.16)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                width: 'fit-content',
+              }}>
+                <TypingDot delay="0s" />
+                <Typography sx={{ color: T.white, fontSize: '0.688rem', fontWeight: 700 }}>
+                  {STREAM_STAGE_LABELS[streamStage] || 'Đang xử lý'}
+                </Typography>
+              </Box>
+            )}
           </Box>
           <Tooltip title="Cuộc trò chuyện mới">
             <IconButton size="small" onClick={handleReset} aria-label="Làm mới"
