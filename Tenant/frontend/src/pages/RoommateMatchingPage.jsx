@@ -115,6 +115,26 @@ function normalizeGender(value) {
   return value || 'Khác'
 }
 
+function normalizeStoredGender(value) {
+  if (value === 'male') return 'Nam'
+  if (value === 'female') return 'Ná»¯'
+  if (value === 'other') return 'any'
+  return value || 'any'
+}
+
+function isRoommateProfileReady(profile) {
+  if (!profile) return false
+
+  const hasName = Boolean(profile.name?.trim())
+  const hasAge = Number(profile.age) >= 18
+  const hasOccupation = Boolean(profile.occupation?.trim())
+  const hasBio = Boolean(profile.bio?.trim())
+  const hasBudget = Array.isArray(profile.budget) && profile.budget.length === 2
+  const hasLocations = Array.isArray(profile.locations) && profile.locations.length > 0
+
+  return hasName && hasAge && hasOccupation && hasBio && hasBudget && hasLocations
+}
+
 function buildMatchFactors(profile) {
   const factors = []
 
@@ -588,8 +608,10 @@ export default function RoommateMatchingPage() {
   const [hasProfile, setHasProfile] = useState(false)
   const [showProfileForm, setShowProfileForm] = useState(false)
   const [userProfile, setUserProfile] = useState(null)
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false)
   const [candidatePool, setCandidatePool] = useState([])
   const scrollRef = useRef(null)
+  const canStartMatching = hasProfile && isRoommateProfileReady(userProfile)
 
   // Check if user has profile on mount
   useEffect(() => {
@@ -621,10 +643,12 @@ export default function RoommateMatchingPage() {
   }
 
   const checkUserProfile = async () => {
+    setIsCheckingProfile(true)
     try {
       const token = localStorage.getItem('token')
       if (!token) {
         setHasProfile(false)
+        setUserProfile(null)
         return
       }
 
@@ -638,9 +662,13 @@ export default function RoommateMatchingPage() {
       
       if (data.success && data.profile) {
         const profileForForm = {
-          ...data.profile,
+          TenantID: data.profile.TenantID,
+          name: data.profile.Name || '',
+          age: data.profile.Age || '',
+          gender: normalizeStoredGender(data.profile.Gender),
           occupation: data.profile.Job || '',
           university: data.profile.University || '',
+          bio: data.profile.Bio || '',
           lifestyle: data.profile.lifestyles || [],
           interests: data.profile.interests || [],
           budget: [
@@ -650,28 +678,32 @@ export default function RoommateMatchingPage() {
           locations: data.profile.preferences?.PreferredDistrict
             ? data.profile.preferences.PreferredDistrict.split(', ').filter(Boolean)
             : [],
-          genderPreference: data.profile.preferences?.PreferredGender || 'any',
+          genderPreference: normalizeStoredGender(data.profile.preferences?.PreferredGender),
           duration: data.profile.preferences?.PreferredAmenities || 'long-term',
         }
 
-        setHasProfile(true)
+        setHasProfile(isRoommateProfileReady(profileForForm))
         setUserProfile(profileForForm)
         
         // Update prefs from profile
         if (data.profile.preferences) {
           setPrefs({
             budget: [data.profile.preferences.BudgetMin || 2, data.profile.preferences.BudgetMax || 6],
-            gender: data.profile.preferences.PreferredGender || 'any',
+            gender: normalizeStoredGender(data.profile.preferences.PreferredGender),
             locations: data.profile.preferences.PreferredDistrict ? data.profile.preferences.PreferredDistrict.split(', ') : [],
             lifestyle: data.profile.lifestyles || [],
           })
         }
       } else {
         setHasProfile(false)
+        setUserProfile(null)
       }
     } catch (error) {
       console.error('Error checking profile:', error)
       setHasProfile(false)
+      setUserProfile(null)
+    } finally {
+      setIsCheckingProfile(false)
     }
   }
 
@@ -695,13 +727,15 @@ export default function RoommateMatchingPage() {
       const data = await response.json()
       
       if (data.success) {
-        setHasProfile(true)
-        setUserProfile((prev) => ({
-          ...(prev || {}),
+        const nextProfile = {
+          ...(userProfile || {}),
           ...profileData,
-          TenantID: prev?.TenantID || userProfile?.TenantID,
-        }))
+          TenantID: userProfile?.TenantID,
+        }
+        setHasProfile(isRoommateProfileReady(nextProfile))
+        setUserProfile(nextProfile)
         setShowProfileForm(false)
+        setStarted(true)
         fetchPublicProfiles()
         
         // Update prefs from profile
@@ -764,13 +798,27 @@ export default function RoommateMatchingPage() {
     )
   }
 
+  if (user && isCheckingProfile) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+        <div style={{ textAlign: 'center', maxWidth: 360, padding: 24 }}>
+          <div style={{ fontSize: 44, marginBottom: 16, animation: 'float 2s ease-in-out infinite' }}>👥</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>Đang kiểm tra hồ sơ roommate</div>
+          <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.6 }}>
+            Mình đang kiểm tra xem bạn đã có đủ thông tin để bắt đầu tìm kiếm hay chưa.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Show profile form if user is logged in but doesn't have profile ──────
-  if (user && (!hasProfile || showProfileForm)) {
+  if (user && (!canStartMatching || showProfileForm)) {
     return (
       <RoommateProfileForm
         onSubmit={handleProfileSubmit}
         onCancel={showProfileForm ? () => setShowProfileForm(false) : null}
-        initialData={showProfileForm ? userProfile : null}
+        initialData={userProfile}
       />
     )
   }
@@ -833,7 +881,7 @@ export default function RoommateMatchingPage() {
           ) : (
             // Show start button for authenticated users
             <>
-              <button onClick={() => setStarted(true)} style={{
+              <button onClick={() => canStartMatching ? setStarted(true) : setShowProfileForm(true)} style={{
                 width: '100%', padding: '16px', borderRadius: 16,
                 background: `linear-gradient(135deg, ${C.accent}, #9b8ef8)`,
                 border: 'none', color: '#fff', fontSize: 16, fontWeight: 700,
@@ -850,6 +898,21 @@ export default function RoommateMatchingPage() {
               }}>
                 ⚙️ Chỉnh sửa hồ sơ
               </button>
+              <div style={{
+                marginTop: 12,
+                padding: '12px 14px',
+                borderRadius: 12,
+                background: canStartMatching ? C.greenSoft : C.goldSoft,
+                border: `1px solid ${canStartMatching ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
+                color: canStartMatching ? C.green : C.gold,
+                fontSize: 13,
+                lineHeight: 1.5,
+                textAlign: 'left',
+              }}>
+                {canStartMatching
+                  ? 'Hồ sơ roommate của bạn đã sẵn sàng. Bạn có thể tìm kiếm luôn hoặc chỉnh sửa lại tiêu chí.'
+                  : 'Bạn cần điền đầy đủ hồ sơ roommate trước khi bắt đầu tìm kiếm.'}
+              </div>
             </>
           )}
           <div style={{ marginTop: 12, fontSize: 12, color: C.subtle }}>Đã có {candidatePool.length} người đang tìm roommate tại Hà Nội</div>
@@ -883,6 +946,15 @@ export default function RoommateMatchingPage() {
 
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => setShowProfileForm(true)} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.06)',
+              border: `1px solid ${C.border}`,
+              color: C.muted,
+              padding: '7px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+            }}>
+              Hồ sơ roommate
+            </button>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowFilter(true)} style={{
                 display: 'flex', alignItems: 'center', gap: 6,
